@@ -15,7 +15,7 @@
      }">
 
   <p class="text-base font-extrabold leading-snug mb-2 text-ink">
-    {% if lang == 'fr' %}{{ question.prompt_fr }}{% else %}{{ question.prompt_en }}{% endif %}
+    {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
   </p>
 
   {% if question.shape_data and question.show_illustration %}
@@ -118,7 +118,7 @@
      }'>
 
   <p class="text-base font-extrabold leading-snug mb-1 text-ink">
-    {% if lang == 'fr' %}{{ question.prompt_fr }}{% else %}{{ question.prompt_en }}{% endif %}
+    {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
   </p>
   <p class="text-xs text-[var(--text-soft)] mb-2 flex items-center gap-1 font-bold">
     ⬆⬇ {% if lang == 'fr' %}Glissez pour réordonner{% else %}Drag to reorder{% endif %}
@@ -198,7 +198,7 @@
      }'>
 
   <p class="text-base font-extrabold leading-snug mb-2 text-ink">
-    {% if lang == 'fr' %}{{ question.prompt_fr }}{% else %}{{ question.prompt_en }}{% endif %}
+    {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
   </p>
 
   <div class="space-y-2 mb-2">

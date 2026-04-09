@@ -968,7 +968,8 @@ def prizes_view(request):
                 if slug not in unlocked and student.total_stars >= prize['cost']:
                     unlocked.add(slug)
                     student.unlocked_avatars = sorted(unlocked)
-                    student.save(update_fields=['unlocked_avatars'])
+                    student.total_stars = max(0, student.total_stars - prize['cost'])
+                    student.save(update_fields=['unlocked_avatars', 'total_stars'])
             elif action == 'select' and slug in unlocked:
                 student.avatar_slug = slug
                 student.unlocked_avatars = sorted(unlocked)

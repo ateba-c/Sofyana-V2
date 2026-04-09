@@ -12,7 +12,7 @@
     </span>
     <div class="flex-1">
       <p class="text-lg font-semibold leading-relaxed">
-        {% if lang == 'fr' %}{{ question.prompt_fr|default:question.prompt_en }}{% else %}{{ question.prompt_en }}{% endif %}
+        {% if lang == 'fr' %}{{ question.prompt_fr|default:question.prompt_en|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
       </p>
       <div class="flex flex-wrap gap-2 mt-2">
         <span class="text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand/80">

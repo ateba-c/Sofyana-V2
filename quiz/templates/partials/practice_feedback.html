@@ -19,7 +19,7 @@
 
     <!-- Prompt -->
     <p class="text-base font-extrabold leading-snug mb-2 text-ink">
-      {% if lang == 'fr' %}{{ question.prompt_fr }}{% else %}{{ question.prompt_en }}{% endif %}
+      {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
     </p>
 
     <!-- Shape canvas -->
@@ -143,7 +143,7 @@
       {% for step in explanation|split_lines %}
       <li class="flex items-start gap-2 text-sm text-ink">
         <span class="shrink-0 w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-black flex items-center justify-center mt-0.5">{{ forloop.counter }}</span>
-        <span>{{ step }}</span>
+        <span>{{ step|md_bold }}</span>
       </li>
       {% endfor %}
     </ol>

@@ -1,5 +1,7 @@
 import json as _json
+import re as _re
 from django import template
+from django.utils.html import escape as _escape
 from django.utils.safestring import mark_safe
 from quiz.geometry_utils import render_shapes as _render_shapes
 
@@ -31,6 +33,16 @@ def split_lines(value):
 def to_json(value):
     """Serialize a Python value to a JSON string safe for inline JavaScript."""
     return mark_safe(_json.dumps(value))
+
+
+@register.filter
+def md_bold(value):
+    """Render **text** as <strong>text</strong>. Escapes HTML first for safety."""
+    if not value:
+        return value
+    safe = _escape(str(value))
+    result = _re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', safe)
+    return mark_safe(result)
 
 
 @register.filter
