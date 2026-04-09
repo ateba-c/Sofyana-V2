@@ -1,0 +1,88 @@
+{% load quiz_extras %}
+{# Multiple Choice — up to N options, single or multi correct #}
+<div
+  x-data="{
+    selected: null,
+    submitted: false,
+    isCorrect: false,
+    submit() {
+      if (this.selected === null || this.submitted) return;
+      this.submitted = true;
+      fetch('{% url 'quiz:submit_answer' quiz.pk q_index %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ answer: [this.selected], lang: '{{ lang }}' })
+      })
+      .then(r => r.json())
+      .then(data => {
+        this.isCorrect = data.correct;
+        data.q_id = '{{ question.pk }}';
+        window.dispatchEvent(new CustomEvent('answer-submitted', { detail: data }));
+      });
+    }
+  }"
+  class="space-y-3"
+>
+  {% for choice in shuffled_choices %}
+  <button
+    type="button"
+    :disabled="submitted"
+    @click="if (!submitted) selected = '{{ choice.pk }}';"
+    :class="{
+      'border-brand bg-brand-light text-brand ring-1 ring-brand/40':            selected === '{{ choice.pk }}' && !submitted,
+      'border-emerald-300 bg-emerald-50 text-emerald-700':                      submitted && {{ choice.is_correct|lower }},
+      'border-red-300 bg-red-50 text-red-600':                                  submitted && selected === '{{ choice.pk }}' && !{{ choice.is_correct|lower }},
+      'border-slate-200 bg-white text-slate-700 hover:bg-brand-light hover:border-brand/40': !submitted && selected !== '{{ choice.pk }}',
+    }"
+    class="w-full text-left px-5 py-3.5 rounded-xl border font-medium text-sm transition-all duration-200 flex items-center gap-3 disabled:cursor-default"
+  >
+    <!-- Custom radio circle -->
+    <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
+          :class="selected === '{{ choice.pk }}' ? 'border-brand' : 'border-slate-300'">
+      <span x-show="selected === '{{ choice.pk }}'"
+            class="w-2 h-2 rounded-full bg-brand"></span>
+    </span>
+
+    <span class="flex-1">
+      {% if lang == 'fr' %}{{ choice.label_fr|default:choice.label_en }}{% else %}{{ choice.label_en }}{% endif %}
+    </span>
+
+    <span x-show="submitted && {{ choice.is_correct|lower }}">✅</span>
+    <span x-show="submitted && selected === '{{ choice.pk }}' && !{{ choice.is_correct|lower }}">❌</span>
+  </button>
+  {% endfor %}
+
+  <button
+    @click="submit()"
+    :disabled="selected === null || submitted"
+    class="mt-1 w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-brand to-accent text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+  >
+    {% if lang == 'fr' %}Valider{% else %}Submit Answer{% endif %}
+  </button>
+
+  {% if question.explanation_en or question.explanation_fr %}
+  <div x-show="submitted && !isCorrect" x-transition
+       class="rounded-xl border border-brand-light bg-soft p-4 mt-1">
+    <p class="text-xs font-extrabold text-brand uppercase tracking-wide mb-3">
+      {% if lang == 'fr' %}Explication étape par étape{% else %}Step-by-step explanation{% endif %}
+    </p>
+    <ol class="space-y-1.5 list-none">
+      {% if lang == 'fr' %}
+        {% for step in question.explanation_fr|default:question.explanation_en|split_lines %}
+        <li class="flex items-start gap-2 text-sm text-ink">
+          <span class="shrink-0 w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-black flex items-center justify-center mt-0.5">{{ forloop.counter }}</span>
+          <span>{{ step }}</span>
+        </li>
+        {% endfor %}
+      {% else %}
+        {% for step in question.explanation_en|split_lines %}
+        <li class="flex items-start gap-2 text-sm text-ink">
+          <span class="shrink-0 w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-black flex items-center justify-center mt-0.5">{{ forloop.counter }}</span>
+          <span>{{ step }}</span>
+        </li>
+        {% endfor %}
+      {% endif %}
+    </ol>
+  </div>
+  {% endif %}
+</div>

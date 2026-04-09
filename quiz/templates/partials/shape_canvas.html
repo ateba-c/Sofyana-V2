@@ -1,0 +1,129 @@
+{% if shapes %}
+{% with first=shapes.0 %}
+<div class="shape-canvas mb-2
+  {% if first.type == 'expression' %}flex flex-col items-center gap-2
+  {% elif count == 1 %}flex justify-center
+  {% elif count == 2 %}flex justify-center gap-4 flex-wrap
+  {% else %}grid grid-cols-2 gap-3 justify-items-center{% endif %}">
+{% endwith %}
+
+  {% for shape in shapes %}
+  <div class="relative">
+    {% if shape.title %}
+    <div class="mb-0.5 text-center text-xs font-extrabold uppercase tracking-wide"
+         style="color:{{ shape.stroke }}; font-family:'Baloo 2',Nunito,system-ui,sans-serif; letter-spacing:.08em;">
+      {{ shape.title }}
+    </div>
+    {% endif %}
+
+    <svg viewBox="0 0 {{ shape.vw }} {{ shape.vh }}"
+         xmlns="http://www.w3.org/2000/svg"
+         class="{% if shape.type == 'expression' %}w-full max-w-xs{% elif count == 1 %}w-auto{% elif count == 2 %}w-40{% else %}w-32{% endif %} h-auto"
+         style="overflow: visible; max-height: 88px; filter: drop-shadow(0 4px 10px {{ shape.stroke }}44);">
+
+      <defs>
+        <filter id="shape-glow-{{ forloop.counter }}" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+          <feColorMatrix in="blur" type="matrix"
+            values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0   0 0 0 0.18 0"
+            result="shadow"/>
+          <feComposite in="SourceGraphic" in2="shadow" operator="over"/>
+        </filter>
+      </defs>
+
+      <!-- ── shape fill + stroke ── -->
+      {% if shape.path %}
+      <path d="{{ shape.path }}"
+            fill="{{ shape.fill }}"
+            stroke="{{ shape.stroke }}"
+            stroke-width="{{ shape.sw }}"
+            stroke-linejoin="round"
+            stroke-linecap="round"/>
+      {% endif %}
+
+      {% if shape.circle %}
+      <circle cx="{{ shape.circle.cx }}" cy="{{ shape.circle.cy }}" r="{{ shape.circle.r }}"
+              fill="{{ shape.fill }}"
+              stroke="{{ shape.stroke }}"
+              stroke-width="{{ shape.sw }}"/>
+      {% endif %}
+
+      <!-- ── plain lines (thermometer, number line) ── -->
+      {% for ln in shape.lines %}
+      <line x1="{{ ln.x1 }}" y1="{{ ln.y1 }}" x2="{{ ln.x2 }}" y2="{{ ln.y2 }}"
+            stroke="{{ ln.stroke|default:'#374151' }}"
+            stroke-width="{{ ln.width|default:'1' }}"
+            stroke-linecap="round"/>
+      {% endfor %}
+
+      <!-- ── marks (right-angle square, tick, dashed height, radius, dot, rect, circle, pie_slice) ── -->
+      {% for mark in shape.marks %}
+
+        {% if mark.type == 'path' %}
+        <path d="{{ mark.d }}"
+              fill="{{ mark.fill|default:'none' }}"
+              stroke="{{ mark.stroke|default:shape.stroke }}"
+              stroke-width="{{ mark.sw|default:'2.2' }}"
+              stroke-linecap="round"
+              stroke-linejoin="round"/>
+
+        {% elif mark.type == 'dashed' %}
+        <line x1="{{ mark.x1 }}" y1="{{ mark.y1 }}"
+              x2="{{ mark.x2 }}" y2="{{ mark.y2 }}"
+              stroke="{{ shape.stroke }}" stroke-width="2"
+              stroke-dasharray="6 4" opacity="0.55"/>
+
+        {% elif mark.type == 'line' %}
+        <line x1="{{ mark.x1 }}" y1="{{ mark.y1 }}"
+              x2="{{ mark.x2 }}" y2="{{ mark.y2 }}"
+              stroke="{{ mark.color|default:shape.stroke }}" stroke-width="2.2" opacity="0.8"/>
+
+        {% elif mark.type == 'dot' %}
+        <circle cx="{{ mark.x }}" cy="{{ mark.y }}" r="4"
+                fill="{{ shape.stroke }}"/>
+
+        {% elif mark.type == 'rect' %}
+        <rect x="{{ mark.x }}" y="{{ mark.y }}"
+              width="{{ mark.w }}" height="{{ mark.h }}"
+              fill="{{ mark.fill|default:'none' }}"
+              stroke="{{ mark.stroke|default:'none' }}"/>
+
+        {% elif mark.type == 'circle' %}
+        <circle cx="{{ mark.cx }}" cy="{{ mark.cy }}" r="{{ mark.r }}"
+                fill="{{ mark.fill|default:'none' }}"
+                stroke="{{ mark.stroke|default:shape.stroke }}"
+                stroke-width="{{ mark.stroke_width|default:'1' }}"/>
+
+        {% elif mark.type == 'pie_slice' %}
+        <path d="M {{ mark.cx }},{{ mark.cy }} L {{ mark.lx1 }},{{ mark.ly1 }} A {{ mark.r }},{{ mark.r }} 0 {{ mark.large_arc }},1 {{ mark.lx2 }},{{ mark.ly2 }} Z"
+              fill="{{ mark.fill }}"
+              fill-opacity="{{ mark.alpha|default:'0.9' }}"
+              stroke="{{ mark.stroke|default:'#fff' }}"
+              stroke-width="1.5"/>
+
+        {% endif %}
+      {% endfor %}
+
+      <!-- ── text labels ── -->
+      {% for lbl in shape.labels %}
+      <text x="{{ lbl.x }}" y="{{ lbl.y }}"
+            text-anchor="{{ lbl.anchor }}"
+            font-size="{{ lbl.size }}"
+            font-family="'Baloo 2', Nunito, system-ui, sans-serif"
+            {% if lbl.bold %}font-weight="800"{% else %}font-weight="700"{% endif %}
+            fill="{{ lbl.color|default:'#1C1018' }}"
+            paint-order="stroke"
+            stroke="white"
+            stroke-width="3"
+            stroke-linejoin="round"
+            {% if lbl.transform %}transform="{{ lbl.transform }}"{% endif %}>
+        {{ lbl.text }}
+      </text>
+      {% endfor %}
+
+    </svg>
+  </div>
+  {% endfor %}
+
+</div>
+{% endif %}

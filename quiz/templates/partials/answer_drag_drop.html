@@ -1,0 +1,95 @@
+{# Drag & Drop — sort items; per-item green/red after submit #}
+<div
+  x-data="{
+    items: [
+      {% for c in question.choices.all %}
+      { id: '{{ c.pk }}', label: '{% if lang == 'fr' %}{{ c.label_fr|default:c.label_en|escapejs }}{% else %}{{ c.label_en|escapejs }}{% endif %}', correctOrder: {{ c.order }} },
+      {% endfor %}
+    ].sort(() => Math.random() - 0.5),
+    dragging: null,
+    submitted: false,
+    correct: null,
+    /* true if item at position idx is in its correct slot */
+    itemCorrect(idx) { return this.items[idx].correctOrder === idx + 1; },
+    submit() {
+      if (this.submitted) return;
+      this.submitted = true;
+      const answer = this.items.map((item, idx) => ({ id: item.id, pos: idx + 1 }));
+      fetch('{% url 'quiz:submit_answer' quiz.pk q_index %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ answer, lang: '{{ lang }}' })
+      })
+      .then(r => r.json())
+      .then(data => {
+        this.correct = data.correct;
+        data.q_id = '{{ question.pk }}';
+        window.dispatchEvent(new CustomEvent('answer-submitted', { detail: data }));
+      });
+    },
+    dragStart(idx) { this.dragging = idx; },
+    dragOver(idx) {
+      if (this.dragging === null || this.dragging === idx) return;
+      const arr = [...this.items];
+      const [moved] = arr.splice(this.dragging, 1);
+      arr.splice(idx, 0, moved);
+      this.items    = arr;
+      this.dragging = idx;
+    },
+  }"
+>
+  <p class="text-xs text-white/40 mb-3 flex items-center gap-1">
+    ⬆⬇ {% if lang == 'fr' %}Glissez pour réordonner du premier au dernier{% else %}Drag to arrange in the correct order{% endif %}
+  </p>
+
+  <div class="space-y-2" @dragend="dragging = null">
+    <template x-for="(item, idx) in items" :key="item.id">
+      <div
+        draggable="true"
+        @dragstart="dragStart(idx)"
+        @dragover.prevent="dragOver(idx)"
+        :class="{
+          'opacity-50 scale-95':                                                                      dragging === idx,
+          'border-[#22C55E] bg-[#22C55E]/15 text-[#22C55E]':                                        submitted && itemCorrect(idx),
+          'border-[#EF4444] bg-[#EF4444]/15 text-[#EF4444]':                                        submitted && !itemCorrect(idx),
+          'border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-brand/40 cursor-grab active:cursor-grabbing': !submitted,
+        }"
+        class="flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 group select-none"
+      >
+        <span class="text-white/25 group-hover:text-brand transition text-lg shrink-0" x-show="!submitted">⠿</span>
+
+        <!-- position badge — turns green/red per item -->
+        <span class="w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 transition-colors"
+              :class="{
+                'bg-[#22C55E]/20 text-[#22C55E]': submitted && itemCorrect(idx),
+                'bg-[#EF4444]/20 text-[#EF4444]': submitted && !itemCorrect(idx),
+                'bg-brand/20 text-brand':          !submitted,
+              }"
+              x-text="idx + 1">
+        </span>
+
+        <span class="text-sm font-medium flex-1" x-text="item.label"></span>
+
+        <!-- per-item icon -->
+        <template x-if="submitted && itemCorrect(idx)">
+          <span class="text-[#22C55E] font-bold">✅</span>
+        </template>
+        <template x-if="submitted && !itemCorrect(idx)">
+          <div class="flex items-center gap-1 text-xs text-[#EF4444]">
+            <span>❌</span>
+            <!-- show where it should have gone -->
+            <span class="opacity-70">#<span x-text="item.correctOrder"></span></span>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <button
+    @click="submit()"
+    :disabled="submitted"
+    class="mt-4 w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-brand to-accent hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+  >
+    {% if lang == 'fr' %}Valider l'ordre{% else %}Submit Order{% endif %}
+  </button>
+</div>

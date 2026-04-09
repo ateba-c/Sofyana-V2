@@ -1,0 +1,92 @@
+{% load quiz_extras %}
+{# Text Input #}
+<div
+  x-data="{
+    value: '',
+    submitted: false,
+    correct: null,
+    submit() {
+      if (!this.value.trim() || this.submitted) return;
+      this.submitted = true;
+      fetch('{% url 'quiz:submit_answer' quiz.pk q_index %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ answer: this.value, lang: '{{ lang }}' })
+      })
+      .then(r => r.json())
+      .then(data => {
+        this.correct = data.correct;
+        data.q_id = '{{ question.pk }}';
+        window.dispatchEvent(new CustomEvent('answer-submitted', { detail: data }));
+      });
+    }
+  }"
+  @keydown.enter="submit()"
+>
+  <div class="relative">
+    <input
+      type="text"
+      x-model="value"
+      :disabled="submitted"
+      :class="{
+        'border-[#22C55E] bg-[#22C55E]/10 text-[#22C55E]': submitted && correct,
+        'border-[#EF4444] bg-[#EF4444]/10 text-[#EF4444]': submitted && !correct,
+        'border-white/20 bg-white/5 focus:border-brand':   !submitted,
+      }"
+      placeholder="{% if lang == 'fr' %}Votre réponse…{% else %}Your answer…{% endif %}"
+      class="w-full px-5 py-4 rounded-xl border text-sm font-medium transition-all duration-200 outline-none placeholder-white/30"
+      autofocus
+    />
+    <div class="absolute right-4 top-1/2 -translate-y-1/2 text-xl pointer-events-none" x-show="submitted">
+      <span x-show="correct">✅</span>
+      <span x-show="!correct">❌</span>
+    </div>
+  </div>
+
+  <button
+    @click="submit()"
+    :disabled="!value.trim() || submitted"
+    class="mt-3 w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-brand to-accent hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+  >
+    {% if lang == 'fr' %}Valider{% else %}Submit Answer{% endif %}
+  </button>
+
+  <!-- Correct answer reveal (wrong answers only) -->
+  {% with correct_choice=question.choices.all|first %}
+  {% if correct_choice %}
+  <div x-show="submitted && !correct" x-transition
+       class="px-4 py-3 rounded-xl border border-lime/50 bg-lime-light text-lime-dark text-sm font-bold mt-1">
+    <span class="text-xs font-extrabold uppercase tracking-wide opacity-70 mr-2">
+      {% if lang == 'fr' %}Bonne réponse :{% else %}Correct answer:{% endif %}
+    </span>
+    {% for c in question.choices.all %}{% if c.is_correct %}{% if lang == 'fr' %}{{ c.label_fr|default:c.label_en }}{% else %}{{ c.label_en }}{% endif %}{% endif %}{% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  {% if question.explanation_en or question.explanation_fr %}
+  <div x-show="submitted && !correct" x-transition
+       class="rounded-xl border border-brand-light bg-soft p-4 mt-1">
+    <p class="text-xs font-extrabold text-brand uppercase tracking-wide mb-3">
+      {% if lang == 'fr' %}Explication étape par étape{% else %}Step-by-step explanation{% endif %}
+    </p>
+    <ol class="space-y-1.5 list-none">
+      {% if lang == 'fr' %}
+        {% for step in question.explanation_fr|default:question.explanation_en|split_lines %}
+        <li class="flex items-start gap-2 text-sm text-ink">
+          <span class="shrink-0 w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-black flex items-center justify-center mt-0.5">{{ forloop.counter }}</span>
+          <span>{{ step }}</span>
+        </li>
+        {% endfor %}
+      {% else %}
+        {% for step in question.explanation_en|split_lines %}
+        <li class="flex items-start gap-2 text-sm text-ink">
+          <span class="shrink-0 w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-black flex items-center justify-center mt-0.5">{{ forloop.counter }}</span>
+          <span>{{ step }}</span>
+        </li>
+        {% endfor %}
+      {% endif %}
+    </ol>
+  </div>
+  {% endif %}
+</div>

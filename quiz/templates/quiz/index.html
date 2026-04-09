@@ -1,0 +1,281 @@
+{% extends 'quiz/base.html' %}
+{% block title %}Sofyana — {% if lang == 'fr' %}Apprendre avec joie{% else %}Learn with Joy{% endif %}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl space-y-6">
+
+  <!-- Greeting header -->
+  <section class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-display text-3xl font-extrabold text-ink sm:text-4xl">
+        {% if lang == 'fr' %}Salut, {{ user.username }} ! 👋{% else %}Hey, {{ user.username }}! 👋{% endif %}
+      </h1>
+      <p class="mt-1.5 text-base font-bold text-[var(--text-soft)]">
+        {% if lang == 'fr' %}Qu'est-ce que tu veux apprendre aujourd'hui ?{% else %}What do you want to learn today?{% endif %}
+      </p>
+    </div>
+    <!-- Grade filter + gamification level -->
+    <div class="flex items-center gap-3 shrink-0 flex-wrap justify-end">
+      <!-- School grade filter -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--text-soft)] hidden sm:block">
+          {% if lang == 'fr' %}Année{% else %}Grade{% endif %}
+        </span>
+        <a href="?lang={{ lang }}"
+           class="flex h-8 w-8 items-center justify-center rounded-full text-xs font-black transition
+                  {% if not grade_filter %}bg-brand text-white shadow-warm{% else %}bg-white border-2 border-brand/25 text-brand/60 hover:border-brand/60{% endif %}">
+          ✦
+        </a>
+        {% for g in available_grades %}
+        <a href="?lang={{ lang }}&grade={{ g }}"
+           class="flex h-8 w-8 items-center justify-center rounded-full text-xs font-black transition
+                  {% if grade_filter == g %}bg-brand text-white shadow-warm scale-110{% else %}bg-white border-2 border-brand/25 text-brand/60 hover:border-brand/60 hover:scale-105{% endif %}">
+          {{ g }}
+        </a>
+        {% endfor %}
+      </div>
+      <!-- Gamification level (stars-based, not school grade) -->
+      <div class="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+        <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--text-soft)] hidden sm:block">
+          ⭐
+        </span>
+        <div class="flex gap-1">
+          {% for i in "1234567" %}
+          {% with lvl=forloop.counter %}
+          <div class="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-black
+            {% if lvl == student_level %}bg-amber-light text-amber-dark ring-2 ring-amber/40{% else %}bg-white border border-slate-200 text-slate-400{% endif %}">
+            {{ lvl }}
+          </div>
+          {% endwith %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Parent homework panel (shown only if there are assignments) -->
+  {% if parent_assignments %}
+  <section class="card-solid rounded-[2rem] overflow-hidden"
+           x-data="{ tab: 'parent' }">
+    <!-- Tab bar -->
+    <div class="flex border-b border-brand-light/50 bg-soft/60">
+      <button @click="tab = 'parent'"
+              :class="tab === 'parent' ? 'border-b-2 border-brand text-brand bg-white' : 'text-[var(--text-soft)] hover:text-brand'"
+              class="flex items-center gap-2 px-5 py-4 text-sm font-extrabold transition">
+        <span>⭐</span>
+        <span>{% if lang == 'fr' %}De ton parent{% else %}From your parent{% endif %}</span>
+        <span class="ml-1 rounded-full bg-brand px-2 py-0.5 text-[10px] font-black text-white">{{ parent_assignments|length }}</span>
+      </button>
+      <button @click="tab = 'recent'"
+              :class="tab === 'recent' ? 'border-b-2 border-brand text-brand bg-white' : 'text-[var(--text-soft)] hover:text-brand'"
+              class="flex items-center gap-2 px-5 py-4 text-sm font-extrabold transition">
+        <span>🕐</span>
+        <span>{% if lang == 'fr' %}Compétences récentes{% else %}Recent skills{% endif %}</span>
+      </button>
+    </div>
+
+    <!-- From your parent tab -->
+    <div x-show="tab === 'parent'" class="divide-y divide-brand-light/40">
+      {% for a in parent_assignments %}
+      <div class="flex items-center gap-4 px-5 py-4 {% if a.completed_at %}opacity-60{% endif %}">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black
+          {% if a.completed_at %}bg-lime-light text-lime-dark{% else %}bg-brand-light text-brand{% endif %}">
+          {% if a.completed_at %}✓{% else %}★{% endif %}
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="font-extrabold text-ink truncate">
+            {% if lang == 'fr' %}
+              {% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == a.topic_slug %}{{ t.name_fr }}{% endif %}{% endfor %}{% endfor %}
+            {% else %}
+              {% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == a.topic_slug %}{{ t.name_en }}{% endif %}{% endfor %}{% endfor %}
+            {% endif %}
+          </p>
+          {% if a.note %}<p class="text-xs font-bold text-[var(--text-soft)] mt-0.5">{{ a.note }}</p>{% endif %}
+          {% if a.completed_at %}<p class="text-xs font-bold text-lime-dark mt-0.5">{% if lang == 'fr' %}Terminé !{% else %}Completed!{% endif %}</p>{% endif %}
+        </div>
+        <div class="flex shrink-0 gap-2">
+          {% if not a.completed_at %}
+          <a href="{% url 'quiz:practice_page' a.topic_slug %}?lang={{ lang }}"
+             class="rounded-xl bg-brand px-3 py-2 text-xs font-black text-white hover:bg-brand-dark transition">
+            {% if lang == 'fr' %}Pratiquer →{% else %}Practice →{% endif %}
+          </a>
+          <form method="post" action="{% url 'quiz:complete_assignment' %}?lang={{ lang }}" class="inline">
+            {% csrf_token %}
+            <input type="hidden" name="assignment_id" value="{{ a.pk }}">
+            <button type="submit" class="rounded-xl bg-lime-light px-3 py-2 text-xs font-black text-lime-dark hover:bg-lime/20 transition">
+              {% if lang == 'fr' %}Fait !{% else %}Done!{% endif %}
+            </button>
+          </form>
+          {% else %}
+          <a href="{% url 'quiz:practice_page' a.topic_slug %}?lang={{ lang }}"
+             class="rounded-xl bg-soft px-3 py-2 text-xs font-black text-brand hover:bg-brand-light transition">
+            {% if lang == 'fr' %}Revoir{% else %}Review{% endif %}
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Recent skills tab -->
+    <div x-show="tab === 'recent'" class="divide-y divide-brand-light/40">
+      {% if recent_topics %}
+        {% for slug in recent_topics %}
+        <div class="flex items-center gap-4 px-5 py-4">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-light text-lg">
+            {% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == slug %}{{ g.icon }}{% endif %}{% endfor %}{% endfor %}
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="font-extrabold text-ink truncate">
+              {% if lang == 'fr' %}{% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == slug %}{{ t.name_fr }}{% endif %}{% endfor %}{% endfor %}
+              {% else %}{% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == slug %}{{ t.name_en }}{% endif %}{% endfor %}{% endfor %}{% endif %}
+            </p>
+          </div>
+          <a href="{% url 'quiz:practice_page' slug %}?lang={{ lang }}"
+             class="shrink-0 rounded-xl bg-brand-light px-3 py-2 text-xs font-black text-brand hover:bg-brand hover:text-white transition">
+            {% if lang == 'fr' %}Continuer →{% else %}Continue →{% endif %}
+          </a>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="px-5 py-8 text-center text-sm font-bold text-[var(--text-soft)]">
+        {% if lang == 'fr' %}Commence une compétence pour la voir ici !{% else %}Start practising a skill to see it here!{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {% elif recent_topics %}
+  <!-- Compact recent skills (no parent assignments) -->
+  <section class="card-solid rounded-[2rem] p-5">
+    <p class="text-xs font-extrabold uppercase tracking-[0.2em] text-brand mb-4">{% if lang == 'fr' %}Compétences récentes{% else %}Recent skills{% endif %}</p>
+    <div class="flex flex-wrap gap-2">
+      {% for slug in recent_topics %}
+      <a href="{% url 'quiz:practice_page' slug %}?lang={{ lang }}"
+         class="inline-flex items-center gap-2 rounded-xl border border-brand-light bg-white px-3 py-2 text-sm font-extrabold text-ink hover:border-brand hover:bg-brand-light transition">
+        <span>{% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == slug %}{{ g.icon }}{% endif %}{% endfor %}{% endfor %}</span>
+        <span>{% if lang == 'fr' %}{% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == slug %}{{ t.name_fr }}{% endif %}{% endfor %}{% endfor %}{% else %}{% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == slug %}{{ t.name_en }}{% endif %}{% endfor %}{% endfor %}{% endif %}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Quick stats -->
+  <section class="grid gap-4 sm:grid-cols-3">
+    <div class="card-solid rounded-[1.75rem] p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)]">{% if lang == 'fr' %}Questions{% else %}Questions{% endif %}</p>
+          <p class="mt-2 text-3xl font-black text-brand">{{ recent_count }}</p>
+        </div>
+        <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-light text-2xl">📚</div>
+      </div>
+    </div>
+    <div class="card-solid rounded-[1.75rem] p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)]">{% if lang == 'fr' %}Étoiles{% else %}Stars{% endif %}</p>
+          <p class="mt-2 text-3xl font-black text-amber-dark">{% if student %}{{ student.total_stars }}{% else %}0{% endif %}</p>
+        </div>
+        <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-light text-2xl">⭐</div>
+      </div>
+    </div>
+    <div class="card-solid rounded-[1.75rem] p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)]">{% if lang == 'fr' %}Devoirs assignés{% else %}Assigned tasks{% endif %}</p>
+          <p class="mt-2 text-3xl font-black text-teal">{{ parent_assignments|length }}</p>
+        </div>
+        <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-light text-2xl">📋</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Skill map -->
+  {% if topic_groups %}
+  <section class="card-solid rounded-[2.25rem] p-5 sm:p-7">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-xs font-extrabold uppercase tracking-[0.24em] text-brand">{% if lang == 'fr' %}Chemin des compétences{% else %}Skill path{% endif %}</p>
+        <h2 class="mt-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">
+          {% if grade_filter %}
+            {% if lang == 'fr' %}3e année — compétences{% else %}Grade {{ grade_filter }} skills{% endif %}
+          {% else %}
+            {% if lang == 'fr' %}Où veux-tu aller aujourd'hui ?{% else %}Where do you want to go today?{% endif %}
+          {% endif %}
+        </h2>
+      </div>
+      <a href="{% url 'quiz:progress' %}?lang={{ lang }}" class="inline-flex items-center gap-2 rounded-full bg-white border border-brand-light px-4 py-3 text-sm font-black text-brand shadow-card self-start sm:self-auto">
+        <span>📈</span>
+        <span>{% if lang == 'fr' %}Voir ma progression{% else %}My progress{% endif %}</span>
+      </a>
+    </div>
+    <div class="grid gap-4 xl:grid-cols-2">
+      {% for group in topic_groups %}
+      <div class="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-card">
+        <div class="mb-4 flex items-center gap-3">
+          <div class="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-gradient-to-br from-brand-light to-amber-light text-2xl">{{ group.icon }}</div>
+          <div>
+            <h3 class="text-lg font-black text-ink">{% if lang == 'fr' %}{{ group.name_fr }}{% else %}{{ group.name_en }}{% endif %}</h3>
+            <p class="text-xs font-bold text-[var(--text-soft)]">{{ group.topics|length }} {% if lang == 'fr' %}compétences{% else %}skills{% endif %}</p>
+          </div>
+        </div>
+        <div class="space-y-2">
+          {% for t in group.topics %}
+          <a href="{% url 'quiz:practice_page' t.slug %}?lang={{ lang }}"
+             class="group flex items-center gap-3 rounded-[1.1rem] border border-brand-light/40 bg-soft/60 px-3 py-3 transition hover:border-brand/40 hover:bg-brand-light/60 active:scale-[0.98]">
+            <div class="shrink-0 relative h-9 w-9">
+              <svg viewBox="0 0 36 36" class="absolute inset-0 w-full h-full -rotate-90">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#FED7AA" stroke-width="3"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#F97316" stroke-width="3"
+                  stroke-dasharray="{{ t.accuracy|default:4 }} 100" stroke-linecap="round"/>
+              </svg>
+              <span class="absolute inset-0 flex items-center justify-center text-[9px] font-black text-brand">
+                {% if t.accuracy is not None %}{{ t.accuracy }}{% else %}—{% endif %}
+              </span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-extrabold leading-5 text-ink truncate">{% if lang == 'fr' %}{{ t.name_fr }}{% else %}{{ t.name_en }}{% endif %}</p>
+              <p class="mt-0.5 text-[11px] font-bold text-[var(--text-soft)]">
+                {% if t.accuracy is not None %}{{ t.accuracy }}% {% if lang == 'fr' %}réussite{% else %}accuracy{% endif %}
+                {% else %}{% if lang == 'fr' %}Nouveau — commence ici !{% else %}New — start here!{% endif %}{% endif %}
+              </p>
+            </div>
+            <span class="shrink-0 rounded-full bg-brand-light px-2.5 py-1 text-xs font-black text-brand group-hover:bg-brand group-hover:text-white transition">→</span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Guided quizzes -->
+  {% if quizsets %}
+  <section class="card-glass rounded-[2rem] p-5 sm:p-7">
+    <div class="mb-5">
+      <p class="text-xs font-extrabold uppercase tracking-[0.24em] text-brand">{% if lang == 'fr' %}Quiz complets{% else %}Complete quizzes{% endif %}</p>
+      <h2 class="mt-2 font-display text-3xl font-extrabold text-ink">{% if lang == 'fr' %}Réviser avec des séries guidées{% else %}Revise with guided sets{% endif %}</h2>
+    </div>
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {% for qs in quizsets %}
+      <a href="{% url 'quiz:playground' qs.pk %}?lang={{ lang }}" class="group rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-card transition hover:-translate-y-1 hover:shadow-soft">
+        <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-[1.3rem] bg-gradient-to-br from-brand to-amber text-3xl text-white">🎯</div>
+        <h3 class="text-lg font-black text-ink">{% if lang == 'fr' %}{{ qs.title_fr|default:qs.title_en }}{% else %}{{ qs.title_en }}{% endif %}</h3>
+        <p class="mt-2 text-sm font-bold leading-6 text-[var(--text-soft)]">
+          {% if lang == 'fr' %}{{ qs.description_fr|default:qs.description_en|truncatechars:100 }}{% else %}{{ qs.description_en|truncatechars:100 }}{% endif %}
+        </p>
+        <div class="mt-4 flex items-center justify-between text-sm font-black">
+          <span class="rounded-full bg-brand-light px-3 py-1.5 text-brand">{{ qs.questions.count }} Qs</span>
+          <span class="text-brand group-hover:translate-x-1 transition-transform inline-block">{% if lang == 'fr' %}Ouvrir →{% else %}Open →{% endif %}</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

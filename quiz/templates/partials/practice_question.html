@@ -1,0 +1,262 @@
+{% load quiz_extras %}
+
+{% if question.q_type == 'multiple_choice' or question.q_type == 'text_input' %}
+{# ── Multiple choice / text input ─────────────────────────────────────────── #}
+<div id="practice-area"
+     class="card-glass rounded-2xl p-3 sm:p-4 animate-slide-up"
+     x-data="{
+       selected: null, submitted: false, showHint: false,
+       submit() {
+         if (this.submitted) return;
+         if ('{{ question.q_type }}' === 'multiple_choice' && this.selected === null) return;
+         this.submitted = true;
+         htmx.trigger('#pq-form', 'submit');
+       }
+     }">
+
+  <p class="text-base font-extrabold leading-snug mb-2 text-ink">
+    {% if lang == 'fr' %}{{ question.prompt_fr }}{% else %}{{ question.prompt_en }}{% endif %}
+  </p>
+
+  {% if question.shape_data and question.show_illustration %}
+  <div class="rounded-xl border border-slate-200 bg-slate-50 p-2 mb-2">
+    {% shape_canvas question.shape_data lang %}
+  </div>
+  {% endif %}
+
+  <form id="pq-form"
+        hx-post="{% url 'quiz:practice_check' topic %}"
+        hx-target="#practice-area" hx-swap="outerHTML"
+        hx-include="[name='csrfmiddlewaretoken'],[name='lang'],[name='level'],[name='answer']"
+        class="space-y-2">
+    {% csrf_token %}
+    <input type="hidden" name="lang"  value="{{ lang }}">
+    <input type="hidden" name="level" value="{{ level }}">
+
+    {% if question.q_type == 'multiple_choice' %}
+      {% for choice in question.choices %}
+      <button type="button"
+              :disabled="submitted"
+              @click="if (!submitted) selected = {{ forloop.counter0 }}"
+              :class="{
+                'border-brand bg-brand-light ring-2 ring-brand/30 text-brand font-black': selected === {{ forloop.counter0 }} && !submitted,
+                'border-brand-light bg-white hover:bg-brand-light hover:border-brand/40 text-ink': selected !== {{ forloop.counter0 }} && !submitted,
+                'opacity-50 cursor-default': submitted,
+              }"
+              class="w-full text-left px-4 py-2.5 rounded-xl border font-bold text-sm transition-all duration-200 flex items-center gap-3 active:scale-[0.99]">
+        <span class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition"
+              :class="selected === {{ forloop.counter0 }} ? 'border-brand' : 'border-brand-light'">
+          <span x-show="selected === {{ forloop.counter0 }}"
+                class="w-1.5 h-1.5 rounded-full bg-brand"></span>
+        </span>
+        <span>{{ choice.label }}</span>
+      </button>
+      {% endfor %}
+      <input type="hidden" name="answer" :value="selected">
+      <button type="button" @click="submit()"
+              :disabled="selected === null || submitted"
+              class="w-full py-3.5 rounded-xl font-black text-sm bg-gradient-to-r from-brand to-coral text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition mt-1 shadow-card active:scale-[0.98]">
+        {% if lang == 'fr' %}Valider{% else %}Submit Answer{% endif %}
+      </button>
+
+    {% elif question.q_type == 'text_input' %}
+      <div class="flex gap-2">
+        <input type="text" name="answer" autofocus
+               :disabled="submitted"
+               @keydown.enter="submit()"
+               class="flex-1 bg-white border-2 border-brand-light rounded-xl px-4 py-3 text-ink placeholder-brand-light/70 font-mono text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus:border-brand transition"
+               placeholder="{% if lang == 'fr' %}Votre réponse…{% else %}Your answer…{% endif %}">
+        <button type="button" @click="submit()" :disabled="submitted"
+                class="px-5 py-3 rounded-xl font-black text-sm bg-gradient-to-r from-brand to-coral text-white hover:opacity-90 disabled:opacity-40 transition shadow-card active:scale-[0.98] min-h-[44px]">
+          OK
+        </button>
+      </div>
+    {% endif %}
+  </form>
+
+  {% if question.hint_en %}
+  <div class="mt-2">
+    <button type="button" @click="showHint = !showHint"
+            class="px-4 py-3 rounded-xl font-bold text-xs bg-coral-light text-coral hover:bg-coral/20 border border-coral/30 transition active:scale-[0.98] min-h-[44px]">
+      💡 {% if lang == 'fr' %}Indice{% else %}Hint{% endif %}
+    </button>
+    <div x-show="showHint" x-transition
+         class="mt-2 bg-coral-light rounded-xl p-3 border border-coral/30 text-sm text-coral-dark font-bold">
+      💡 {% if lang == 'fr' %}{{ question.hint_fr }}{% else %}{{ question.hint_en }}{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+
+{% elif question.q_type == 'ordering' or question.q_type == 'sorting' %}
+{# ── Drag-to-order ─────────────────────────────────────────────────────────── #}
+<div id="practice-area"
+     class="card-glass rounded-2xl p-3 sm:p-4 animate-slide-up"
+     x-data='{
+       items: {{ question.items|to_json }},
+       dragging: null,
+       submitted: false,
+       showHint: false,
+       init() { this.items = [...this.items].sort(() => Math.random() - 0.5); },
+       dragStart(idx) { this.dragging = idx; },
+       dragOver(idx) {
+         if (this.dragging === null || this.dragging === idx) return;
+         const arr = [...this.items];
+         const [moved] = arr.splice(this.dragging, 1);
+         arr.splice(idx, 0, moved);
+         this.items = arr;
+         this.dragging = idx;
+       },
+       submit() {
+         if (this.submitted) return;
+         this.submitted = true;
+         document.querySelector("#pq-order-answer").value = JSON.stringify(this.items.map(i => i.label));
+         htmx.trigger("#pq-form", "submit");
+       }
+     }'>
+
+  <p class="text-base font-extrabold leading-snug mb-1 text-ink">
+    {% if lang == 'fr' %}{{ question.prompt_fr }}{% else %}{{ question.prompt_en }}{% endif %}
+  </p>
+  <p class="text-xs text-[var(--text-soft)] mb-2 flex items-center gap-1 font-bold">
+    ⬆⬇ {% if lang == 'fr' %}Glissez pour réordonner{% else %}Drag to reorder{% endif %}
+  </p>
+
+  <div class="space-y-1.5 mb-2" @dragend="dragging = null">
+    <template x-for="(item, idx) in items" :key="item.label">
+      <div draggable="true"
+           @dragstart="dragStart(idx)"
+           @dragover.prevent="dragOver(idx)"
+           :class="{
+             'opacity-40 scale-95': dragging === idx,
+             'cursor-grab hover:border-brand/50 hover:bg-brand-light': !submitted,
+             'cursor-default': submitted,
+           }"
+           class="flex items-center gap-3 px-3 py-2 rounded-xl border border-brand-light bg-white text-ink transition-all duration-150 select-none active:cursor-grabbing">
+        <span class="text-brand-light text-lg shrink-0" x-show="!submitted">⠿</span>
+        <span class="w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-black flex items-center justify-center shrink-0"
+              x-text="idx + 1"></span>
+        <span class="text-sm font-bold flex-1" x-text="item.label"></span>
+      </div>
+    </template>
+  </div>
+
+  <form id="pq-form"
+        hx-post="{% url 'quiz:practice_check' topic %}"
+        hx-target="#practice-area" hx-swap="outerHTML"
+        hx-include="[name='csrfmiddlewaretoken'],[name='lang'],[name='level'],[name='answer']">
+    {% csrf_token %}
+    <input type="hidden" name="lang"  value="{{ lang }}">
+    <input type="hidden" name="level" value="{{ level }}">
+    <input type="hidden" name="answer" id="pq-order-answer">
+  </form>
+
+  <button type="button" @click="submit()" :disabled="submitted"
+          class="w-full py-3.5 rounded-xl font-black text-sm bg-gradient-to-r from-brand to-coral text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-card active:scale-[0.98]">
+    {% if lang == 'fr' %}Valider l'ordre{% else %}Submit Order{% endif %}
+  </button>
+
+  {% if question.hint_en %}
+  <div class="mt-2">
+    <button type="button" @click="showHint = !showHint"
+            class="px-4 py-3 rounded-xl font-bold text-xs bg-coral-light text-coral hover:bg-coral/20 border border-coral/30 transition active:scale-[0.98] min-h-[44px]">
+      💡 {% if lang == 'fr' %}Indice{% else %}Hint{% endif %}
+    </button>
+    <div x-show="showHint" x-transition
+         class="mt-2 bg-coral-light rounded-xl p-3 border border-coral/30 text-sm text-coral-dark font-bold">
+      💡 {% if lang == 'fr' %}{{ question.hint_fr }}{% else %}{{ question.hint_en }}{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+
+{% elif question.q_type == 'mix_match' %}
+{# ── Mix & Match (dropdown) ────────────────────────────────────────────────── #}
+<div id="practice-area"
+     class="card-glass rounded-2xl p-3 sm:p-4 animate-slide-up"
+     x-data='{
+       pairs: {{ question.pairs|to_json }},
+       rights: [],
+       selections: {},
+       submitted: false,
+       showHint: false,
+       init() {
+         this.rights = [...this.pairs.map(p => p.right)].sort(() => Math.random() - 0.5);
+         this.pairs.forEach(p => { this.selections[p.left] = ""; });
+       },
+       allSelected() { return Object.values(this.selections).every(v => v !== ""); },
+       submit() {
+         if (this.submitted || !this.allSelected()) return;
+         this.submitted = true;
+         document.querySelector("#pq-match-answer").value = JSON.stringify(this.selections);
+         htmx.trigger("#pq-form", "submit");
+       }
+     }'>
+
+  <p class="text-base font-extrabold leading-snug mb-2 text-ink">
+    {% if lang == 'fr' %}{{ question.prompt_fr }}{% else %}{{ question.prompt_en }}{% endif %}
+  </p>
+
+  <div class="space-y-2 mb-2">
+    <template x-for="pair in pairs" :key="pair.left">
+      <div class="flex items-center gap-2">
+        <div class="flex-1 px-3 py-2 rounded-xl border border-brand-light bg-soft text-sm font-bold text-ink truncate"
+             x-text="pair.left"></div>
+        <span class="text-[var(--text-soft)] shrink-0 font-black">→</span>
+        <div class="flex-1">
+          <select x-model="selections[pair.left]"
+                  :disabled="submitted"
+                  :class="{
+                    'border-lime/60 bg-lime-light text-lime-dark': submitted && selections[pair.left] === pair.right,
+                    'border-pink/50 bg-pink-light text-pink-dark': submitted && selections[pair.left] !== pair.right,
+                    'border-brand-light text-ink':                  !submitted,
+                  }"
+                  class="w-full px-3 py-3 rounded-xl border-2 bg-white text-[16px] font-bold focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 outline-none transition cursor-pointer">
+            <option value="" disabled>{% if lang == 'fr' %}Choisir…{% else %}Select…{% endif %}</option>
+            <template x-for="r in rights" :key="r">
+              <option :value="r" x-text="r"></option>
+            </template>
+          </select>
+        </div>
+        <template x-if="submitted">
+          <span x-text="selections[pair.left] === pair.right ? '✅' : '❌'" class="shrink-0 text-lg"></span>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <form id="pq-form"
+        hx-post="{% url 'quiz:practice_check' topic %}"
+        hx-target="#practice-area" hx-swap="outerHTML"
+        hx-include="[name='csrfmiddlewaretoken'],[name='lang'],[name='level'],[name='answer']">
+    {% csrf_token %}
+    <input type="hidden" name="lang"  value="{{ lang }}">
+    <input type="hidden" name="level" value="{{ level }}">
+    <input type="hidden" name="answer" id="pq-match-answer">
+  </form>
+
+  <button type="button" @click="submit()"
+          :disabled="!allSelected() || submitted"
+          class="w-full py-3.5 rounded-xl font-black text-sm bg-gradient-to-r from-brand to-coral text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-card active:scale-[0.98]">
+    {% if lang == 'fr' %}Valider les associations{% else %}Submit Matches{% endif %}
+  </button>
+
+  {% if question.hint_en %}
+  <div class="mt-2">
+    <button type="button" @click="showHint = !showHint"
+            class="px-4 py-3 rounded-xl font-bold text-xs bg-coral-light text-coral hover:bg-coral/20 border border-coral/30 transition active:scale-[0.98] min-h-[44px]">
+      💡 {% if lang == 'fr' %}Indice{% else %}Hint{% endif %}
+    </button>
+    <div x-show="showHint" x-transition
+         class="mt-2 bg-coral-light rounded-xl p-3 border border-coral/30 text-sm text-coral-dark font-bold">
+      💡 {% if lang == 'fr' %}{{ question.hint_fr }}{% else %}{{ question.hint_en }}{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}

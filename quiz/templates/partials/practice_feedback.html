@@ -1,0 +1,261 @@
+{% load quiz_extras %}
+<div id="practice-area"
+     class="space-y-2 animate-slide-up result-banner"
+     data-correct="{{ correct|lower }}"
+     data-streak="{{ streak }}"
+     data-total="{{ total }}"
+     {% if not suggested_action %}
+     hx-get="{% url 'quiz:practice_next' topic %}?lang={{ lang }}&level={{ level }}"
+     hx-trigger="load delay:1500ms"
+     hx-target="#practice-area"
+     hx-swap="outerHTML"
+     {% endif %}>
+
+  <!-- Question card (answered/frozen state) -->
+  <div class="card-glass rounded-2xl p-3 sm:p-4">
+
+    <!-- Prompt -->
+    <p class="text-base font-extrabold leading-snug mb-2 text-ink">
+      {% if lang == 'fr' %}{{ question.prompt_fr }}{% else %}{{ question.prompt_en }}{% endif %}
+    </p>
+
+    <!-- Shape canvas -->
+    {% if question.shape_data and question.show_illustration %}
+    <div class="rounded-xl bg-slate-50 border border-slate-200 p-2 mb-2">
+      {% shape_canvas question.shape_data lang %}
+    </div>
+    {% endif %}
+
+    <!-- Frozen answer display — type-specific -->
+
+    {% if question.q_type == 'multiple_choice' %}
+    <div class="space-y-1.5">
+      {% for choice in question.choices %}
+      <div class="w-full text-left px-4 py-2.5 rounded-xl border font-bold text-sm flex items-center gap-3
+                  {% if choice.correct %}border-lime/50 bg-lime-light text-lime-dark
+                  {% elif forloop.counter0 == answer_index %}border-pink/40 bg-pink-light text-pink-dark
+                  {% else %}border-brand-light bg-white text-[var(--text-soft)]{% endif %}">
+        <span class="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0
+                     {% if choice.correct %}border-lime
+                     {% elif forloop.counter0 == answer_index %}border-pink
+                     {% else %}border-brand-light{% endif %}">
+          {% if choice.correct %}
+            <span class="w-1.5 h-1.5 rounded-full bg-lime"></span>
+          {% elif forloop.counter0 == answer_index %}
+            <span class="w-1.5 h-1.5 rounded-full bg-pink"></span>
+          {% endif %}
+        </span>
+        <span>{{ choice.label }}</span>
+        {% if choice.correct %}<span class="ml-auto text-xs font-black">✓</span>
+        {% elif forloop.counter0 == answer_index %}<span class="ml-auto text-xs font-black">✗</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% elif question.q_type == 'text_input' %}
+    <div class="px-4 py-3 rounded-xl border font-mono text-sm font-bold
+                {% if correct %}border-lime/50 bg-lime-light text-lime-dark
+                {% else %}border-pink/40 bg-pink-light text-pink-dark{% endif %}">
+      {% if lang == 'fr' %}Votre réponse :{% else %}Your answer:{% endif %} {{ answer }}
+    </div>
+
+    {% elif question.q_type == 'ordering' or question.q_type == 'sorting' %}
+    <div class="space-y-2">
+      {% for item in answer_data %}
+      <div class="flex items-center gap-3 px-4 py-3 rounded-xl border font-bold text-sm
+                  {% if item.is_correct %}border-lime/50 bg-lime-light text-lime-dark
+                  {% else %}border-pink/40 bg-pink-light text-pink-dark{% endif %}">
+        <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0
+                     {% if item.is_correct %}bg-lime text-white
+                     {% else %}bg-pink text-white{% endif %}">
+          {{ item.submitted_pos }}
+        </span>
+        <span class="flex-1">{{ item.label }}</span>
+        {% if item.is_correct %}
+          <span class="text-xs font-black">✓</span>
+        {% else %}
+          <span class="text-xs font-bold text-[var(--text-soft)] shrink-0">
+            {% if lang == 'fr' %}devait être #{{ item.correct_pos }}{% else %}should be #{{ item.correct_pos }}{% endif %}
+          </span>
+          <span class="text-xs font-black">✗</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% elif question.q_type == 'mix_match' %}
+    <div class="space-y-2">
+      {% for item in answer_data %}
+      <div class="flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold
+                  {% if item.is_correct %}border-lime/50 bg-lime-light text-lime-dark
+                  {% else %}border-pink/40 bg-pink-light text-pink-dark{% endif %}">
+        <span class="font-extrabold shrink-0 text-ink">{{ item.left }}</span>
+        <span class="text-[var(--text-soft)] shrink-0">→</span>
+        <span class="flex-1">{{ item.right_submitted }}</span>
+        {% if item.is_correct %}
+          <span class="text-xs font-black shrink-0">✓</span>
+        {% else %}
+          <span class="text-xs font-bold text-[var(--text-soft)] shrink-0">
+            ✓ {{ item.right_correct }}
+          </span>
+          <span class="text-xs font-black shrink-0">✗</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div><!-- /question card -->
+
+  <!-- ── Layer 1: Result banner ──────────────────────────────────────────── -->
+  <div class="rounded-xl px-4 py-3 font-bold text-sm flex items-center gap-3
+              {% if correct %}bg-lime-light border border-lime/40 text-lime-dark
+              {% else %}bg-pink-light border border-pink/30 text-pink-dark{% endif %}">
+    <span class="text-lg">{{ correct|yesno:"✅,❌" }}</span>
+    <div class="flex-1">
+      {% if correct %}
+        {% if lang == 'fr' %}Correct !{% else %}Correct!{% endif %}
+      {% else %}
+        {% if misconception_feedback %}
+          {{ misconception_feedback }}
+        {% else %}
+          {% if lang == 'fr' %}Pas tout à fait.{% else %}Not quite.{% endif %}
+        {% endif %}
+      {% endif %}
+    </div>
+    {% if correct and streak > 1 %}
+    <div class="shrink-0 bg-coral-light border border-coral/30 rounded-full px-3 py-1 text-coral text-xs font-black">
+      🔥 {{ streak }}{% if lang == 'fr' %} en série{% else %} in a row{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Layer 2: Worked solution (wrong answers only) ──────────────────── -->
+  {% if not correct and explanation %}
+  <div class="rounded-xl border border-brand-light bg-soft p-4">
+    <p class="text-xs font-extrabold text-brand uppercase tracking-wide mb-3">
+      {% if lang == 'fr' %}Explication étape par étape{% else %}Step-by-step explanation{% endif %}
+    </p>
+    <ol class="space-y-1.5 list-none">
+      {% for step in explanation|split_lines %}
+      <li class="flex items-start gap-2 text-sm text-ink">
+        <span class="shrink-0 w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-black flex items-center justify-center mt-0.5">{{ forloop.counter }}</span>
+        <span>{{ step }}</span>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endif %}
+
+  <!-- ── Layer 3: Adaptive routing suggestion ───────────────────────────── -->
+  {% if suggested_action %}
+  <div class="rounded-xl border p-4
+              {% if suggested_action == 'level_up' or suggested_action == 'mastery' %}border-brand-light bg-soft
+              {% else %}border-coral-light bg-coral-light/50{% endif %}">
+
+    {% if suggested_action == 'level_up' %}
+    <p class="text-sm font-bold text-brand mb-3">
+      🚀 {% if lang == 'fr' %}5 bonnes réponses d'affilée ! Tu es prêt(e) pour le niveau supérieur.{% else %}5 correct in a row! You're ready for the next level.{% endif %}
+    </p>
+    <div class="flex gap-2 flex-wrap">
+      <a href="{% url 'quiz:practice_page' topic %}?level={{ suggested_level }}&lang={{ lang }}"
+         class="px-4 py-2.5 rounded-xl text-sm font-black bg-brand hover:bg-brand-dark text-white transition hover:opacity-90 active:scale-[0.98]">
+        {% if lang == 'fr' %}Passer au niveau {{ suggested_level }}{% else %}Try {{ suggested_level }} level{% endif %}
+      </a>
+      <a href="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
+         hx-get="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
+         hx-target="#practice-area" hx-swap="outerHTML"
+         class="px-4 py-2.5 rounded-xl text-sm font-black text-brand border border-brand-light bg-white hover:bg-brand-light transition active:scale-[0.98]">
+        {% if lang == 'fr' %}Continuer quand même{% else %}Keep going anyway{% endif %}
+      </a>
+    </div>
+
+    {% elif suggested_action == 'mastery' %}
+    <p class="text-sm font-bold text-brand mb-3">
+      ⭐ {% if lang == 'fr' %}Maîtrise atteinte ! Prêt(e) pour le prochain défi ?{% else %}Mastery achieved! Ready for the next challenge?{% endif %}
+    </p>
+    <div class="flex gap-2 flex-wrap">
+      <a href="{% url 'quiz:practice_page' suggested_topic %}?level=easy&lang={{ lang }}"
+         class="px-4 py-2.5 rounded-xl text-sm font-black bg-brand hover:bg-brand-dark text-white transition hover:opacity-90 active:scale-[0.98]">
+        {% if lang == 'fr' %}Essayer{% else %}Try{% endif %} {{ suggested_topic }}
+      </a>
+      <a href="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
+         hx-get="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
+         hx-target="#practice-area" hx-swap="outerHTML"
+         class="px-4 py-2.5 rounded-xl text-sm font-black text-brand border border-brand-light bg-white hover:bg-brand-light transition active:scale-[0.98]">
+        {% if lang == 'fr' %}Continuer ici{% else %}Keep practising here{% endif %}
+      </a>
+    </div>
+
+    {% elif suggested_action == 'level_down' %}
+    <p class="text-sm font-bold text-coral mb-3">
+      💪 {% if lang == 'fr' %}3 erreurs d'affilée — essaie le niveau inférieur pour consolider.{% else %}3 wrong in a row — try the easier level to build confidence.{% endif %}
+    </p>
+    <div class="flex gap-2 flex-wrap">
+      <a href="{% url 'quiz:practice_page' topic %}?level={{ suggested_level }}&lang={{ lang }}"
+         class="px-4 py-2.5 rounded-xl text-sm font-black bg-coral text-white hover:bg-coral-dark transition active:scale-[0.98]">
+        {% if lang == 'fr' %}Passer au niveau {{ suggested_level }}{% else %}Switch to {{ suggested_level }}{% endif %}
+      </a>
+      <a href="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
+         hx-get="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
+         hx-target="#practice-area" hx-swap="outerHTML"
+         class="px-4 py-2.5 rounded-xl text-sm font-black text-coral border border-coral-light bg-white hover:bg-coral-light transition active:scale-[0.98]">
+        {% if lang == 'fr' %}Continuer quand même{% else %}Keep trying{% endif %}
+      </a>
+    </div>
+
+    {% elif suggested_action == 'prerequisite' %}
+    <p class="text-sm font-bold text-coral mb-3">
+      📚 {% if lang == 'fr' %}Difficile ? Renforce tes bases avec un sujet prérequis.{% else %}Finding this hard? Strengthen the foundation skill first.{% endif %}
+    </p>
+    <div class="flex gap-2 flex-wrap">
+      <a href="{% url 'quiz:practice_page' suggested_topic %}?level=medium&lang={{ lang }}"
+         class="px-4 py-2.5 rounded-xl text-sm font-black bg-coral text-white hover:bg-coral-dark transition active:scale-[0.98]">
+        {% if lang == 'fr' %}Revoir{% else %}Review{% endif %} {{ suggested_topic }}
+      </a>
+      <a href="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
+         hx-get="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
+         hx-target="#practice-area" hx-swap="outerHTML"
+         class="px-4 py-2.5 rounded-xl text-sm font-black text-coral border border-coral-light bg-white hover:bg-coral-light transition active:scale-[0.98]">
+        {% if lang == 'fr' %}Continuer ici{% else %}Stay here{% endif %}
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endif %}
+
+  <!-- Stars toast -->
+  {% if stars_earned > 0 %}
+  <script>
+    document.addEventListener('htmx:afterSettle', function _onSettle(e) {
+      if (e.detail.target && e.detail.target.id === 'practice-area') {
+        toast('⭐ +{{ stars_earned }}', 'warn');
+        const el = document.getElementById('nav-stars');
+        if (el) el.textContent = '⭐ ' + (parseInt(el.textContent.replace(/\D/g, '')) + {{ stars_earned }});
+        document.removeEventListener('htmx:afterSettle', _onSettle);
+      }
+    });
+  </script>
+  {% endif %}
+
+  <!-- Auto-advance notice (only when no routing suggestion shown) -->
+  {% if not suggested_action %}
+  <p class="text-xs text-brand/60 text-center font-bold">
+    {% if lang == 'fr' %}Prochaine question dans 1,5 s…{% else %}Next question in 1.5 s…{% endif %}
+  </p>
+  {% endif %}
+
+</div>
+
+<script>
+  // Scroll result into view on mobile so explanation is always readable without scrolling
+  (function() {
+    var banner = document.querySelector('.result-banner');
+    if (banner && window.innerWidth < 1024) {
+      setTimeout(function() {
+        banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+    }
+  })();
+</script>

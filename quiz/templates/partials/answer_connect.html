@@ -1,0 +1,210 @@
+{# Connect — drag a left chip over a right target and release to snap it #}
+<div
+  x-data="{
+    pairs: [
+      {% for p in question.pairs.all %}
+      { id: '{{ p.pk }}',
+        left:  '{% if lang == 'fr' %}{{ p.left_fr|default:p.left_en|escapejs }}{% else %}{{ p.left_en|escapejs }}{% endif %}',
+        right: '{% if lang == 'fr' %}{{ p.right_fr|default:p.right_en|escapejs }}{% else %}{{ p.right_en|escapejs }}{% endif %}' },
+      {% endfor %}
+    ],
+    lefts:       [],
+    rights:      [],
+    connections: {},   /* leftId → rightId */
+    draggingId:  null, /* leftId being dragged */
+    hoverId:     null, /* rightId being hovered */
+    submitted:   false,
+
+    init() {
+      this.lefts  = this.pairs.map(p => ({ id: p.id, label: p.left  })).sort(() => Math.random() - 0.5);
+      this.rights = this.pairs.map(p => ({ id: p.id, label: p.right })).sort(() => Math.random() - 0.5);
+    },
+
+    /* which leftId is mapped to this rightId? */
+    connectedLeftId(rightId) {
+      return Object.keys(this.connections).find(k => this.connections[k] === rightId) || null;
+    },
+    connectedLeftLabel(rightId) {
+      const lid = this.connectedLeftId(rightId);
+      return lid ? (this.lefts.find(l => l.id === lid)?.label || '') : '';
+    },
+    isLeftConnected(leftId) { return leftId in this.connections; },
+
+    onDragStart(leftId, e) {
+      if (this.submitted) { e.preventDefault(); return; }
+      this.draggingId = leftId;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', leftId);
+    },
+    onDragEnd() {
+      this.draggingId = null;
+      this.hoverId    = null;
+    },
+    onDragOver(rightId, e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      this.hoverId = rightId;
+    },
+    onDragLeave(rightId) {
+      if (this.hoverId === rightId) this.hoverId = null;
+    },
+    onDrop(rightId, e) {
+      e.preventDefault();
+      const leftId = e.dataTransfer.getData('text/plain') || this.draggingId;
+      if (!leftId || this.submitted) return;
+
+      /* remove any previous mapping to this right slot */
+      const prev = this.connectedLeftId(rightId);
+      if (prev) {
+        const c = { ...this.connections };
+        delete c[prev];
+        this.connections = c;
+      }
+      /* remove any previous right slot for this left item */
+      const c = { ...this.connections };
+      delete c[leftId];
+      c[leftId] = rightId;
+      this.connections = c;
+
+      this.draggingId = null;
+      this.hoverId    = null;
+    },
+
+    /* double-click a right slot to clear its connection */
+    clearSlot(rightId) {
+      if (this.submitted) return;
+      const lid = this.connectedLeftId(rightId);
+      if (!lid) return;
+      const c = { ...this.connections };
+      delete c[lid];
+      this.connections = c;
+    },
+
+    submit() {
+      if (this.submitted) return;
+      this.submitted = true;
+      const answer = {};
+      for (const [leftId, rightId] of Object.entries(this.connections)) {
+        answer[leftId] = this.rights.find(r => r.id === rightId)?.label || '';
+      }
+      fetch('{% url 'quiz:submit_answer' quiz.pk q_index %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ answer, lang: '{{ lang }}' })
+      })
+      .then(r => r.json())
+      .then(data => {
+        data.q_id = '{{ question.pk }}';
+        window.dispatchEvent(new CustomEvent('answer-submitted', { detail: data }));
+      });
+    }
+  }"
+  @dragover.prevent
+>
+  <p class="text-xs text-white/40 mb-4 flex items-center gap-1.5">
+    <span class="text-base">↔</span>
+    {% if lang == 'fr' %}
+      Glissez un élément de gauche et déposez-le sur sa correspondance.
+    {% else %}
+      Drag a left item and drop it onto its match. Double-click a slot to clear it.
+    {% endif %}
+  </p>
+
+  <div class="grid grid-cols-2 gap-x-6 gap-y-2">
+
+    <!-- ── LEFT: draggable chips ── -->
+    <div class="space-y-2">
+      <div class="text-xs font-semibold text-white/40 uppercase tracking-widest mb-1">
+        {% if lang == 'fr' %}Élément{% else %}Item{% endif %}
+      </div>
+      <template x-for="item in lefts" :key="item.id">
+        <div
+          draggable="true"
+          @dragstart="onDragStart(item.id, $event)"
+          @dragend="onDragEnd()"
+          :class="{
+            'opacity-40 scale-95 border-brand/60':            draggingId === item.id,
+            'border-[#22C55E] bg-[#22C55E]/15 text-[#22C55E]': isLeftConnected(item.id) && !submitted,
+            'cursor-grab border-white/10 bg-white/5 text-white/80 hover:border-brand/50 hover:bg-brand/10 hover:text-white': !isLeftConnected(item.id) && !submitted,
+            'cursor-default border-white/10 bg-white/5 text-white/60': submitted,
+          }"
+          class="select-none px-4 py-2.5 rounded-xl border text-sm font-medium transition-all duration-150 flex items-center gap-2 active:cursor-grabbing"
+        >
+          <!-- drag handle dot -->
+          <span class="text-white/20 text-base shrink-0" x-show="!submitted">⠿</span>
+          <span x-text="item.label" class="flex-1"></span>
+          <!-- green tick if connected -->
+          <span x-show="isLeftConnected(item.id) && !submitted" class="text-[#22C55E] text-xs shrink-0">✓</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- ── RIGHT: drop targets ── -->
+    <div class="space-y-2">
+      <div class="text-xs font-semibold text-white/40 uppercase tracking-widest mb-1">
+        {% if lang == 'fr' %}Correspondance{% else %}Match{% endif %}
+      </div>
+      <template x-for="item in rights" :key="item.id">
+        <div
+          @dragover="onDragOver(item.id, $event)"
+          @dragleave="onDragLeave(item.id)"
+          @drop="onDrop(item.id, $event)"
+          @dblclick="clearSlot(item.id)"
+          :class="{
+            /* actively hovered during drag */
+            'border-brand bg-brand/20 scale-[1.03] shadow-[0_0_0_3px_rgba(108,99,255,0.4)]': hoverId === item.id && !submitted,
+            /* slot filled */
+            'border-[#22C55E]/60 bg-[#22C55E]/10':  connectedLeftId(item.id) && hoverId !== item.id && !submitted,
+            /* empty idle */
+            'border-dashed border-white/20 bg-white/3': !connectedLeftId(item.id) && hoverId !== item.id && !submitted,
+            /* submitted */
+            'border-white/10 bg-white/5': submitted,
+          }"
+          class="min-h-[44px] px-4 py-2.5 rounded-xl border text-sm font-medium transition-all duration-150 relative"
+        >
+          <!-- Right label always visible -->
+          <span class="text-white/60 text-xs" x-text="item.label"></span>
+
+          <!-- Snapped chip — shows which left item is dropped here -->
+          <template x-if="connectedLeftId(item.id)">
+            <div class="mt-1 flex items-center gap-1.5">
+              <span class="inline-flex items-center gap-1 bg-brand/30 border border-brand/50 text-brand text-xs font-bold px-2.5 py-1 rounded-full animate-pop">
+                <span x-text="connectedLeftLabel(item.id)"></span>
+                <!-- ✕ to unsnap (only before submit) -->
+                <button x-show="!submitted"
+                        @click.stop="clearSlot(item.id)"
+                        class="ml-0.5 text-brand/60 hover:text-white transition leading-none"
+                        title="Remove">×</button>
+              </span>
+            </div>
+          </template>
+
+          <!-- Empty-slot hint -->
+          <template x-if="!connectedLeftId(item.id) && !submitted">
+            <span class="absolute inset-0 flex items-center justify-center text-white/15 text-xs pointer-events-none">
+              {% if lang == 'fr' %}déposer ici{% else %}drop here{% endif %}
+            </span>
+          </template>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Progress pill -->
+  <div class="flex items-center justify-between mt-3">
+    <span class="text-xs text-white/30"
+          x-text="`${Object.keys(connections).length} / ${pairs.length} {% if lang == 'fr' %}associés{% else %}connected{% endif %}`">
+    </span>
+    <span x-show="!submitted" class="text-xs text-white/20">
+      {% if lang == 'fr' %}Double-clic sur un slot pour effacer{% else %}Double-click slot to clear{% endif %}
+    </span>
+  </div>
+
+  <button
+    @click="submit()"
+    :disabled="Object.keys(connections).length < pairs.length || submitted"
+    class="mt-3 w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-brand to-accent hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+  >
+    {% if lang == 'fr' %}Valider les connexions{% else %}Submit Connections{% endif %}
+  </button>
+</div>

@@ -1,0 +1,64 @@
+{% extends 'quiz/base.html' %}
+{% block title %}{% if lang == 'fr' %}Connexion{% else %}Log In{% endif %} — Sofyana{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
+  <div class="card-glass rounded-[2rem] p-8 w-full max-w-sm">
+
+    <div class="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber to-brand text-4xl mx-auto shadow-warm">🌟</div>
+    <h1 class="text-2xl font-black mb-1 text-center text-ink">
+      {% if lang == 'fr' %}Content(e) de te revoir !{% else %}Welcome back!{% endif %}
+    </h1>
+    <p class="text-[var(--text-soft)] text-sm mb-7 text-center font-bold">
+      {% if lang == 'fr' %}Connexion à Sofyana{% else %}Log in to Sofyana{% endif %}
+    </p>
+
+    {% if error %}
+    <div class="mb-4 rounded-xl bg-pink-light border border-pink/30 text-pink text-sm px-4 py-3 font-bold">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.GET.next }}">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-extrabold text-[var(--text-soft)] uppercase tracking-wide mb-1.5">
+            {% if lang == 'fr' %}Nom d'utilisateur{% else %}Username{% endif %}
+          </label>
+          <input type="text" name="username" autocomplete="username"
+                 class="w-full bg-white border-2 border-brand-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm font-bold transition"
+                 placeholder="{% if lang == 'fr' %}Ton pseudo{% else %}Your username{% endif %}">
+        </div>
+        <div>
+          <label class="block text-xs font-extrabold text-[var(--text-soft)] uppercase tracking-wide mb-1.5">
+            {% if lang == 'fr' %}Mot de passe{% else %}Password{% endif %}
+          </label>
+          <input type="password" name="password" autocomplete="current-password"
+                 class="w-full bg-white border-2 border-brand-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm font-bold transition"
+                 placeholder="••••••••">
+        </div>
+      </div>
+
+      <button type="submit"
+              class="mt-6 w-full bg-brand text-white font-black py-4 rounded-xl transition hover:bg-brand-dark text-sm shadow-warm">
+        {% if lang == 'fr' %}Se connecter{% else %}Log in{% endif %}
+      </button>
+    </form>
+
+    <p class="text-center text-[var(--text-soft)] text-xs mt-5 font-bold">
+      {% if lang == 'fr' %}Pas encore de compte ?{% else %}No account yet?{% endif %}
+      <a href="{% url 'quiz:register' %}?lang={{ lang }}" class="text-brand hover:underline font-extrabold">
+        {% if lang == 'fr' %}S'inscrire{% else %}Sign up{% endif %}
+      </a>
+    </p>
+    <p class="text-center text-[var(--text-soft)] text-xs mt-2 font-bold">
+      {% if lang == 'fr' %}Compte parent ?{% else %}Parent account?{% endif %}
+      <a href="{% url 'quiz:parent_register' %}?lang={{ lang }}" class="text-teal hover:underline font-extrabold">
+        {% if lang == 'fr' %}Inscription parent{% else %}Parent sign up{% endif %}
+      </a>
+    </p>
+  </div>
+</div>
+{% endblock %}

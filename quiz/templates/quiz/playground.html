@@ -1,0 +1,306 @@
+{% extends 'quiz/base.html' %}
+{% block title %}{{ quiz.title_en }} — IXL Killer{% endblock %}
+
+{% block nav_extra %}
+  <a href="{% url 'quiz:scoreboard' quiz.pk %}?lang={{ lang }}"
+     class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition flex items-center gap-1">
+    📊 {% if lang == 'fr' %}Tableau{% else %}Scores{% endif %}
+  </a>
+{% endblock %}
+
+{% block content %}
+<div
+  id="quiz-app"
+  class="max-w-5xl mx-auto px-4 py-8"
+  x-data="quizApp({{ q_index }}, {{ total }}, '{{ lang }}', {{ session.score }}, {{ session.max_score }}, {{ quiz.pk }})"
+  @answer-submitted.window="onAnswerSubmit($event.detail)"
+>
+
+  <!-- TOP BAR — progress + score + timer -->
+  <div class="flex items-center gap-4 mb-6">
+    <!-- Progress bar -->
+    <div class="flex-1">
+      <div class="flex justify-between text-xs text-slate-400 mb-1">
+        <span x-text="`Q${qIndex+1} / ${total}`"></span>
+        <span><span x-text="Math.round((qIndex/total)*100)"></span>%</span>
+      </div>
+      <div class="h-2.5 rounded-full bg-slate-200 overflow-hidden">
+        <div class="h-full rounded-full bg-gradient-to-r from-brand to-accent progress-bar"
+             :style="`width:${Math.round((qIndex/total)*100)}%`"></div>
+      </div>
+    </div>
+
+    <!-- Score badge -->
+    <div class="card-glass rounded-xl px-4 py-2 text-center min-w-[80px]">
+      <div class="text-xs text-slate-400 uppercase tracking-wide">Score</div>
+      <div class="text-lg font-black text-brand" x-text="`${score} / ${maxScore}`"></div>
+    </div>
+
+    <!-- Timer -->
+    <div class="card-glass rounded-xl px-4 py-2 text-center min-w-[70px] relative overflow-hidden">
+      <div class="text-xs text-slate-400 uppercase tracking-wide">⏱</div>
+      <div class="text-2xl font-black tabular-nums"
+           :class="timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-slate-800'"
+           x-text="timeLeft"></div>
+      <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-brand to-accent transition-all duration-1000"
+           :style="`width:${timeLimit > 0 ? Math.round((timeLeft/timeLimit)*100) : 0}%`"></div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="grid lg:grid-cols-[1fr_300px] gap-6">
+
+    <!-- LEFT column -->
+    <div class="space-y-4">
+
+      <!-- Question + answer area (htmx swap target) -->
+      <div id="question-area"
+           data-time-limit="{{ question.time_limit }}"
+           class="card-glass rounded-2xl p-6 animate-slide-up">
+        {% include 'partials/question_area.html' %}
+      </div>
+
+      <!-- Feedback banner -->
+      <div x-show="feedback && !reviewMode"
+           x-transition:enter="transition ease-out duration-300"
+           x-transition:enter-start="opacity-0 translate-y-2"
+           x-transition:enter-end="opacity-100 translate-y-0"
+           class="rounded-xl px-5 py-4 font-semibold text-sm flex items-center gap-3"
+           :class="lastCorrect
+             ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+             : 'bg-red-50 border border-red-200 text-red-600'">
+        <span x-text="lastCorrect ? '✅' : '❌'"></span>
+        <span x-text="feedback"></span>
+      </div>
+
+      <!-- NAV BUTTONS -->
+      <div class="flex items-center justify-between gap-3">
+        <template x-if="!reviewMode">
+          <button @click="navigate(-1)" :disabled="qIndex === 0"
+                  class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm card-glass hover:bg-slate-100 text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition">
+            ← {% if lang == 'fr' %}Précédent{% else %}Previous{% endif %}
+          </button>
+        </template>
+        <template x-if="reviewMode">
+          <p class="text-xs text-slate-400 italic">
+            {% if lang == 'fr' %}Cliquez une question dans la grille →{% else %}Click a question in the grid →{% endif %}
+          </p>
+        </template>
+
+        <div class="flex gap-2">
+          <template x-if="!reviewMode">
+            <button @click="showHint = !showHint"
+                    class="px-4 py-2.5 rounded-xl font-bold text-sm bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 transition">
+              💡 {% if lang == 'fr' %}Indice{% else %}Hint{% endif %}
+            </button>
+          </template>
+          <button @click="toggleReview()"
+                  :class="reviewMode
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'"
+                  class="px-4 py-2.5 rounded-xl font-bold text-sm transition">
+            <span x-text="reviewMode
+              ? '{{ lang }}' === 'fr' ? '← Pratiquer' : '← Practice'
+              : '{{ lang }}' === 'fr' ? '🔍 Réviser' : '🔍 Review'"></span>
+          </button>
+        </div>
+
+        <template x-if="!reviewMode">
+          <button @click="navigate(1)" :disabled="qIndex >= total - 1"
+                  class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-brand text-white hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm">
+            {% if lang == 'fr' %}Suivant{% else %}Next {% endif %}→
+          </button>
+        </template>
+        <template x-if="reviewMode">
+          <div></div>
+        </template>
+      </div>
+
+      <!-- Hint panel -->
+      <div x-show="showHint && !reviewMode" x-transition
+           class="bg-amber-50 rounded-xl p-4 border border-amber-200 text-sm text-amber-700">
+        💡 <span id="hint-text">{{ question.hint_en|default:"No hint available." }}</span>
+      </div>
+
+      <!-- Review panel -->
+      <div x-show="reviewMode" x-transition class="card-glass rounded-xl p-4 text-sm space-y-1">
+        <h3 class="font-bold text-brand mb-3">📋 {% if lang == 'fr' %}Résumé — cliquez pour revoir{% else %}Summary — click to review{% endif %}</h3>
+        {% for q in questions %}
+        <div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0 cursor-pointer hover:bg-slate-50 rounded-lg px-2 -mx-2 transition"
+             @click="reviewQuestion('{{ q.pk }}')">
+          <span class="text-slate-600 truncate max-w-[200px]">Q{{ forloop.counter }}. {% if lang == 'fr' %}{{ q.prompt_fr|default:q.prompt_en|truncatechars:40 }}{% else %}{{ q.prompt_en|truncatechars:40 }}{% endif %}</span>
+          <span class="text-xs px-2 py-0.5 rounded-full ml-2 shrink-0"
+                :class="sessionAnswers['{{ q.pk }}']?.correct
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : sessionAnswers['{{ q.pk }}']
+                    ? 'bg-red-50 text-red-600'
+                    : 'bg-slate-100 text-slate-400'"
+                x-text="sessionAnswers['{{ q.pk }}']?.correct ? '✓ Correct'
+                       : sessionAnswers['{{ q.pk }}'] ? '✗ Wrong'
+                       : '— Skipped'">
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- RIGHT sidebar -->
+    <div class="space-y-4">
+
+      <!-- Illustration -->
+      <div id="sidebar-illustration">
+        {% if question.illustration_url %}
+        <div class="card-glass rounded-2xl overflow-hidden animate-pop">
+          <img src="{{ question.illustration_url }}" alt="illustration"
+               class="w-full h-44 object-cover"/>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Scoring grid -->
+      <div class="card-glass rounded-2xl p-5">
+        <h3 class="font-bold text-sm mb-3 flex items-center gap-2 text-slate-700">
+          🏆 {% if lang == 'fr' %}Tableau de bord{% else %}Score Grid{% endif %}
+        </h3>
+        <div class="grid grid-cols-5 gap-1.5">
+          {% for q in questions %}
+          <div class="aspect-square rounded-lg flex items-center justify-center text-xs font-bold cursor-pointer transition-all hover:scale-110"
+               :class="sessionAnswers['{{ q.pk }}']?.correct
+                 ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                 : sessionAnswers['{{ q.pk }}']
+                   ? 'bg-red-100 text-red-600 border border-red-300'
+                   : !reviewMode && {{ forloop.counter0 }} === qIndex
+                     ? 'bg-brand-light text-brand border border-brand/40 ring-2 ring-brand/20'
+                     : 'bg-slate-100 text-slate-400 border border-slate-200'"
+               @click="reviewMode ? reviewQuestion('{{ q.pk }}') : goTo({{ forloop.counter0 }})">
+            {{ forloop.counter }}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+          <div class="text-3xl font-black bg-gradient-to-r from-brand to-accent bg-clip-text text-transparent"
+               x-text="`${maxScore > 0 ? Math.round(score/maxScore*100) : 0}%`"></div>
+          <div class="text-xs text-slate-400 mt-0.5">
+            {% if lang == 'fr' %}Score actuel{% else %}Current score{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Type + points badge -->
+      <div class="card-glass rounded-xl p-4 text-center">
+        <div class="text-xs text-slate-400 uppercase tracking-wide mb-1">Type</div>
+        <div id="sidebar-type" class="font-bold text-sm text-brand">
+          {% if question.q_type == 'multiple_choice' %}🔘 Multiple Choice
+          {% elif question.q_type == 'drag_drop' %}🖱️ Drag & Drop
+          {% elif question.q_type == 'connect' %}🔗 Connect
+          {% elif question.q_type == 'mix_match' %}🔀 Mix & Match
+          {% elif question.q_type == 'text_input' %}⌨️ Text Input{% endif %}
+        </div>
+        <div id="sidebar-pts" class="text-xs text-slate-400 mt-1">
+          {{ question.points }} pts · {{ question.time_limit }}s
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /quiz-app -->
+
+<script>
+function quizApp(initIndex, total, lang, initScore, initMaxScore, quizId) {
+  return {
+    qIndex:        initIndex,
+    total:         total,
+    lang:          lang,
+    score:         initScore,
+    maxScore:      initMaxScore,
+    timeLeft:      {{ question.time_limit }},
+    timeLimit:     {{ question.time_limit }},
+    _timer:        null,
+    answered:      false,
+    feedback:      '',
+    lastCorrect:   false,
+    showHint:      false,
+    reviewMode:    false,
+    sessionAnswers: {{ session_answers_json|safe }},
+
+    init() {
+      window._quizApp = this;
+      this.startTimer();
+    },
+
+    startTimer() {
+      clearInterval(this._timer);
+      this._timer = setInterval(() => {
+        if (this.timeLeft > 0) {
+          this.timeLeft--;
+        } else {
+          clearInterval(this._timer);
+          if (!this.answered) {
+            this.feedback    = this.lang === 'fr' ? "Temps écoulé !" : "Time's up!";
+            this.lastCorrect = false;
+            this.answered    = true;
+          }
+        }
+      }, 1000);
+    },
+
+    navigate(dir) {
+      const next = Math.max(0, Math.min(this.qIndex + dir, this.total - 1));
+      this.goTo(next);
+    },
+
+    goTo(idx) {
+      this.qIndex   = idx;
+      this.answered = false;
+      this.feedback = '';
+      this.showHint = false;
+      htmx.ajax('GET', `/quiz/${quizId}/q/${idx}/?lang=${this.lang}`,
+                { target: '#question-area', swap: 'outerHTML' });
+    },
+
+    toggleReview() {
+      this.reviewMode = !this.reviewMode;
+      if (!this.reviewMode) {
+        // Return to current live question
+        this.goTo(this.qIndex);
+      } else {
+        // Load placeholder — user picks from the list/grid
+        clearInterval(this._timer);
+        this.feedback = '';
+      }
+    },
+
+    reviewQuestion(qPk) {
+      htmx.ajax('GET', `/quiz/${quizId}/review/${qPk}/?lang=${this.lang}`,
+                { target: '#question-area', swap: 'outerHTML' });
+    },
+
+    onAnswerSubmit(data) {
+      this.answered    = true;
+      this.lastCorrect = data.correct;
+      this.feedback    = this.lang === 'fr' ? data.feedback_fr : data.feedback_en;
+      this.score       = data.score;
+      clearInterval(this._timer);
+      this.sessionAnswers = {
+        ...this.sessionAnswers,
+        [String(data.q_id)]: { correct: data.correct, points: data.points }
+      };
+      toast(this.feedback, data.correct ? 'success' : 'error');
+    },
+  };
+}
+
+document.addEventListener('htmx:afterSwap', function(e) {
+  const qa = document.getElementById('question-area');
+  if (!qa || !window._quizApp) return;
+  // Skip timer reset for review partials
+  if (qa.dataset.review === 'true') return;
+  const t = parseInt(qa.dataset.timeLimit || 30, 10);
+  window._quizApp.timeLeft  = t;
+  window._quizApp.timeLimit = t;
+  window._quizApp.answered  = false;
+  window._quizApp.feedback  = '';
+  window._quizApp.startTimer();
+});
+</script>
+{% endblock %}

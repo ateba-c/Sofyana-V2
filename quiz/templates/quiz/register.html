@@ -1,0 +1,100 @@
+{% extends 'quiz/base.html' %}
+{% block title %}{% if lang == 'fr' %}Créer un compte{% else %}Create Account{% endif %} — Sofyana{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-sm space-y-4">
+
+    <!-- Account type chooser -->
+    <div class="card-solid rounded-[2rem] p-5 text-center">
+      <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber to-brand text-4xl mx-auto">🌟</div>
+      <h1 class="font-display text-2xl font-extrabold text-ink">
+        {% if lang == 'fr' %}Qui rejoint Sofyana ?{% else %}Who's joining Sofyana?{% endif %}
+      </h1>
+      <p class="mt-2 text-sm font-bold text-[var(--text-soft)]">
+        {% if lang == 'fr' %}Choisis ton type de compte{% else %}Choose your account type{% endif %}
+      </p>
+      <div class="mt-5 grid grid-cols-2 gap-3">
+        <div id="type-student"
+             class="cursor-pointer rounded-[1.5rem] border-2 border-brand bg-brand-light p-4 text-center transition hover:shadow-card"
+             onclick="selectType('student')">
+          <div class="text-3xl mb-2">🎒</div>
+          <div class="font-black text-brand text-sm">{% if lang == 'fr' %}Je suis élève{% else %}I'm a student{% endif %}</div>
+        </div>
+        <a href="{% url 'quiz:parent_register' %}?lang={{ lang }}"
+           class="rounded-[1.5rem] border-2 border-teal bg-teal-light p-4 text-center transition hover:shadow-card block">
+          <div class="text-3xl mb-2">👨‍👩‍👧</div>
+          <div class="font-black text-teal-dark text-sm">{% if lang == 'fr' %}Je suis parent{% else %}I'm a parent{% endif %}</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Student registration form -->
+    <div id="student-form" class="card-glass rounded-[2rem] p-7">
+      <h2 class="text-xl font-black text-ink mb-1">
+        {% if lang == 'fr' %}Créer mon compte élève{% else %}Create student account{% endif %}
+      </h2>
+      <p class="text-xs font-bold text-[var(--text-soft)] mb-6">
+        {% if lang == 'fr' %}Rejoins des milliers d'élèves !{% else %}Join thousands of learners!{% endif %}
+      </p>
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.GET.next }}">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-extrabold text-[var(--text-soft)] uppercase tracking-wide mb-1.5">
+              {% if lang == 'fr' %}Nom d'utilisateur{% else %}Username{% endif %}
+            </label>
+            <input type="text" name="username"
+                   value="{{ form.username.value|default:'' }}"
+                   autocomplete="username"
+                   class="w-full bg-white border-2 border-brand-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm font-bold transition"
+                   placeholder="{% if lang == 'fr' %}Ton pseudo cool{% else %}Your cool username{% endif %}">
+            {% if form.username.errors %}
+              <p class="text-pink text-xs mt-1 font-bold">{{ form.username.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-xs font-extrabold text-[var(--text-soft)] uppercase tracking-wide mb-1.5">
+              {% if lang == 'fr' %}Mot de passe{% else %}Password{% endif %}
+            </label>
+            <input type="password" name="password1"
+                   autocomplete="new-password"
+                   class="w-full bg-white border-2 border-brand-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm font-bold transition"
+                   placeholder="{% if lang == 'fr' %}Au moins 4 caractères{% else %}At least 4 characters{% endif %}">
+            {% if form.password1.errors %}
+              <p class="text-pink text-xs mt-1 font-bold">{{ form.password1.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-xs font-extrabold text-[var(--text-soft)] uppercase tracking-wide mb-1.5">
+              {% if lang == 'fr' %}Confirme le mot de passe{% else %}Confirm Password{% endif %}
+            </label>
+            <input type="password" name="password2"
+                   autocomplete="new-password"
+                   class="w-full bg-white border-2 border-brand-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm font-bold transition"
+                   placeholder="{% if lang == 'fr' %}Répète le mot de passe{% else %}Repeat password{% endif %}">
+            {% if form.password2.errors %}
+              <p class="text-pink text-xs mt-1 font-bold">{{ form.password2.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <button type="submit"
+                class="mt-6 w-full bg-brand hover:bg-brand-dark text-white font-black py-4 rounded-xl transition hover:opacity-90 text-sm shadow-card">
+          {% if lang == 'fr' %}Créer mon compte 🚀{% else %}Create my account 🚀{% endif %}
+        </button>
+      </form>
+
+      <p class="text-center text-[var(--text-soft)] text-xs mt-5 font-bold">
+        {% if lang == 'fr' %}Déjà un compte ?{% else %}Already have an account?{% endif %}
+        <a href="{% url 'quiz:login' %}?lang={{ lang }}" class="text-brand hover:underline font-extrabold">
+          {% if lang == 'fr' %}Se connecter{% else %}Log in{% endif %}
+        </a>
+      </p>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'quiz/base.html' %}
+{% block title %}{% if lang == 'fr' %}Profil{% else %}Profile{% endif %}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl space-y-6">
+  <section class="card-solid rounded-[2rem] p-6 sm:p-8">
+    <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <div class="flex items-center gap-4">
+        <div class="flex h-24 w-24 items-center justify-center rounded-[2rem] bg-gradient-to-br from-brand-light to-accent-light text-6xl shadow-card">{{ student.avatar_emoji }}</div>
+        <div>
+          <p class="text-xs font-extrabold uppercase tracking-[0.24em] text-brand">{% if lang == 'fr' %}Mon espace{% else %}My space{% endif %}</p>
+          <h1 class="mt-2 font-display text-4xl font-extrabold text-ink">{{ request.user.username }}</h1>
+          <p class="mt-2 text-sm font-bold text-slate-600">{% if lang == 'fr' %}Choisis un avatar débloqué et regarde tes progrès d un coup d oeil.{% else %}Pick an unlocked avatar and see your progress at a glance.{% endif %}</p>
+        </div>
+      </div>
+      <a href="{% url 'quiz:prizes' %}?lang={{ lang }}" class="inline-flex items-center justify-center gap-2 rounded-full bg-amber-500 px-5 py-3 text-sm font-black text-white shadow-card">
+        <span>🎁</span>
+        <span>{% if lang == 'fr' %}Voir les prix{% else %}View prizes{% endif %}</span>
+      </a>
+    </div>
+
+    <div class="mt-6 grid gap-4 sm:grid-cols-3">
+      <div class="rounded-[1.5rem] bg-amber-50 p-5">
+        <div class="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-700">{% if lang == 'fr' %}Étoiles{% else %}Stars{% endif %}</div>
+        <div class="mt-2 text-3xl font-black text-amber-600">{{ student.total_stars }}</div>
+      </div>
+      <div class="rounded-[1.5rem] bg-sky-50 p-5">
+        <div class="text-xs font-extrabold uppercase tracking-[0.2em] text-sky-700">{% if lang == 'fr' %}Questions{% else %}Solved{% endif %}</div>
+        <div class="mt-2 text-3xl font-black text-sky-600">{{ solved_count }}</div>
+      </div>
+      <div class="rounded-[1.5rem] bg-emerald-50 p-5">
+        <div class="text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-700">{% if lang == 'fr' %}Précision{% else %}Accuracy{% endif %}</div>
+        <div class="mt-2 text-3xl font-black text-emerald-600">{{ accuracy_pct }}%</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card-glass rounded-[2rem] p-5 sm:p-7">
+    <div class="mb-5 flex items-center justify-between gap-3">
+      <div>
+        <h2 class="font-display text-3xl font-extrabold text-ink">{% if lang == 'fr' %}Mes avatars{% else %}My avatars{% endif %}</h2>
+        <p class="mt-2 text-sm font-bold text-slate-600">{% if lang == 'fr' %}Seuls les avatars débloqués peuvent être choisis.{% else %}Only unlocked avatars can be selected.{% endif %}</p>
+      </div>
+      <a href="{% url 'quiz:progress' %}?lang={{ lang }}" class="rounded-full bg-white px-4 py-3 text-sm font-black text-brand shadow-card">{% if lang == 'fr' %}Voir le progrès{% else %}See progress{% endif %}</a>
+    </div>
+    <form method="post" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {% csrf_token %}
+      {% for av in avatars %}
+      <button type="submit" name="avatar" value="{{ av.slug }}"
+              class="rounded-[1.6rem] border p-5 text-left shadow-card transition {% if av.slug == student.avatar_slug %}border-brand bg-brand-light/30{% elif av.is_unlocked %}border-slate-200 bg-white hover:-translate-y-0.5{% else %}border-slate-200 bg-slate-100 opacity-70{% endif %}"
+              {% if not av.is_unlocked %}disabled{% endif %}>
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex h-16 w-16 items-center justify-center rounded-[1.4rem] bg-white text-4xl">{{ av.emoji }}</div>
+          <div class="rounded-full px-3 py-1 text-xs font-black {% if av.slug == student.avatar_slug %}bg-brand text-white{% elif av.is_unlocked %}bg-emerald-50 text-emerald-700{% else %}bg-slate-200 text-slate-600{% endif %}">
+            {% if av.slug == student.avatar_slug %}
+              {% if lang == 'fr' %}Actif{% else %}Active{% endif %}
+            {% elif av.is_unlocked %}
+              {% if lang == 'fr' %}Disponible{% else %}Unlocked{% endif %}
+            {% else %}
+              {% if lang == 'fr' %}Verrouillé{% else %}Locked{% endif %}
+            {% endif %}
+          </div>
+        </div>
+        <p class="mt-4 text-lg font-black text-slate-800">{{ av.slug|title }}</p>
+      </button>
+      {% endfor %}
+    </form>
+  </section>
+</div>
+{% endblock %}

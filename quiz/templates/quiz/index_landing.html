@@ -1,0 +1,522 @@
+{% extends 'quiz/base_landing.html' %}
+{% block title %}Sofyana — {% if lang == 'fr' %}Apprendre avec joie{% else %}Learn with Joy{% endif %}{% endblock %}
+
+{% block content %}
+
+<!-- ══════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════ -->
+<section class="relative flex flex-col items-center gap-6 pt-4 pb-6 sm:pt-6 sm:pb-8 lg:flex-row lg:items-center lg:gap-10 lg:pt-8 lg:pb-10">
+
+  <!-- Left: copy & CTAs -->
+  <div class="flex-1 text-center lg:text-left">
+
+    <!-- Badge pill -->
+    <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-brand-light bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-[0.18em] text-brand shadow-card">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.5 4h4.2L9.6 7.5l1.3 4.1L7 9.2 3.1 11.6l1.3-4.1L1.3 5h4.2z" fill="#F97316"/></svg>
+      {% if lang == 'fr' %}Pour les élèves du primaire — 60 jours gratuits{% else %}For Grade 1 to 6 learners — 60 days free{% endif %}
+    </div>
+
+    <h1 class="font-display text-4xl font-extrabold leading-tight text-ink sm:text-5xl lg:text-6xl">
+      {% if lang == 'fr' %}
+        Apprends, Joue<br><span class="text-brand">&amp; Grandis !</span>
+      {% else %}
+        Learn, Play<br><span class="text-brand">&amp; Grow!</span>
+      {% endif %}
+    </h1>
+
+    <p class="mt-5 text-base font-bold leading-7 sm:text-lg lg:max-w-md" style="color:var(--text-soft)">
+      {% if lang == 'fr' %}
+        Les maths deviennent une aventure ! Des défis adaptés créés juste pour ton enfant, de la 1re à la 6e année.
+      {% else %}
+        Math feels like a game! Adaptive challenges created just for your child, from Grade 1 to Grade 6.
+      {% endif %}
+    </p>
+
+    <div class="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
+      <a href="{% url 'quiz:register' %}?lang={{ lang }}"
+         class="rounded-2xl bg-brand px-7 py-4 text-base font-black text-white shadow-warm hover:bg-brand-dark hover:scale-105 transition-all">
+        {% if lang == 'fr' %}Commencer gratuitement →{% else %}Start for free →{% endif %}
+      </a>
+      <a href="#comment-ca-marche"
+         class="rounded-2xl border-2 border-brand-light bg-white px-7 py-4 text-base font-black text-brand hover:bg-brand-light transition">
+        {% if lang == 'fr' %}Comment ça marche{% else %}How it works{% endif %}
+      </a>
+    </div>
+
+    <p class="mt-5 text-sm font-bold" style="color:var(--text-soft)">
+      {% if lang == 'fr' %}Vous êtes un parent ?{% else %}Are you a parent?{% endif %}
+      <a href="{% url 'quiz:parent_register' %}?lang={{ lang }}" class="text-brand underline font-extrabold">
+        {% if lang == 'fr' %}Créer un compte parent{% else %}Create a parent account{% endif %}
+      </a>
+    </p>
+  </div>
+
+  <!-- Right: Star mascot inside card (sofyana.app-style container) -->
+  <div class="relative flex-shrink-0 rounded-[2.5rem] bg-white/70 border border-brand-light shadow-card p-4 sm:p-6"
+       style="width:min(20rem,90vw)">
+
+    <!-- Warm glow behind star -->
+    <div class="absolute inset-8 rounded-full bg-gradient-to-br from-amber to-brand opacity-10 blur-2xl"></div>
+
+    <div class="animate-float flex items-center justify-center" style="height:17rem">
+
+    <svg viewBox="0 0 280 290" xmlns="http://www.w3.org/2000/svg" class="relative z-10 w-full h-full" style="filter:drop-shadow(0 16px 40px rgba(249,115,22,0.25))">
+
+      <!-- ── Floating decorative dots ── -->
+      <circle cx="24"  cy="58"  r="7.5" fill="#93C5FD" opacity="0.85"/>
+      <circle cx="252" cy="195" r="10"  fill="#FCD34D" opacity="0.8"/>
+      <circle cx="240" cy="30"  r="6"   fill="#6EE7B7" opacity="0.9"/>
+      <circle cx="40"  cy="228" r="8.5" fill="#F9A8D4" opacity="0.8"/>
+      <circle cx="258" cy="110" r="5"   fill="#FCA5A5" opacity="0.7"/>
+      <circle cx="16"  cy="155" r="4.5" fill="#C4B5FD" opacity="0.75"/>
+
+      <!-- ── Soft ground shadow ── -->
+      <ellipse cx="118" cy="184" rx="64" ry="11" fill="#F59E0B" opacity="0.12"/>
+
+      <!-- ── Star body ── -->
+      <!-- 5-pointed star: center ~(118,105), R=90, r=36 -->
+      <polygon points="118,18 140,80 206,80 154,118 174,180 118,142 62,180 82,118 30,80 96,80"
+               fill="#FDE68A" stroke="#F59E0B" stroke-width="3" stroke-linejoin="round"/>
+
+      <!-- Inner highlight (3D feel, top-left facet) -->
+      <polygon points="118,18 126,66 96,80" fill="#FEF9C3" opacity="0.7"/>
+      <polygon points="118,18 140,80 126,66" fill="#FEF3C7" opacity="0.35"/>
+
+      <!-- ── Face ── -->
+      <!-- Left eye -->
+      <circle cx="100" cy="96"  r="7.5" fill="#1C1018"/>
+      <circle cx="103" cy="93"  r="2.8" fill="white"/>
+      <!-- Right eye -->
+      <circle cx="136" cy="96"  r="7.5" fill="#1C1018"/>
+      <circle cx="139" cy="93"  r="2.8" fill="white"/>
+      <!-- Smile -->
+      <path d="M102 118 Q118 135 134 118" stroke="#1C1018" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <!-- Cheek blushes -->
+      <circle cx="87"  cy="112" r="9"  fill="#FCA5A5" opacity="0.35"/>
+      <circle cx="149" cy="112" r="9"  fill="#FCA5A5" opacity="0.35"/>
+
+      <!-- ── Pencil (extends from bottom-right star point, angled ~35°) ── -->
+      <g transform="translate(178,148) rotate(38)">
+        <!-- body -->
+        <rect x="-5.5" y="0" width="11" height="50" rx="2.2" fill="#FCD34D"/>
+        <!-- wood grain detail -->
+        <line x1="-2" y1="12" x2="-2" y2="43" stroke="#F59E0B" stroke-width="1" opacity="0.45"/>
+        <!-- metal ferrule -->
+        <rect x="-5.5" y="41" width="11" height="5"   fill="#9CA3AF"/>
+        <!-- eraser (pink top) -->
+        <rect x="-5.5" y="0"  width="11" height="9"   rx="2.2" fill="#FECACA"/>
+        <!-- ferrule line -->
+        <rect x="-5.5" y="9"  width="11" height="2.5" fill="#D1D5DB"/>
+        <!-- tip (wood cone) -->
+        <polygon points="-5.5,46 5.5,46 0,60" fill="#D97706"/>
+        <!-- graphite point -->
+        <polygon points="-2,53 2,53 0,60" fill="#374151"/>
+      </g>
+
+      <!-- ── Math card (bottom-left, tilted) ── -->
+      <g transform="translate(14,185) rotate(-7)">
+        <!-- card shadow -->
+        <rect x="3" y="4" width="84" height="50" rx="12" fill="#F97316" opacity="0.12"/>
+        <!-- card body -->
+        <rect x="0" y="0" width="84" height="50" rx="12" fill="white" stroke="#FED7AA" stroke-width="2"/>
+        <!-- divider -->
+        <line x1="42" y1="10" x2="42" y2="40" stroke="#FED7AA" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <!-- question side -->
+        <text x="21" y="32" text-anchor="middle" font-family="Nunito,sans-serif" font-size="15" font-weight="900" fill="#F97316">2+3</text>
+        <!-- answer side -->
+        <text x="63" y="32" text-anchor="middle" font-family="Nunito,sans-serif" font-size="15" font-weight="900" fill="#22C55E">= 5</text>
+      </g>
+
+      <!-- ── Level-up badge (top-right, floating) ── -->
+      <g transform="translate(216,46)">
+        <!-- outer ring -->
+        <circle cx="0" cy="0" r="30" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2.5"/>
+        <!-- inner warm fill -->
+        <circle cx="0" cy="0" r="22" fill="#FDE68A" opacity="0.55"/>
+        <!-- upward chevron arrow -->
+        <path d="M-10 8 L0 -6 L10 8" stroke="#D97706" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- small sparkle above chevron -->
+        <circle cx="0" cy="-16" r="3" fill="#F59E0B" opacity="0.7"/>
+      </g>
+
+      <!-- tiny sparkle dots near badge -->
+      <circle cx="188" cy="20" r="3"   fill="#F59E0B" opacity="0.55"/>
+      <circle cx="248" cy="72" r="3.5" fill="#FCD34D" opacity="0.6"/>
+
+    </svg>
+    </div><!-- end animate-float -->
+
+    <!-- Result card at bottom of container (like sofyana.app) -->
+    <div class="mt-4 flex items-center gap-3 rounded-2xl bg-brand-light px-4 py-3 border border-brand/20">
+      <span class="text-2xl">⭐</span>
+      <div>
+        <div class="text-xs font-extrabold uppercase tracking-wide text-brand">
+          {% if lang == 'fr' %}Bravo !{% else %}Perfect!{% endif %}
+        </div>
+        <div class="text-sm font-black text-ink">2 + 3 = 5</div>
+      </div>
+      <div class="ml-auto text-xs font-extrabold text-brand">+1 ⭐</div>
+    </div>
+
+  </div><!-- end card container -->
+</section>
+
+<!-- ══════════════════════════════════════════════
+     STATS BAR
+══════════════════════════════════════════════ -->
+<section class="my-2 mb-10 grid grid-cols-3 gap-3 sm:gap-6 rounded-[2rem] bg-gradient-to-r from-brand to-amber-500 p-6 text-white shadow-warm">
+  <div class="text-center">
+    <div class="font-display text-3xl font-extrabold sm:text-4xl">87</div>
+    <div class="mt-1 text-xs font-extrabold uppercase tracking-wide opacity-80">
+      {% if lang == 'fr' %}compétences{% else %}skills{% endif %}
+    </div>
+  </div>
+  <div class="text-center border-x border-white/20">
+    <div class="font-display text-3xl font-extrabold sm:text-4xl">1→6</div>
+    <div class="mt-1 text-xs font-extrabold uppercase tracking-wide opacity-80">
+      {% if lang == 'fr' %}années scolaires{% else %}grade levels{% endif %}
+    </div>
+  </div>
+  <div class="text-center">
+    <div class="font-display text-3xl font-extrabold sm:text-4xl">100%</div>
+    <div class="mt-1 text-xs font-extrabold uppercase tracking-wide opacity-80">
+      {% if lang == 'fr' %}gratuit{% else %}free{% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     FEATURE CARDS
+══════════════════════════════════════════════ -->
+<section class="grid gap-4 sm:grid-cols-3 mb-14">
+  <div class="card-solid rounded-[2rem] p-6 hover:-translate-y-1 transition-transform">
+    <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-light text-3xl">🧩</div>
+    <h3 class="font-display text-xl font-extrabold text-ink">
+      {% if lang == 'fr' %}87 compétences{% else %}87 skills{% endif %}
+    </h3>
+    <p class="mt-2 text-sm font-bold leading-6" style="color:var(--text-soft)">
+      {% if lang == 'fr' %}Additions, fractions, géométrie, probabilités — tout le programme en un seul endroit.{% else %}Addition, fractions, geometry, probability — the full curriculum in one place.{% endif %}
+    </p>
+  </div>
+  <div class="card-solid rounded-[2rem] p-6 hover:-translate-y-1 transition-transform">
+    <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-light text-3xl">🔥</div>
+    <h3 class="font-display text-xl font-extrabold text-ink">
+      {% if lang == 'fr' %}S'adapte à l'enfant{% else %}Adapts to your child{% endif %}
+    </h3>
+    <p class="mt-2 text-sm font-bold leading-6" style="color:var(--text-soft)">
+      {% if lang == 'fr' %}Plus facile ou plus difficile selon les résultats, automatiquement.{% else %}Gets easier or harder based on performance, automatically.{% endif %}
+    </p>
+  </div>
+  <div class="card-solid rounded-[2rem] p-6 hover:-translate-y-1 transition-transform">
+    <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-light text-3xl">👪</div>
+    <h3 class="font-display text-xl font-extrabold text-ink">
+      {% if lang == 'fr' %}Vue parents{% else %}Parent view{% endif %}
+    </h3>
+    <p class="mt-2 text-sm font-bold leading-6" style="color:var(--text-soft)">
+      {% if lang == 'fr' %}Suivez la progression et assignez des devoirs à distance.{% else %}Track progress and assign homework remotely.{% endif %}
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     HOW IT WORKS  (4-card 2×2 grid like sofyana.app)
+══════════════════════════════════════════════ -->
+<section id="comment-ca-marche" class="mb-14">
+  <div class="mb-8 text-center">
+    <h2 class="font-display text-3xl font-extrabold text-ink">
+      {% if lang == 'fr' %}Comment Sofyana fonctionne ✨{% else %}How Sofyana works ✨{% endif %}
+    </h2>
+    <p class="mt-2 text-base font-bold" style="color:var(--text-soft)">
+      {% if lang == 'fr' %}Apprendre en s'amusant, une étape à la fois !{% else %}Learning through play, one step at a time!{% endif %}
+    </p>
+  </div>
+
+  <div class="grid gap-5 sm:grid-cols-2">
+    <!-- Card 1: Adaptive engine -->
+    <div class="card-solid rounded-[2rem] p-6 flex gap-4">
+      <div class="flex-shrink-0 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-light text-2xl">🧠</div>
+      <div>
+        <h3 class="font-display text-lg font-extrabold text-ink">
+          {% if lang == 'fr' %}Moteur intelligent{% else %}Intelligent engine{% endif %}
+        </h3>
+        <p class="mt-1 text-sm font-bold leading-6" style="color:var(--text-soft)">
+          {% if lang == 'fr' %}Notre moteur génère des problèmes uniques juste pour toi, suivant parfaitement le programme scolaire.{% else %}Our engine generates unique problems just for you, perfectly following the school curriculum.{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Card 2: Deep diagnostics -->
+    <div class="card-solid rounded-[2rem] p-6 flex gap-4">
+      <div class="flex-shrink-0 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-light text-2xl">🔍</div>
+      <div>
+        <h3 class="font-display text-lg font-extrabold text-ink">
+          {% if lang == 'fr' %}Diagnostics profonds{% else %}Deep diagnostics{% endif %}
+        </h3>
+        <p class="mt-1 text-sm font-bold leading-6" style="color:var(--text-soft)">
+          {% if lang == 'fr' %}Nous ne disons pas "Faux !". Nous trouvons pourquoi tu bloques et donnons des indices ciblés.{% else %}We don't just say "Wrong!". We find why you're stuck and give targeted hints.{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Card 3: Visualize math -->
+    <div class="card-solid rounded-[2rem] p-6 flex gap-4">
+      <div class="flex-shrink-0 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-light text-2xl">👁️</div>
+      <div>
+        <h3 class="font-display text-lg font-extrabold text-ink">
+          {% if lang == 'fr' %}Visualise les maths{% else %}Visualize math{% endif %}
+        </h3>
+        <p class="mt-1 text-sm font-bold leading-6" style="color:var(--text-soft)">
+          {% if lang == 'fr' %}Des explications étape par étape rendent les idées complexes simples et accessibles.{% else %}Step-by-step explanations make complex ideas simple and accessible.{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Card 4: See yourself grow -->
+    <div class="card-solid rounded-[2rem] p-6 flex gap-4">
+      <div class="flex-shrink-0 flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-light text-2xl">📈</div>
+      <div>
+        <h3 class="font-display text-lg font-extrabold text-ink">
+          {% if lang == 'fr' %}Regarde-toi grandir{% else %}Watch yourself grow{% endif %}
+        </h3>
+        <p class="mt-1 text-sm font-bold leading-6" style="color:var(--text-soft)">
+          {% if lang == 'fr' %}Gagne des étoiles, obtiens des prix et suis tes progrès sur ton tableau de bord personnalisé.{% else %}Earn stars, unlock prizes and track your progress on your personal dashboard.{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     GRADE LEVELS
+══════════════════════════════════════════════ -->
+<section class="mb-14">
+  <div class="mb-8 text-center">
+    <p class="text-xs font-extrabold uppercase tracking-[0.24em] text-brand">
+      {% if lang == 'fr' %}Contenu par niveau{% else %}Content by grade{% endif %}
+    </p>
+    <h2 class="mt-2 font-display text-3xl font-extrabold text-ink">
+      {% if lang == 'fr' %}Adapté à chaque année{% else %}Tailored to every grade{% endif %}
+    </h2>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-3">
+    <!-- General / All grades -->
+    <div class="card-solid rounded-[2rem] p-5 border-l-4" style="border-color:#F97316">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-light text-2xl">🔢</div>
+        <div>
+          <div class="font-display font-extrabold text-ink">{% if lang == 'fr' %}Toutes années{% else %}All grades{% endif %}</div>
+          <div class="text-xs font-bold text-brand">24 {% if lang == 'fr' %}compétences{% else %}skills{% endif %}</div>
+        </div>
+      </div>
+      <p class="text-xs font-bold leading-5" style="color:var(--text-soft)">
+        {% if lang == 'fr' %}Arithmétique, fractions, géométrie, mesures et plus — applicable à tous les niveaux.{% else %}Arithmetic, fractions, geometry, measurement and more — applicable at all levels.{% endif %}
+      </p>
+    </div>
+
+    <!-- Grade 3 -->
+    <div class="card-solid rounded-[2rem] p-5 border-l-4" style="border-color:#F59E0B">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-light text-2xl">➕</div>
+        <div>
+          <div class="font-display font-extrabold text-ink">{% if lang == 'fr' %}3e année{% else %}Grade 3{% endif %}</div>
+          <div class="text-xs font-bold text-brand">41 {% if lang == 'fr' %}compétences{% else %}skills{% endif %}</div>
+        </div>
+      </div>
+      <p class="text-xs font-bold leading-5" style="color:var(--text-soft)">
+        {% if lang == 'fr' %}Numération, calcul, géométrie, fractions, monnaie, mesure et statistiques.{% else %}Number sense, arithmetic, geometry, fractions, money, measurement and statistics.{% endif %}
+      </p>
+    </div>
+
+    <!-- Grade 5 -->
+    <div class="card-solid rounded-[2rem] p-5 border-l-4" style="border-color:#22C55E">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-lime-light text-2xl">➗</div>
+        <div>
+          <div class="font-display font-extrabold text-ink">{% if lang == 'fr' %}5e année{% else %}Grade 5{% endif %}</div>
+          <div class="text-xs font-bold text-brand">22 {% if lang == 'fr' %}compétences{% else %}skills{% endif %}</div>
+        </div>
+      </div>
+      <p class="text-xs font-bold leading-5" style="color:var(--text-soft)">
+        {% if lang == 'fr' %}Ordre des opérations, décimaux, mesure avancée, statistiques et probabilités.{% else %}Order of operations, decimals, advanced measurement, statistics and probability.{% endif %}
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SKILLS PREVIEW
+══════════════════════════════════════════════ -->
+{% if topic_groups %}
+<section id="skills" class="card-glass rounded-[2.25rem] p-5 sm:p-8 mb-14">
+  <div class="mb-6 text-center">
+    <p class="text-xs font-extrabold uppercase tracking-[0.24em] text-brand">
+      {% if lang == 'fr' %}Ce que vous allez apprendre{% else %}What you'll learn{% endif %}
+    </p>
+    <h2 class="mt-2 font-display text-3xl font-extrabold text-ink">
+      {% if lang == 'fr' %}Toutes les compétences incluses{% else %}All skills included{% endif %}
+    </h2>
+  </div>
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    {% for group in topic_groups %}
+    <div class="rounded-[1.5rem] bg-white/90 p-4" style="border:1px solid rgba(249,115,22,0.15)">
+      <div class="mb-3 flex items-center gap-2">
+        <span class="text-2xl">{{ group.icon }}</span>
+        <span class="text-sm font-black text-ink">{% if lang == 'fr' %}{{ group.name_fr }}{% else %}{{ group.name_en }}{% endif %}</span>
+      </div>
+      <div class="space-y-1">
+        {% for t in group.topics %}
+        <div class="text-xs font-bold truncate" style="color:var(--text-soft)">• {% if lang == 'fr' %}{{ t.name_fr }}{% else %}{{ t.name_en }}{% endif %}</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="mt-8 text-center">
+    <a href="{% url 'quiz:register' %}?lang={{ lang }}"
+       class="inline-flex items-center gap-2 rounded-2xl bg-brand px-8 py-4 font-black text-white shadow-warm hover:bg-brand-dark hover:scale-105 transition-all">
+      <span>{% if lang == 'fr' %}Créer un compte gratuit{% else %}Create a free account{% endif %}</span>
+      <span>→</span>
+    </a>
+  </div>
+</section>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════
+     PRICING
+══════════════════════════════════════════════ -->
+<section class="mb-14">
+  <div class="mb-8 text-center">
+    <h2 class="font-display text-3xl font-extrabold text-ink">
+      {% if lang == 'fr' %}Choisissez votre chemin vers l'excellence{% else %}Choose your path to excellence{% endif %}
+    </h2>
+    <p class="mt-2 text-sm font-bold" style="color:var(--text-soft)">
+      {% if lang == 'fr' %}Annulez à tout moment{% else %}Cancel anytime{% endif %}
+    </p>
+  </div>
+
+  <div class="grid gap-5 sm:grid-cols-3">
+
+    <!-- Free -->
+    <div class="card-solid rounded-[2rem] p-6 flex flex-col">
+      <div class="mb-4">
+        <div class="font-display text-lg font-extrabold text-ink">
+          {% if lang == 'fr' %}60 jours gratuits{% else %}60-Day Free Trial{% endif %}
+        </div>
+        <div class="mt-2 flex items-end gap-1">
+          <span class="font-display text-4xl font-extrabold text-ink">$0</span>
+          <span class="mb-1 text-sm font-bold" style="color:var(--text-soft)">/{% if lang == 'fr' %}mois{% else %}mo{% endif %}</span>
+        </div>
+        <p class="mt-2 text-xs font-bold leading-5" style="color:var(--text-soft)">
+          {% if lang == 'fr' %}Découvrez toute la puissance de Sofyana pendant 60 jours — sans carte de crédit.{% else %}Experience the full power of Sofyana for 60 days — no credit card needed.{% endif %}
+        </p>
+      </div>
+      <ul class="space-y-2 text-sm font-bold flex-1" style="color:var(--text-soft)">
+        <li class="flex gap-2"><span class="text-brand">✓</span> {% if lang == 'fr' %}Problèmes illimités{% else %}Unlimited problems{% endif %}</li>
+        <li class="flex gap-2"><span class="text-brand">✓</span> {% if lang == 'fr' %}Moteur intelligent{% else %}Intelligent engine{% endif %}</li>
+        <li class="flex gap-2"><span class="text-brand">✓</span> {% if lang == 'fr' %}Pratique de base{% else %}Basic practice{% endif %}</li>
+        <li class="flex gap-2"><span class="text-brand">✓</span> {% if lang == 'fr' %}60 jours gratuits{% else %}60 days free{% endif %}</li>
+        <li class="flex gap-2"><span class="text-brand">✓</span> {% if lang == 'fr' %}Aucune carte de crédit{% else %}No credit card needed{% endif %}</li>
+      </ul>
+      <a href="{% url 'quiz:register' %}?lang={{ lang }}"
+         class="mt-6 block rounded-2xl border-2 border-brand bg-white py-3 text-center text-sm font-black text-brand hover:bg-brand-light transition">
+        {% if lang == 'fr' %}Commencer gratuitement{% else %}Start free{% endif %}
+      </a>
+    </div>
+
+    <!-- Monthly -->
+    <div class="card-solid rounded-[2rem] p-6 flex flex-col">
+      <div class="mb-4">
+        <div class="font-display text-lg font-extrabold text-ink">
+          {% if lang == 'fr' %}Mensuel{% else %}Monthly{% endif %}
+        </div>
+        <div class="mt-2 flex items-end gap-1">
+          <span class="font-display text-4xl font-extrabold text-ink">$10</span>
+          <span class="mb-1 text-sm font-bold" style="color:var(--text-soft)">/{% if lang == 'fr' %}mois{% else %}mo{% endif %}</span>
+        </div>
+        <p class="mt-2 text-xs font-bold leading-5" style="color:var(--text-soft)">
+          {% if lang == 'fr' %}Facturation flexible, sans engagement.{% else %}Flexible billing, no commitment.{% endif %}
+        </p>
+      </div>
+      <ul class="space-y-2 text-sm font-bold flex-1" style="color:var(--text-soft)">
+        <li class="flex gap-2"><span class="text-brand">✓</span> {% if lang == 'fr' %}Moteur intelligent{% else %}Intelligent engine{% endif %}</li>
+        <li class="flex gap-2"><span class="text-brand">✓</span> {% if lang == 'fr' %}Statistiques de session{% else %}Session analytics{% endif %}</li>
+        <li class="flex gap-2"><span class="text-brand">✓</span> {% if lang == 'fr' %}Tableau de bord parents{% else %}Parental insights{% endif %}</li>
+        <li class="flex gap-2"><span class="text-brand">✓</span> {% if lang == 'fr' %}Avatars personnalisés{% else %}Custom avatars{% endif %}</li>
+      </ul>
+      <a href="{% url 'quiz:register' %}?lang={{ lang }}"
+         class="mt-6 block rounded-2xl border-2 border-brand bg-white py-3 text-center text-sm font-black text-brand hover:bg-brand-light transition">
+        {% if lang == 'fr' %}Choisir ce plan{% else %}Choose this plan{% endif %}
+      </a>
+    </div>
+
+    <!-- Annual (highlighted) -->
+    <div class="rounded-[2rem] p-6 flex flex-col relative overflow-hidden text-white shadow-warm"
+         style="background:linear-gradient(135deg,#F97316,#F59E0B)">
+      <!-- Best value badge -->
+      <div class="absolute top-4 right-4 rounded-full bg-white/20 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide">
+        {% if lang == 'fr' %}ÉCONOMISEZ 40%{% else %}SAVE 40%{% endif %}
+      </div>
+      <div class="mb-4">
+        <div class="font-display text-lg font-extrabold">
+          {% if lang == 'fr' %}Annuel{% else %}Annual{% endif %}
+        </div>
+        <div class="mt-2 flex items-end gap-1">
+          <span class="font-display text-4xl font-extrabold">$5.99</span>
+          <span class="mb-1 text-sm font-bold opacity-80">/{% if lang == 'fr' %}mois{% else %}mo{% endif %}</span>
+        </div>
+        <p class="mt-2 text-xs font-bold leading-5 opacity-80">
+          {% if lang == 'fr' %}Facturé annuellement.{% else %}Billed annually.{% endif %}
+        </p>
+      </div>
+      <ul class="space-y-2 text-sm font-bold flex-1 opacity-90">
+        <li class="flex gap-2"><span>✓</span> {% if lang == 'fr' %}Tout du plan mensuel{% else %}Everything in monthly{% endif %}</li>
+        <li class="flex gap-2"><span>✓</span> {% if lang == 'fr' %}Meilleure valeur (−40%){% else %}Best value (save 40%){% endif %}</li>
+        <li class="flex gap-2"><span>✓</span> {% if lang == 'fr' %}Support prioritaire{% else %}Priority support{% endif %}</li>
+        <li class="flex gap-2"><span>✓</span> {% if lang == 'fr' %}Accès aux nouvelles fonctionnalités{% else %}Early access features{% endif %}</li>
+      </ul>
+      <a href="{% url 'quiz:register' %}?lang={{ lang }}"
+         class="mt-6 block rounded-2xl bg-white py-3 text-center text-sm font-black text-brand hover:opacity-90 transition shadow-card">
+        {% if lang == 'fr' %}Commencer l'essai{% else %}Start trial{% endif %}
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     FINAL CTA
+══════════════════════════════════════════════ -->
+<section class="mb-10 rounded-[2.5rem] bg-gradient-to-br from-brand via-amber to-brand-dark p-8 sm:p-12 text-center text-white shadow-warm overflow-hidden relative">
+  <!-- Background decoration -->
+  <div class="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white opacity-5"></div>
+  <div class="absolute -bottom-10 -left-10 w-56 h-56 rounded-full bg-white opacity-5"></div>
+
+  <!-- Star accent -->
+  <div class="mb-4 text-4xl">⭐</div>
+
+  <h2 class="font-display text-3xl font-extrabold sm:text-4xl relative z-10">
+    {% if lang == 'fr' %}Prêt(e) pour l'aventure ?{% else %}Ready for the adventure?{% endif %}
+  </h2>
+  <p class="mt-4 text-base font-bold opacity-90 max-w-lg mx-auto relative z-10">
+    {% if lang == 'fr' %}
+      Rejoins des milliers d'élèves qui apprennent les maths avec Sofyana — c'est gratuit, amusant et efficace !
+    {% else %}
+      Join thousands of students learning math with Sofyana — it's free, fun and effective!
+    {% endif %}
+  </p>
+
+  <div class="mt-8 flex flex-wrap justify-center gap-4 relative z-10">
+    <a href="{% url 'quiz:register' %}?lang={{ lang }}"
+       class="rounded-2xl bg-white px-8 py-4 text-base font-black text-brand shadow-card hover:scale-105 transition-all">
+      {% if lang == 'fr' %}Commencer maintenant — c'est gratuit !{% else %}Start now — it's free!{% endif %}
+    </a>
+    <a href="{% url 'quiz:parent_register' %}?lang={{ lang }}"
+       class="rounded-2xl border-2 border-white/40 bg-white/10 px-8 py-4 text-base font-black text-white hover:bg-white/20 transition">
+      {% if lang == 'fr' %}Je suis un parent{% else %}I'm a parent{% endif %}
+    </a>
+  </div>
+</section>
+
+{% endblock %}

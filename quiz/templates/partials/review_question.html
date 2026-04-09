@@ -1,0 +1,155 @@
+{% load quiz_extras %}
+{# Frozen review — shows correct answer, user's selection, and worked explanation #}
+
+<div id="question-area"
+     data-review="true"
+     data-time-limit="0"
+     class="card-glass rounded-2xl p-6 animate-slide-up space-y-4">
+
+  <!-- Header badge -->
+  <div class="flex items-center gap-2 mb-1">
+    <span class="text-xs font-bold px-3 py-1 rounded-full
+                 {% if submitted %}
+                   {% if was_correct %}bg-emerald-100 text-emerald-700{% else %}bg-red-100 text-red-600{% endif %}
+                 {% else %}bg-slate-100 text-slate-500{% endif %}">
+      {% if not submitted %}
+        — {% if lang == 'fr' %}Sans réponse{% else %}Skipped{% endif %}
+      {% elif was_correct %}
+        ✓ {% if lang == 'fr' %}Correct{% else %}Correct{% endif %}
+      {% else %}
+        ✗ {% if lang == 'fr' %}Incorrect{% else %}Incorrect{% endif %}
+      {% endif %}
+    </span>
+    <span class="text-xs text-slate-400 uppercase tracking-wide">
+      {% if lang == 'fr' %}Révision{% else %}Review{% endif %}
+    </span>
+  </div>
+
+  <!-- Prompt -->
+  <p class="text-lg font-semibold leading-relaxed text-slate-800">
+    {% if lang == 'fr' %}{{ question.prompt_fr|default:question.prompt_en }}{% else %}{{ question.prompt_en }}{% endif %}
+  </p>
+
+  <!-- Shape canvas -->
+  {% if question.shape_data %}
+  <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+    {% shape_canvas question.shape_data lang %}
+  </div>
+  {% endif %}
+
+  <hr class="border-slate-100"/>
+
+  {% if question.q_type == 'multiple_choice' %}
+  <!-- ── MC frozen choices ── -->
+  <div class="space-y-2">
+    {% for c in choice_display %}
+    <div class="w-full px-5 py-3.5 rounded-xl border font-medium text-sm flex items-center gap-3
+                {% if c.is_correct and c.was_selected %}border-emerald-300 bg-emerald-50 text-emerald-700
+                {% elif c.is_correct %}border-emerald-200 bg-emerald-50/60 text-emerald-600
+                {% elif c.was_selected %}border-red-300 bg-red-50 text-red-600
+                {% else %}border-slate-200 bg-white text-slate-400{% endif %}">
+
+      <!-- Circle indicator -->
+      <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
+                   {% if c.is_correct %}border-emerald-500
+                   {% elif c.was_selected %}border-red-400
+                   {% else %}border-slate-200{% endif %}">
+        {% if c.is_correct %}
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        {% elif c.was_selected %}
+          <span class="w-2 h-2 rounded-full bg-red-400"></span>
+        {% endif %}
+      </span>
+
+      <span class="flex-1">{{ c.label }}</span>
+
+      {% if c.is_correct and c.was_selected %}
+        <span class="text-xs font-bold shrink-0">✓</span>
+      {% elif c.is_correct %}
+        <span class="text-xs font-semibold text-emerald-600 shrink-0">
+          ← {% if lang == 'fr' %}bonne réponse{% else %}correct answer{% endif %}
+        </span>
+      {% elif c.was_selected %}
+        <span class="text-xs font-bold shrink-0">✗</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% elif question.q_type == 'text_input' %}
+  <!-- ── Text input frozen state ── -->
+  {% if submitted %}
+  <div class="space-y-2">
+    <div class="px-4 py-3 rounded-xl border font-mono text-sm
+                {% if was_correct %}border-emerald-300 bg-emerald-50 text-emerald-700
+                {% else %}border-red-300 bg-red-50 text-red-600{% endif %}">
+      <span class="text-xs font-bold uppercase tracking-wide opacity-60 mr-2">
+        {% if lang == 'fr' %}Votre réponse :{% else %}Your answer:{% endif %}
+      </span>
+      {{ submitted_answer }}
+      {% if was_correct %}<span class="ml-2 font-bold">✓</span>
+      {% else %}<span class="ml-2 font-bold">✗</span>{% endif %}
+    </div>
+    {% if not was_correct and question.answer_en %}
+    <div class="px-4 py-3 rounded-xl border border-emerald-200 bg-emerald-50/60 font-mono text-sm text-emerald-700">
+      <span class="text-xs font-bold uppercase tracking-wide opacity-60 mr-2">
+        {% if lang == 'fr' %}Bonne réponse :{% else %}Correct answer:{% endif %}
+      </span>
+      {% if lang == 'fr' %}{{ question.answer_fr|default:question.answer_en }}{% else %}{{ question.answer_en }}{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="text-sm text-slate-400 italic">{% if lang == 'fr' %}Question non répondue{% else %}Not answered{% endif %}</p>
+  {% endif %}
+
+  {% else %}
+  <!-- ── Other types: generic summary ── -->
+  {% if submitted %}
+  <div class="px-4 py-3 rounded-xl border font-medium text-sm
+              {% if was_correct %}border-emerald-300 bg-emerald-50 text-emerald-700
+              {% else %}border-red-300 bg-red-50 text-red-600{% endif %}">
+    {% if was_correct %}✓ {% if lang == 'fr' %}Réponse correcte{% else %}Correct{% endif %}
+    {% else %}✗ {% if lang == 'fr' %}Réponse incorrecte{% else %}Incorrect{% endif %}{% endif %}
+  </div>
+  {% else %}
+  <p class="text-sm text-slate-400 italic">{% if lang == 'fr' %}Question non répondue{% else %}Not answered{% endif %}</p>
+  {% endif %}
+  {% endif %}
+
+  <!-- Explanation (shown when wrong or skipped) -->
+  {% if not was_correct %}
+    {% if question.explanation_en or question.explanation_fr %}
+    <div class="rounded-xl border border-brand-light bg-soft p-4">
+      <p class="text-xs font-extrabold text-brand uppercase tracking-wide mb-3">
+        {% if lang == 'fr' %}Explication étape par étape{% else %}Step-by-step explanation{% endif %}
+      </p>
+      <ol class="space-y-1.5 list-none">
+        {% if lang == 'fr' %}
+          {% for step in question.explanation_fr|default:question.explanation_en|split_lines %}
+          <li class="flex items-start gap-2 text-sm text-ink">
+            <span class="shrink-0 w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-black flex items-center justify-center mt-0.5">{{ forloop.counter }}</span>
+            <span>{{ step }}</span>
+          </li>
+          {% endfor %}
+        {% else %}
+          {% for step in question.explanation_en|split_lines %}
+          <li class="flex items-start gap-2 text-sm text-ink">
+            <span class="shrink-0 w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-black flex items-center justify-center mt-0.5">{{ forloop.counter }}</span>
+            <span>{{ step }}</span>
+          </li>
+          {% endfor %}
+        {% endif %}
+      </ol>
+    </div>
+    {% endif %}
+  {% endif %}
+
+  <!-- Hint -->
+  {% if question.hint_en %}
+  <div class="bg-amber-50 rounded-xl p-4 border border-amber-200 text-sm text-amber-700">
+    💡 {% if lang == 'fr' %}{{ question.hint_fr|default:question.hint_en }}{% else %}{{ question.hint_en }}{% endif %}
+  </div>
+  {% endif %}
+
+</div>

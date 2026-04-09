@@ -1,0 +1,76 @@
+{# Mix & Match — dropdown per left item #}
+<div
+  x-data="{
+    pairs: [
+      {% for p in question.pairs.all %}
+      { id: '{{ p.pk }}',
+        left:  '{% if lang == 'fr' %}{{ p.left_fr|default:p.left_en|escapejs }}{% else %}{{ p.left_en|escapejs }}{% endif %}',
+        right: '{% if lang == 'fr' %}{{ p.right_fr|default:p.right_en|escapejs }}{% else %}{{ p.right_en|escapejs }}{% endif %}' },
+      {% endfor %}
+    ],
+    rights:     [],
+    selections: {},
+    submitted:  false,
+    init() {
+      this.rights = this.pairs.map(p => p.right).sort(() => Math.random() - 0.5);
+      this.pairs.forEach(p => { this.selections[p.id] = ''; });
+    },
+    allSelected() { return Object.values(this.selections).every(v => v !== ''); },
+    submit() {
+      if (this.submitted || !this.allSelected()) return;
+      this.submitted = true;
+      fetch('{% url 'quiz:submit_answer' quiz.pk q_index %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ answer: this.selections, lang: '{{ lang }}' })
+      })
+      .then(r => r.json())
+      .then(data => {
+        data.q_id = '{{ question.pk }}';
+        window.dispatchEvent(new CustomEvent('answer-submitted', { detail: data }));
+      });
+    }
+  }"
+>
+  <div class="space-y-3">
+    <template x-for="pair in pairs" :key="pair.id">
+      <div class="flex items-center gap-3">
+        <!-- Left label -->
+        <div class="flex-1 min-w-0 px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-sm font-medium text-white/80 truncate"
+             x-text="pair.left"></div>
+
+        <span class="text-white/30 shrink-0">→</span>
+
+        <!-- Dropdown -->
+        <div class="flex-1 flex items-center gap-2">
+          <select
+            x-model="selections[pair.id]"
+            :disabled="submitted"
+            :class="{
+              'border-[#22C55E] text-[#22C55E]': submitted && selections[pair.id] === pair.right,
+              'border-[#EF4444] text-[#EF4444]': submitted && selections[pair.id] !== pair.right,
+              'border-white/20 text-white':       !submitted,
+            }"
+            class="flex-1 px-3 py-3 rounded-xl border bg-[#1A1240] text-sm font-medium focus:border-brand outline-none transition cursor-pointer"
+          >
+            <option value="" disabled>{% if lang == 'fr' %}Choisir…{% else %}Select…{% endif %}</option>
+            <template x-for="r in rights" :key="r">
+              <option :value="r" x-text="r"></option>
+            </template>
+          </select>
+          <template x-if="submitted">
+            <span x-text="selections[pair.id] === pair.right ? '✅' : '❌'" class="shrink-0 text-lg"></span>
+          </template>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <button
+    @click="submit()"
+    :disabled="!allSelected() || submitted"
+    class="mt-4 w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-brand to-accent hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+  >
+    {% if lang == 'fr' %}Valider les associations{% else %}Submit Matches{% endif %}
+  </button>
+</div>

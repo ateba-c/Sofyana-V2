@@ -1,0 +1,274 @@
+{% extends 'quiz/base.html' %}
+{% block title %}{% if lang == 'fr' %}Tableau de bord Parent{% else %}Parent Dashboard{% endif %} — Sofyana{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl space-y-6">
+
+  <!-- Header -->
+  <section class="card-solid rounded-[2rem] p-6 sm:p-8">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-xs font-extrabold uppercase tracking-[0.24em] text-teal">{% if lang == 'fr' %}Tableau de bord{% else %}Parent Dashboard{% endif %}</p>
+        <h1 class="mt-2 font-display text-3xl font-extrabold text-ink">
+          {% if lang == 'fr' %}Bonjour, {{ request.user.username }} 👋{% else %}Hello, {{ request.user.username }} 👋{% endif %}
+        </h1>
+        <p class="mt-2 text-sm font-bold text-[var(--text-soft)]">
+          {% if lang == 'fr' %}Suivez la progression de vos enfants sur Sofyana.{% else %}Track your children's learning journey on Sofyana.{% endif %}
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <span class="inline-flex items-center gap-2 rounded-full bg-teal-light px-4 py-2.5 text-sm font-black text-teal-dark">
+          👨‍👩‍👧 {{ children_data|length }} {% if lang == 'fr' %}enfant{{ children_data|length|pluralize }}{% else %}child{{ children_data|length|pluralize:"ren" }}{% endif %}
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Messages -->
+  {% if link_error %}
+  <div class="rounded-2xl bg-pink-light border border-pink/30 px-5 py-4 text-sm font-bold text-pink">⚠️ {{ link_error }}</div>
+  {% endif %}
+  {% if link_success %}
+  <div class="rounded-2xl bg-lime-light border border-lime/30 px-5 py-4 text-sm font-bold text-lime-dark">✅ {{ link_success }}</div>
+  {% endif %}
+
+  <!-- Link child form -->
+  <section class="card-glass rounded-[2rem] p-5 sm:p-6">
+    <h2 class="font-display text-xl font-extrabold text-ink mb-3">
+      {% if lang == 'fr' %}Lier un compte enfant{% else %}Link a child's account{% endif %}
+    </h2>
+    <p class="text-sm font-bold text-[var(--text-soft)] mb-4">
+      {% if lang == 'fr' %}Demandez à votre enfant son nom d'utilisateur Sofyana et entrez-le ci-dessous.{% else %}Ask your child for their Sofyana username and enter it below.{% endif %}
+    </p>
+    <form method="post" class="flex gap-3 flex-wrap">
+      {% csrf_token %}
+      <input type="text" name="child_username"
+             class="flex-1 min-w-[200px] bg-white border-2 border-teal-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 text-sm font-bold"
+             placeholder="{% if lang == 'fr' %}Nom d'utilisateur de l'enfant{% else %}Child's username{% endif %}">
+      <button type="submit"
+              class="rounded-xl bg-gradient-to-r from-teal to-lime px-6 py-3 text-sm font-black text-white shadow-card hover:opacity-90 transition">
+        {% if lang == 'fr' %}Lier{% else %}Link{% endif %}
+      </button>
+    </form>
+  </section>
+
+  <!-- Children cards -->
+  {% if children_data %}
+  <div class="space-y-6">
+    {% for child in children_data %}
+    <section class="card-solid rounded-[2.25rem] overflow-hidden">
+
+      <!-- Child header -->
+      <div class="bg-gradient-to-r from-brand/10 to-amber/10 px-6 py-5 border-b border-brand-light/50">
+        <div class="flex items-center gap-4">
+          <div class="flex h-16 w-16 items-center justify-center rounded-[1.3rem] bg-gradient-to-br from-brand-light to-amber-light text-4xl shadow-card">{{ child.avatar }}</div>
+          <div>
+            <h2 class="font-display text-2xl font-extrabold text-ink">{{ child.username }}</h2>
+            <div class="mt-1 flex flex-wrap gap-2">
+              <span class="rounded-full bg-coral-light px-3 py-1 text-xs font-extrabold text-coral-dark">⭐ {{ child.total_stars }} {% if lang == 'fr' %}étoiles{% else %}stars{% endif %}</span>
+              <span class="rounded-full bg-brand-light px-3 py-1 text-xs font-extrabold text-brand">📚 {{ child.all_time_total }} {% if lang == 'fr' %}questions{% else %}questions{% endif %}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-5 sm:p-6 space-y-5">
+
+        <!-- This week stats -->
+        <div>
+          <h3 class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)] mb-3">{% if lang == 'fr' %}Cette semaine{% else %}This week{% endif %}</h3>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="rounded-[1.25rem] bg-brand-light/70 p-4 text-center">
+              <div class="text-2xl font-black text-brand">{{ child.week_total }}</div>
+              <div class="text-[10px] font-extrabold uppercase tracking-wide text-brand/70 mt-1">{% if lang == 'fr' %}Questions{% else %}Questions{% endif %}</div>
+            </div>
+            <div class="rounded-[1.25rem] bg-lime-light/70 p-4 text-center">
+              <div class="text-2xl font-black text-lime-dark">{{ child.week_accuracy }}%</div>
+              <div class="text-[10px] font-extrabold uppercase tracking-wide text-lime-dark/70 mt-1">{% if lang == 'fr' %}Précision{% else %}Accuracy{% endif %}</div>
+            </div>
+            <div class="rounded-[1.25rem] bg-coral-light/70 p-4 text-center">
+              <div class="text-2xl font-black text-coral">{{ child.stars_week }}</div>
+              <div class="text-[10px] font-extrabold uppercase tracking-wide text-coral/70 mt-1">⭐ {% if lang == 'fr' %}Étoiles{% else %}Stars{% endif %}</div>
+            </div>
+            <div class="rounded-[1.25rem] bg-pink-light/70 p-4 text-center">
+              <div class="text-2xl font-black text-pink">{{ child.active_days }}/7</div>
+              <div class="text-[10px] font-extrabold uppercase tracking-wide text-pink/70 mt-1">{% if lang == 'fr' %}Jours actifs{% else %}Active days{% endif %}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skills this week -->
+        {% if child.topics_week %}
+        <div>
+          <h3 class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)] mb-2">{% if lang == 'fr' %}Compétences pratiquées{% else %}Skills practiced{% endif %}</h3>
+          <div class="flex flex-wrap gap-2">
+            {% for topic in child.topics_week %}
+            <span class="rounded-full bg-brand-light px-3 py-1.5 text-xs font-black text-brand">{{ topic }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- 7-day activity bars -->
+        {% if child.daily_bars %}
+        <div>
+          <h3 class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)] mb-3">{% if lang == 'fr' %}Activité des 7 derniers jours{% else %}Last 7 days activity{% endif %}</h3>
+          <div class="flex items-end gap-1.5 h-20">
+            {% for bar in child.daily_bars %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full rounded-t-lg transition-all"
+                   style="height: {% if bar.total > 0 %}{% widthratio bar.total 30 100 %}%{% else %}4px{% endif %}; min-height:4px; background: {% if bar.total > 0 %}linear-gradient(180deg, #F97316, #F59E0B){% else %}#FED7AA{% endif %}"></div>
+              <span class="text-[9px] font-bold text-[var(--text-soft)]">{{ bar.date|date:"D"|slice:":1" }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Global comparison -->
+        {% if child.comparison %}
+        <div>
+          <h3 class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)] mb-3">
+            {% if lang == 'fr' %}Comparaison mondiale (précision par sujet){% else %}Global comparison (accuracy by topic){% endif %}
+          </h3>
+          <div class="space-y-2.5">
+            {% for comp in child.comparison %}
+            <div class="rounded-[1rem] bg-white border border-brand-light/60 px-4 py-3">
+              <div class="flex items-center justify-between gap-3 mb-2">
+                <span class="text-sm font-black text-ink truncate">{{ comp.topic }}</span>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-xs font-extrabold {% if comp.diff >= 0 %}text-lime-dark{% else %}text-pink{% endif %}">
+                    {% if comp.diff >= 0 %}+{% endif %}{{ comp.diff }}pp
+                  </span>
+                  {% if comp.diff >= 0 %}
+                  <span class="rounded-full bg-lime-light px-2 py-0.5 text-[10px] font-extrabold text-lime-dark">{% if lang == 'fr' %}au-dessus{% else %}above avg{% endif %}</span>
+                  {% else %}
+                  <span class="rounded-full bg-pink-light px-2 py-0.5 text-[10px] font-extrabold text-pink">{% if lang == 'fr' %}en dessous{% else %}below avg{% endif %}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <!-- Dual bars: child vs global -->
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-14 text-[10px] font-extrabold text-brand shrink-0">{{ child.username }}</span>
+                  <div class="flex-1 h-2.5 rounded-full bg-slate-100">
+                    <div class="h-full rounded-full bg-gradient-to-r from-brand to-pink" style="width:{{ comp.child_pct }}%"></div>
+                  </div>
+                  <span class="w-8 text-right text-[10px] font-extrabold text-brand">{{ comp.child_pct }}%</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="w-14 text-[10px] font-extrabold text-slate-400 shrink-0">{% if lang == 'fr' %}Mondial{% else %}Global{% endif %}</span>
+                  <div class="flex-1 h-2.5 rounded-full bg-slate-100">
+                    <div class="h-full rounded-full bg-slate-300" style="width:{{ comp.global_pct }}%"></div>
+                  </div>
+                  <span class="w-8 text-right text-[10px] font-extrabold text-slate-400">{{ comp.global_pct }}%</span>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if not child.week_total %}
+        <div class="rounded-2xl bg-brand-light/40 border border-brand-light p-5 text-center">
+          <div class="text-3xl mb-2">😴</div>
+          <p class="text-sm font-black text-brand">{% if lang == 'fr' %}Pas d'activité cette semaine encore.{% else %}No activity this week yet.{% endif %}</p>
+          <p class="text-xs font-bold text-[var(--text-soft)] mt-1">{% if lang == 'fr' %}Encouragez {{ child.username }} à pratiquer !{% else %}Encourage {{ child.username }} to practice!{% endif %}</p>
+        </div>
+        {% endif %}
+
+        <!-- Homework assignments -->
+        <div x-data="{ showAssign: false }">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)]">
+              {% if lang == 'fr' %}Devoirs assignés{% else %}Assigned homework{% endif %}
+            </h3>
+            <button @click="showAssign = !showAssign"
+                    class="rounded-xl bg-brand px-3 py-2 text-xs font-black text-white hover:bg-brand-dark transition flex items-center gap-1">
+              <span x-text="showAssign ? '✕' : '+'"></span>
+              <span>{% if lang == 'fr' %}Assigner{% else %}Assign{% endif %}</span>
+            </button>
+          </div>
+
+          <!-- Assign form -->
+          <div x-show="showAssign" x-transition class="mb-4 rounded-2xl bg-brand-light/30 border border-brand-light p-4">
+            <p class="text-xs font-bold text-[var(--text-soft)] mb-3">
+              {% if lang == 'fr' %}Choisissez une compétence à assigner à {{ child.username }}{% else %}Choose a skill to assign to {{ child.username }}{% endif %}
+            </p>
+            <form method="post" action="{% url 'quiz:assign_topic' %}?lang={{ lang }}" class="flex gap-2 flex-wrap">
+              {% csrf_token %}
+              <input type="hidden" name="child_id" value="{{ child.user_id }}">
+              <select name="topic_slug" class="flex-1 min-w-[180px] rounded-xl border border-brand-light bg-white px-3 py-2.5 text-sm font-bold text-ink focus:border-brand focus:outline-none">
+                {% for topic in all_topics %}
+                <option value="{{ topic.slug }}">{{ topic.icon }} {% if lang == 'fr' %}{{ topic.name_fr }}{% else %}{{ topic.name_en }}{% endif %}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="rounded-xl bg-brand px-4 py-2.5 text-sm font-black text-white hover:bg-brand-dark transition">
+                {% if lang == 'fr' %}Assigner →{% else %}Assign →{% endif %}
+              </button>
+            </form>
+          </div>
+
+          <!-- Existing assignments list -->
+          {% with assignments=child_assignments|default_if_none:'' %}
+          {% for username, alist in child_assignments.items %}{% if username == child.username %}
+            {% if alist %}
+            <div class="space-y-2">
+              {% for a in alist %}
+              <div class="flex items-center gap-3 rounded-xl border border-brand-light/50 bg-white px-4 py-3">
+                <span class="text-lg shrink-0">{% if a.completed_at %}✅{% else %}📋{% endif %}</span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-extrabold text-ink truncate">
+                    {% for topic in all_topics %}{% if topic.slug == a.topic_slug %}
+                      {{ topic.icon }} {% if lang == 'fr' %}{{ topic.name_fr }}{% else %}{{ topic.name_en }}{% endif %}
+                    {% endif %}{% endfor %}
+                  </p>
+                  {% if a.completed_at %}<p class="text-[11px] font-bold text-lime-dark">{% if lang == 'fr' %}Terminé{% else %}Completed{% endif %}</p>{% endif %}
+                </div>
+                <form method="post" action="{% url 'quiz:unassign_topic' %}?lang={{ lang }}" class="shrink-0">
+                  {% csrf_token %}
+                  <input type="hidden" name="assignment_id" value="{{ a.pk }}">
+                  <button type="submit" class="rounded-lg bg-coral-light px-2.5 py-1.5 text-xs font-black text-coral hover:bg-coral hover:text-white transition">✕</button>
+                </form>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-xs font-bold text-[var(--text-soft)] italic py-2">
+              {% if lang == 'fr' %}Aucun devoir assigné pour l'instant.{% else %}No homework assigned yet.{% endif %}
+            </p>
+            {% endif %}
+          {% endif %}{% endfor %}
+          {% endwith %}
+        </div>
+
+      </div>
+    </section>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <section class="card-glass rounded-[2rem] p-10 text-center">
+    <div class="text-6xl mb-4">👨‍👩‍👧</div>
+    <h2 class="font-display text-2xl font-extrabold text-ink mb-2">
+      {% if lang == 'fr' %}Aucun enfant lié encore{% else %}No children linked yet{% endif %}
+    </h2>
+    <p class="text-sm font-bold text-[var(--text-soft)] max-w-md mx-auto">
+      {% if lang == 'fr' %}
+      Demandez à votre enfant de créer un compte élève sur Sofyana, puis utilisez le formulaire ci-dessus pour lier son compte avec son nom d'utilisateur.
+      {% else %}
+      Ask your child to create a student account on Sofyana, then use the form above to link their account using their username.
+      {% endif %}
+    </p>
+    <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 max-w-sm mx-auto">
+      <a href="{% url 'quiz:register' %}?lang={{ lang }}"
+         class="rounded-xl bg-brand px-5 py-3 text-sm font-black text-white shadow-warm hover:bg-brand-dark transition">
+        {% if lang == 'fr' %}Créer un compte élève{% else %}Create student account{% endif %}
+      </a>
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% load static quiz_extras %}
+{# Rendered on initial page load AND swapped in by htmx on navigation #}
+
+<div id="question-area"
+     data-time-limit="{{ question.time_limit }}"
+     class="card-glass rounded-2xl p-6 animate-slide-up">
+
+  <!-- Prompt header -->
+  <div class="mb-2 flex items-start gap-3">
+    <span class="shrink-0 w-8 h-8 rounded-full bg-brand/20 border border-brand/40 flex items-center justify-center text-xs font-bold text-brand">
+      {{ q_index|add:1 }}
+    </span>
+    <div class="flex-1">
+      <p class="text-lg font-semibold leading-relaxed">
+        {% if lang == 'fr' %}{{ question.prompt_fr|default:question.prompt_en }}{% else %}{{ question.prompt_en }}{% endif %}
+      </p>
+      <div class="flex flex-wrap gap-2 mt-2">
+        <span class="text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand/80">
+          {% if question.q_type == 'multiple_choice' %}🔘 Multiple Choice
+          {% elif question.q_type == 'drag_drop' %}🖱️ Drag &amp; Drop
+          {% elif question.q_type == 'connect' %}🔗 Connect
+          {% elif question.q_type == 'mix_match' %}🔀 Mix &amp; Match
+          {% elif question.q_type == 'text_input' %}⌨️ Text Input{% endif %}
+        </span>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">{{ question.points }} pts</span>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">⏱ {{ question.time_limit }}s</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shape canvas (geometry questions) -->
+  {% if question.shape_data %}
+  <div class="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-4">
+    {% shape_canvas question.shape_data lang %}
+  </div>
+  {% endif %}
+
+  <!-- Illustration (mobile only — sidebar shows it on desktop) -->
+  {% if question.illustration_url and not question.shape_data %}
+  <div class="lg:hidden rounded-xl overflow-hidden mb-4">
+    <img src="{{ question.illustration_url }}" alt="illustration" class="w-full h-36 object-cover"/>
+  </div>
+  {% endif %}
+
+  <hr class="border-slate-100 my-4"/>
+
+  <!-- Answer partial: delegated by type -->
+  {% if question.q_type == 'multiple_choice' %}
+    {% include 'partials/answer_multiple_choice.html' %}
+  {% elif question.q_type == 'text_input' %}
+    {% include 'partials/answer_text_input.html' %}
+  {% elif question.q_type == 'drag_drop' %}
+    {% include 'partials/answer_drag_drop.html' %}
+  {% elif question.q_type == 'connect' %}
+    {% include 'partials/answer_connect.html' %}
+  {% elif question.q_type == 'mix_match' %}
+    {% include 'partials/answer_mix_match.html' %}
+  {% endif %}
+
+</div>

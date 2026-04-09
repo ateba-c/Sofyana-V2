@@ -1,0 +1,514 @@
+{% with cur_lang=lang|default:'en' %}<!DOCTYPE html>
+<html lang="{{ cur_lang }}" x-data="{ lang: '{{ cur_lang }}', menuOpen: false }">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Sofyana{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand:  { DEFAULT: '#F97316', dark: '#EA580C', light: '#FFF7ED' },
+            coral:  { DEFAULT: '#EF4444', dark: '#DC2626', light: '#FEF2F2' },
+            teal:   { DEFAULT: '#0EA5E9', dark: '#0284C7', light: '#E0F2FE' },
+            lime:   { DEFAULT: '#84CC16', dark: '#65A30D', light: '#F7FEE7' },
+            pink:   { DEFAULT: '#EC4899', dark: '#DB2777', light: '#FCE7F3' },
+            amber:  { DEFAULT: '#F59E0B', dark: '#D97706', light: '#FFFBEB' },
+            ink:    '#1C1018',
+            soft:   '#FFF8F0',
+          },
+          fontFamily: {
+            sans:    ['Nunito', 'system-ui', 'sans-serif'],
+            display: ['"Baloo 2"', 'Nunito', 'system-ui', 'sans-serif'],
+          },
+          boxShadow: {
+            soft:   '0 8px 32px rgba(15, 23, 42, 0.08)',
+            card:   '0 2px 12px rgba(15, 23, 42, 0.07)',
+            glow:   '0 0 20px rgba(249, 115, 22, 0.28)',
+            warm:   '0 6px 24px rgba(249, 115, 22, 0.20)',
+          },
+          animation: {
+            'slide-up': 'slideUp .35s ease',
+            'pop':      'pop .3s ease',
+            'bounce-in':'bounceIn .4s cubic-bezier(.36,.07,.19,.97)',
+            'float':    'float 3s ease-in-out infinite',
+          },
+          keyframes: {
+            slideUp:   { from: { opacity:'0', transform:'translateY(16px)' }, to: { opacity:'1', transform:'translateY(0)' } },
+            pop:       { from: { opacity:'0', transform:'scale(.94)' },        to: { opacity:'1', transform:'scale(1)' } },
+            bounceIn:  { '0%': {transform:'scale(.8)',opacity:'0'}, '60%': {transform:'scale(1.05)'}, '100%': {transform:'scale(1)',opacity:'1'} },
+            float:     { '0%,100%': {transform:'translateY(0)'}, '50%': {transform:'translateY(-8px)'} },
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    :root {
+      --page-bg:    #F1F5F9;
+      --surface:    #FFFFFF;
+      --surface-strong: #FFFFFF;
+      --stroke:     #CBD5E1;
+      --text-main:  #1C1018;
+      --text-soft:  #78490A;
+      --sidebar-bg: #FFFFFF;
+    }
+    body {
+      min-height: 100vh;
+      background: var(--page-bg);
+      color: var(--text-main);
+    }
+    .card-glass {
+      background: var(--surface);
+      border: 1.5px solid var(--stroke);
+      box-shadow: 0 2px 16px rgba(15, 23, 42, 0.06);
+    }
+    .card-solid {
+      background: var(--surface-strong);
+      border: 1.5px solid var(--stroke);
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+    }
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      border-radius: 1.1rem;
+      padding: 0.85rem 1rem;
+      font-weight: 800;
+      color: #9A3412;
+      transition: .15s ease;
+    }
+    .sidebar-link:hover {
+      background: rgba(249, 115, 22, 0.09);
+      color: #F97316;
+      transform: translateX(2px);
+    }
+    .sidebar-link.active {
+      background: linear-gradient(135deg, #F97316, #FB923C);
+      color: white;
+      box-shadow: 0 8px 20px rgba(249, 115, 22, 0.30);
+    }
+    .sidebar-icon {
+      width: 2.1rem;
+      height: 2.1rem;
+      border-radius: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.55);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .sidebar-link.active .sidebar-icon { background: rgba(255,255,255,0.2); }
+    .progress-bar { transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(249, 115, 22, 0.2); border-radius: 999px; }
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      .bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+    }
+    .main-content { padding-bottom: 5.5rem; padding-top: 0.5rem; }
+    @media (min-width: 1024px) { .main-content { padding-bottom: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+  </style>
+</head>
+<body class="font-sans antialiased">
+  <div class="min-h-screen lg:grid lg:grid-cols-[272px_minmax(0,1fr)]">
+    <!-- Mobile overlay -->
+    <div x-show="menuOpen" x-cloak
+         class="fixed inset-0 z-40 bg-ink/20 backdrop-blur-sm lg:hidden"
+         @click="menuOpen = false"></div>
+
+    <!-- Sidebar -->
+    <aside class="fixed inset-y-0 left-0 z-50 w-[272px] max-w-[88vw] border-r border-slate-200 bg-white shadow-card transition-transform duration-200 lg:static lg:translate-x-0"
+           :class="menuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+      <div class="flex h-full flex-col bg-[var(--sidebar-bg)] p-5">
+
+        <!-- Logo -->
+        <div class="mb-4 flex items-center justify-between">
+          <a href="{% url 'quiz:index' %}?lang={{ cur_lang }}" class="flex items-center gap-3">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber via-brand to-coral text-2xl shadow-card">⭐</div>
+            <div>
+              <div class="font-display text-2xl font-extrabold leading-none text-ink">Sofyana</div>
+              <div class="mt-0.5 text-[11px] font-extrabold uppercase tracking-[0.22em] text-brand">{% if cur_lang == 'fr' %}Apprendre &amp; Grandir{% else %}Learn &amp; Grow{% endif %}</div>
+            </div>
+          </a>
+          <button class="rounded-xl bg-brand-light px-3 py-2 text-sm font-black text-brand lg:hidden" @click="menuOpen = false">✕</button>
+        </div>
+
+        <!-- Language toggle -->
+        <div class="mb-4 flex items-center gap-2">
+          <span class="text-xs font-extrabold uppercase tracking-[0.15em] text-brand/60">🌍</span>
+          <div class="flex flex-1 rounded-xl border border-brand-light bg-white p-0.5">
+            <a href="?lang=en" class="flex-1 rounded-[0.6rem] py-3 text-center text-xs font-black transition min-h-[44px] flex items-center justify-center
+                       {% if cur_lang == 'en' %}bg-brand text-white shadow-sm{% else %}text-brand/60 hover:text-brand{% endif %}">EN</a>
+            <a href="?lang=fr" class="flex-1 rounded-[0.6rem] py-3 text-center text-xs font-black transition min-h-[44px] flex items-center justify-center
+                       {% if cur_lang == 'fr' %}bg-brand text-white shadow-sm{% else %}text-brand/60 hover:text-brand{% endif %}">FR</a>
+          </div>
+        </div>
+
+        <!-- Skill search -->
+        <div class="mb-5 relative" x-data="skillSearch()" @click.outside="open = false" @keydown.escape.window="open = false; q = ''">
+          <div class="flex items-center gap-2 rounded-xl border-2 border-brand-light bg-white px-3 py-2.5 transition focus-within:border-brand focus-within:shadow-glow">
+            <span class="text-base shrink-0">🔍</span>
+            <input x-model="q" @input="open = true" @focus="open = true" @keydown.enter.prevent="onEnter()"
+                   type="search" autocomplete="off" spellcheck="false"
+                   placeholder="{% if cur_lang == 'fr' %}Chercher une compétence…{% else %}Search a skill…{% endif %}"
+                   class="flex-1 bg-transparent text-[16px] font-bold text-ink placeholder-brand/40 outline-none min-w-0">
+          </div>
+          <div x-show="open && results.length > 0"
+               x-transition:enter="transition ease-out duration-100"
+               x-transition:enter-start="opacity-0 -translate-y-1"
+               x-transition:enter-end="opacity-100 translate-y-0"
+               class="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-2xl border border-brand-light bg-white py-1.5 shadow-soft">
+            <template x-for="group in groups" :key="group.key">
+              <div>
+                <div class="px-4 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-widest text-brand/50" x-text="group.label"></div>
+                <template x-for="sk in group.skills" :key="sk.slug">
+                  <a :href="'/practice/' + sk.slug + '/?lang={{ cur_lang }}'"
+                     class="flex items-center gap-3 px-4 py-2 text-sm font-bold text-ink hover:bg-brand-light transition">
+                    <span class="shrink-0 text-base" x-text="sk.icon"></span>
+                    <span class="flex-1 min-w-0">
+                      <span class="block font-extrabold truncate" x-text="skillName(sk)"></span>
+                      <span class="block text-[11px] text-brand/60 truncate" x-text="groupName(sk)"></span>
+                    </span>
+                  </a>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Student/parent card -->
+        {% if user.is_authenticated and student %}
+        <div class="card-glass mb-5 rounded-[1.5rem] p-4">
+          <div class="flex items-center gap-3">
+            <div class="flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-gradient-to-br from-brand-light to-amber-light text-3xl">{{ student.avatar_emoji }}</div>
+            <div class="min-w-0">
+              <div class="truncate text-lg font-black text-ink">{{ user.username }}</div>
+              <div class="text-xs font-bold text-brand">{% if cur_lang == 'fr' %}Prêt(e) pour l'aventure !{% else %}Ready to explore!{% endif %}</div>
+            </div>
+          </div>
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            <a href="{% url 'quiz:progress' %}?lang={{ cur_lang }}" class="rounded-xl bg-amber-light px-3 py-2.5 text-center">
+              <div class="text-xl font-black text-amber-dark">{{ student.total_stars }}</div>
+              <div class="text-[10px] font-extrabold uppercase tracking-wide text-amber-dark">⭐ {% if cur_lang == 'fr' %}Étoiles{% else %}Stars{% endif %}</div>
+            </a>
+            <a href="{% url 'quiz:prizes' %}?lang={{ cur_lang }}" class="rounded-xl bg-brand-light px-3 py-2.5 text-center">
+              <div class="text-xl font-black text-brand">{{ student.unlocked_avatars|length|add:1 }}</div>
+              <div class="text-[10px] font-extrabold uppercase tracking-wide text-brand-dark">🎁 {% if cur_lang == 'fr' %}Prix{% else %}Prizes{% endif %}</div>
+            </a>
+          </div>
+        </div>
+        {% elif user.is_authenticated and parent_profile %}
+        <div class="card-glass mb-5 rounded-[1.5rem] p-4">
+          <div class="flex items-center gap-3">
+            <div class="flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-gradient-to-br from-teal-light to-lime-light text-3xl">👨‍👩‍👧</div>
+            <div class="min-w-0">
+              <div class="truncate text-lg font-black text-ink">{{ user.username }}</div>
+              <div class="text-xs font-bold text-teal">{% if cur_lang == 'fr' %}Compte parent{% else %}Parent account{% endif %}</div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Nav links -->
+        <nav class="flex flex-1 flex-col gap-1.5">
+          {% if parent_profile %}
+          <a href="{% url 'quiz:parent_dashboard' %}?lang={{ cur_lang }}" class="sidebar-link {% if request.resolver_match.url_name == 'parent_dashboard' %}active{% endif %}">
+            <span class="sidebar-icon">📊</span>
+            <span>{% if cur_lang == 'fr' %}Tableau de bord{% else %}Dashboard{% endif %}</span>
+          </a>
+          {% else %}
+          <a href="{% url 'quiz:index' %}?lang={{ cur_lang }}" class="sidebar-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+            <span class="sidebar-icon">🏠</span>
+            <span>{% if cur_lang == 'fr' %}Accueil{% else %}Home{% endif %}</span>
+          </a>
+          {% endif %}
+          {% if user.is_authenticated and student %}
+          <a href="{% url 'quiz:progress' %}?lang={{ cur_lang }}" class="sidebar-link {% if request.resolver_match.url_name == 'progress' or request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <span class="sidebar-icon">📈</span>
+            <span>{% if cur_lang == 'fr' %}Progrès{% else %}Progress{% endif %}</span>
+          </a>
+          <a href="{% url 'quiz:prizes' %}?lang={{ cur_lang }}" class="sidebar-link {% if request.resolver_match.url_name == 'prizes' %}active{% endif %}">
+            <span class="sidebar-icon">🎁</span>
+            <span>{% if cur_lang == 'fr' %}Prix{% else %}Prizes{% endif %}</span>
+          </a>
+          <a href="{% url 'quiz:profile' %}?lang={{ cur_lang }}" class="sidebar-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+            <span class="sidebar-icon">🙂</span>
+            <span>{% if cur_lang == 'fr' %}Profil{% else %}Profile{% endif %}</span>
+          </a>
+          {% endif %}
+        </nav>
+
+        <!-- Auth -->
+        <div class="mt-5">
+          {% if user.is_authenticated %}
+          <a href="{% url 'quiz:logout' %}" class="sidebar-link bg-soft">
+            <span class="sidebar-icon">↩️</span>
+            <span>{% if cur_lang == 'fr' %}Déconnexion{% else %}Log out{% endif %}</span>
+          </a>
+          {% else %}
+          <div class="grid grid-cols-2 gap-2">
+            <a href="{% url 'quiz:login' %}?lang={{ cur_lang }}" class="rounded-xl bg-white border border-brand-light px-4 py-3 text-center text-sm font-black text-brand">{% if cur_lang == 'fr' %}Connexion{% else %}Log in{% endif %}</a>
+            <a href="{% url 'quiz:register' %}?lang={{ cur_lang }}" class="rounded-xl bg-gradient-to-r from-brand to-amber px-4 py-3 text-center text-sm font-black text-white shadow-card">{% if cur_lang == 'fr' %}Inscription{% else %}Sign up{% endif %}</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <div class="min-w-0">
+      <!-- Mobile top bar -->
+      <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-xl lg:hidden">
+        <div class="flex items-center justify-between gap-2 px-4 py-2.5">
+          <button class="flex items-center gap-1.5 rounded-xl bg-brand-light px-3 py-2.5 text-sm font-black text-brand" @click="menuOpen = true">☰</button>
+          <a href="{% url 'quiz:index' %}?lang={{ cur_lang }}" class="flex items-center gap-2">
+            <span class="text-xl">⭐</span>
+            <span class="font-display text-xl font-extrabold text-ink">Sofyana</span>
+          </a>
+          <div class="flex items-center gap-2">
+            <div class="flex rounded-xl border border-brand-light bg-white p-0.5">
+              <a href="?lang=en" class="rounded-[0.5rem] px-2.5 py-1.5 text-xs font-black transition {% if cur_lang == 'en' %}bg-brand text-white{% else %}text-brand/50{% endif %}">EN</a>
+              <a href="?lang=fr" class="rounded-[0.5rem] px-2.5 py-1.5 text-xs font-black transition {% if cur_lang == 'fr' %}bg-brand text-white{% else %}text-brand/50{% endif %}">FR</a>
+            </div>
+            {% if user.is_authenticated and student %}
+            <a href="{% url 'quiz:profile' %}?lang={{ cur_lang }}" class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-light text-xl">{{ student.avatar_emoji }}</a>
+            {% elif user.is_authenticated and parent_profile %}
+            <a href="{% url 'quiz:parent_dashboard' %}?lang={{ cur_lang }}" class="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-light text-xl">📊</a>
+            {% else %}
+            <a href="{% url 'quiz:register' %}?lang={{ cur_lang }}" class="rounded-xl bg-brand px-3 py-2 text-xs font-black text-white">{% if cur_lang == 'fr' %}Rejoindre{% else %}Join{% endif %}</a>
+            {% endif %}
+          </div>
+        </div>
+        <!-- Mobile search -->
+        <div class="border-t border-brand-light/40 px-3 py-2" x-data="skillSearch()" @click.outside="open = false">
+          <div class="relative">
+            <div class="flex items-center gap-2 rounded-xl border border-brand-light bg-white px-3 py-2 transition focus-within:border-brand">
+              <span class="text-sm shrink-0">🔍</span>
+              <input x-model="q" @input="open = true" @focus="open = true" @keydown.enter.prevent="onEnter()"
+                     type="search" autocomplete="off" spellcheck="false"
+                     placeholder="{% if cur_lang == 'fr' %}Chercher une compétence…{% else %}Search a skill…{% endif %}"
+                     class="flex-1 bg-transparent text-[16px] font-bold text-ink placeholder-brand/40 outline-none min-w-0">
+            </div>
+            <div x-show="open && results.length > 0"
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="opacity-0 -translate-y-1"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 class="absolute left-0 right-0 top-full z-50 mt-1 rounded-2xl border border-brand-light bg-white py-1.5 shadow-soft">
+              <template x-for="group in groups" :key="group.key">
+                <div>
+                  <div class="px-4 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-widest text-brand/50" x-text="group.label"></div>
+                  <template x-for="sk in group.skills" :key="sk.slug">
+                    <a :href="'/practice/' + sk.slug + '/?lang={{ cur_lang }}'"
+                       class="flex items-center gap-3 px-4 py-2 text-sm font-bold text-ink hover:bg-brand-light transition">
+                      <span class="shrink-0" x-text="sk.icon"></span>
+                      <span class="flex-1 min-w-0">
+                        <span class="block font-extrabold truncate" x-text="skillName(sk)"></span>
+                        <span class="block text-[11px] text-brand/60 truncate" x-text="groupName(sk)"></span>
+                      </span>
+                    </a>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content min-w-0 px-3 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  {% if user.is_authenticated %}
+  <nav class="bottom-nav fixed bottom-0 inset-x-0 z-30 border-t border-slate-200 bg-white/96 backdrop-blur-xl lg:hidden">
+    <div class="grid {% if student %}grid-cols-5{% else %}grid-cols-2{% endif %} px-1 py-1">
+      {% if student %}
+      <a href="{% url 'quiz:index' %}?lang={{ cur_lang }}" class="flex flex-col items-center gap-0.5 px-1 py-3 rounded-2xl transition {% if request.resolver_match.url_name == 'index' %}text-brand{% else %}text-slate-400{% endif %}">
+        <span class="text-2xl">🏠</span><span class="text-[10px] font-extrabold">{% if cur_lang == 'fr' %}Accueil{% else %}Home{% endif %}</span>
+      </a>
+      <a href="{% url 'quiz:index' %}?lang={{ cur_lang }}" class="flex flex-col items-center gap-0.5 px-1 py-3 rounded-2xl transition {% if request.resolver_match.url_name == 'practice_page' %}text-brand{% else %}text-slate-400{% endif %}">
+        <span class="text-2xl">✏️</span><span class="text-[10px] font-extrabold">{% if cur_lang == 'fr' %}Pratique{% else %}Practice{% endif %}</span>
+      </a>
+      <a href="{% url 'quiz:progress' %}?lang={{ cur_lang }}" class="flex flex-col items-center gap-0.5 px-1 py-3 rounded-2xl transition {% if request.resolver_match.url_name == 'progress' or request.resolver_match.url_name == 'dashboard' %}text-brand{% else %}text-slate-400{% endif %}">
+        <span class="text-2xl">📈</span><span class="text-[10px] font-extrabold">{% if cur_lang == 'fr' %}Progrès{% else %}Progress{% endif %}</span>
+      </a>
+      <a href="{% url 'quiz:prizes' %}?lang={{ cur_lang }}" class="flex flex-col items-center gap-0.5 px-1 py-3 rounded-2xl transition {% if request.resolver_match.url_name == 'prizes' %}text-brand{% else %}text-slate-400{% endif %}">
+        <span class="text-2xl">🎁</span><span class="text-[10px] font-extrabold">{% if cur_lang == 'fr' %}Prix{% else %}Prizes{% endif %}</span>
+      </a>
+      <a href="{% url 'quiz:profile' %}?lang={{ cur_lang }}" class="flex flex-col items-center gap-0.5 px-1 py-3 rounded-2xl transition {% if request.resolver_match.url_name == 'profile' %}text-brand{% else %}text-slate-400{% endif %}">
+        <span class="text-2xl">{{ student.avatar_emoji }}</span><span class="text-[10px] font-extrabold">{% if cur_lang == 'fr' %}Profil{% else %}Profile{% endif %}</span>
+      </a>
+      {% elif parent_profile %}
+      <a href="{% url 'quiz:parent_dashboard' %}?lang={{ cur_lang }}" class="flex flex-col items-center gap-0.5 px-1 py-3 rounded-2xl transition {% if request.resolver_match.url_name == 'parent_dashboard' %}text-teal{% else %}text-slate-400{% endif %}">
+        <span class="text-2xl">📊</span><span class="text-[10px] font-extrabold">{% if cur_lang == 'fr' %}Tableau{% else %}Dashboard{% endif %}</span>
+      </a>
+      <a href="{% url 'quiz:logout' %}" class="flex flex-col items-center gap-0.5 px-1 py-3 rounded-2xl text-slate-400 transition">
+        <span class="text-2xl">↩️</span><span class="text-[10px] font-extrabold">{% if cur_lang == 'fr' %}Sortir{% else %}Log out{% endif %}</span>
+      </a>
+      {% endif %}
+    </div>
+  </nav>
+  {% endif %}
+
+  <!-- Toast container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-[100] flex max-w-[calc(100vw-2rem)] flex-col gap-3 sm:bottom-6 sm:right-6 lg:bottom-6"></div>
+
+  <script>
+    const SKILLS = [
+      {slug:"add", en:"Addition", fr:"Addition", icon:"🔢", gen:"Integer Arithmetic", gen_fr:"Arithmétique entière", grade:null},
+      {slug:"subtract", en:"Subtraction", fr:"Soustraction", icon:"🔢", gen:"Integer Arithmetic", gen_fr:"Arithmétique entière", grade:null},
+      {slug:"multiply", en:"Multiplication", fr:"Multiplication", icon:"🔢", gen:"Integer Arithmetic", gen_fr:"Arithmétique entière", grade:null},
+      {slug:"divide", en:"Division", fr:"Division", icon:"🔢", gen:"Integer Arithmetic", gen_fr:"Arithmétique entière", grade:null},
+      {slug:"decimal-add", en:"Decimal Addition", fr:"Addition décimale", icon:"🔡", gen:"Decimal Arithmetic", gen_fr:"Arithmétique décimale", grade:null},
+      {slug:"decimal-subtract", en:"Decimal Subtraction", fr:"Soustraction décimale", icon:"🔡", gen:"Decimal Arithmetic", gen_fr:"Arithmétique décimale", grade:null},
+      {slug:"decimal-multiply", en:"Decimal Multiplication", fr:"Multiplication décimale", icon:"🔡", gen:"Decimal Arithmetic", gen_fr:"Arithmétique décimale", grade:null},
+      {slug:"decimal-divide", en:"Decimal Division", fr:"Division décimale", icon:"🔡", gen:"Decimal Arithmetic", gen_fr:"Arithmétique décimale", grade:null},
+      {slug:"fraction-add", en:"Fraction Addition", fr:"Addition de fractions", icon:"½", gen:"Fraction Arithmetic", gen_fr:"Arithmétique des fractions", grade:null},
+      {slug:"fraction-subtract", en:"Fraction Subtraction", fr:"Soustraction de fractions", icon:"½", gen:"Fraction Arithmetic", gen_fr:"Arithmétique des fractions", grade:null},
+      {slug:"fraction-multiply", en:"Fraction Multiplication", fr:"Multiplication de fractions", icon:"½", gen:"Fraction Arithmetic", gen_fr:"Arithmétique des fractions", grade:null},
+      {slug:"fraction-divide", en:"Fraction Division", fr:"Division de fractions", icon:"½", gen:"Fraction Arithmetic", gen_fr:"Arithmétique des fractions", grade:null},
+      {slug:"compare-int", en:"Compare Integers", fr:"Comparer des entiers", icon:"⚖️", gen:"Comparisons", gen_fr:"Comparaisons", grade:null},
+      {slug:"compare-decimal", en:"Compare Decimals", fr:"Comparer des décimaux", icon:"⚖️", gen:"Comparisons", gen_fr:"Comparaisons", grade:null},
+      {slug:"compare-fraction", en:"Compare Fractions", fr:"Comparer des fractions", icon:"⚖️", gen:"Comparisons", gen_fr:"Comparaisons", grade:null},
+      {slug:"compare-mixed", en:"Compare Mixed", fr:"Comparer (mixte)", icon:"⚖️", gen:"Comparisons", gen_fr:"Comparaisons", grade:null},
+      {slug:"convert-length", en:"Length", fr:"Longueur", icon:"📏", gen:"Metric Conversions", gen_fr:"Conversions métriques", grade:null},
+      {slug:"convert-mass", en:"Mass", fr:"Masse", icon:"📏", gen:"Metric Conversions", gen_fr:"Conversions métriques", grade:null},
+      {slug:"convert-volume", en:"Volume", fr:"Volume", icon:"📏", gen:"Metric Conversions", gen_fr:"Conversions métriques", grade:null},
+      {slug:"geometry-area", en:"Area", fr:"Aire", icon:"📐", gen:"Geometry", gen_fr:"Géométrie", grade:null},
+      {slug:"geometry-perimeter", en:"Perimeter", fr:"Périmètre", icon:"📐", gen:"Geometry", gen_fr:"Géométrie", grade:null},
+      {slug:"squares", en:"Square Numbers", fr:"Carrés parfaits", icon:"🔍", gen:"Number Properties", gen_fr:"Propriétés des nombres", grade:null},
+      {slug:"primes", en:"Prime Numbers", fr:"Nombres premiers", icon:"🔍", gen:"Number Properties", gen_fr:"Propriétés des nombres", grade:null},
+      {slug:"even-odd", en:"Even & Odd", fr:"Pairs & Impairs", icon:"🔍", gen:"Number Properties", gen_fr:"Propriétés des nombres", grade:null},
+      {slug:"read-number", en:"Read a Number", fr:"Lire un nombre", icon:"🔢", gen:"Grade 3 — Number Sense", gen_fr:"3e année — Numération", grade:3},
+      {slug:"write-number", en:"Write a Number", fr:"Écrire un nombre", icon:"🔢", gen:"Grade 3 — Number Sense", gen_fr:"3e année — Numération", grade:3},
+      {slug:"digit-position", en:"Digit Position", fr:"Position d'un chiffre", icon:"🔢", gen:"Grade 3 — Number Sense", gen_fr:"3e année — Numération", grade:3},
+      {slug:"digit-value", en:"Digit Value", fr:"Valeur d'un chiffre", icon:"🔢", gen:"Grade 3 — Number Sense", gen_fr:"3e année — Numération", grade:3},
+      {slug:"expanded-form", en:"Expanded Form", fr:"Forme développée", icon:"🔢", gen:"Grade 3 — Number Sense", gen_fr:"3e année — Numération", grade:3},
+      {slug:"decomposition-match", en:"Decomposition Match", fr:"Décomposition (match)", icon:"🔢", gen:"Grade 3 — Number Sense", gen_fr:"3e année — Numération", grade:3},
+      {slug:"base10-match", en:"Base-10 Match", fr:"Base 10 (match)", icon:"🔢", gen:"Grade 3 — Number Sense", gen_fr:"3e année — Numération", grade:3},
+      {slug:"build-number", en:"Build a Number", fr:"Construire un nombre", icon:"🔢", gen:"Grade 3 — Number Sense", gen_fr:"3e année — Numération", grade:3},
+      {slug:"order-numbers", en:"Order Numbers", fr:"Ranger des nombres", icon:"🔢", gen:"Grade 3 — Number Sense", gen_fr:"3e année — Numération", grade:3},
+      {slug:"missing-addend", en:"Missing Addend", fr:"Terme manquant (addition)", icon:"➕", gen:"Grade 3 — Arithmetic", gen_fr:"3e année — Calcul", grade:3},
+      {slug:"missing-subtrahend", en:"Missing Subtrahend", fr:"Terme manquant (soustraction)", icon:"➕", gen:"Grade 3 — Arithmetic", gen_fr:"3e année — Calcul", grade:3},
+      {slug:"word-problem", en:"Word Problem", fr:"Problème en contexte", icon:"➕", gen:"Grade 3 — Arithmetic", gen_fr:"3e année — Calcul", grade:3},
+      {slug:"multiply-context", en:"Multiplication Context", fr:"Sens de la multiplication", icon:"➕", gen:"Grade 3 — Arithmetic", gen_fr:"3e année — Calcul", grade:3},
+      {slug:"repeated-addition", en:"Repeated Addition", fr:"Addition répétée ↔ ×", icon:"➕", gen:"Grade 3 — Arithmetic", gen_fr:"3e année — Calcul", grade:3},
+      {slug:"division-sharing", en:"Division as Sharing", fr:"Division comme partage", icon:"➕", gen:"Grade 3 — Arithmetic", gen_fr:"3e année — Calcul", grade:3},
+      {slug:"choose-operation", en:"Choose the Operation", fr:"Choisir l'opération", icon:"➕", gen:"Grade 3 — Arithmetic", gen_fr:"3e année — Calcul", grade:3},
+      {slug:"fact-family", en:"Fact Family", fr:"Famille de calculs", icon:"➕", gen:"Grade 3 — Arithmetic", gen_fr:"3e année — Calcul", grade:3},
+      {slug:"number-sequence", en:"Number Sequence", fr:"Suite numérique", icon:"➕", gen:"Grade 3 — Arithmetic", gen_fr:"3e année — Calcul", grade:3},
+      {slug:"number-classify", en:"Classify a Number", fr:"Classifier un nombre", icon:"➕", gen:"Grade 3 — Arithmetic", gen_fr:"3e année — Calcul", grade:3},
+      {slug:"identify-angle", en:"Identify Angle", fr:"Identifier un angle", icon:"📐", gen:"Grade 3 — Geometry", gen_fr:"3e année — Géométrie", grade:3},
+      {slug:"parallel-perp", en:"Parallel / Perp.", fr:"Parallèles / Perpendiculaires", icon:"📐", gen:"Grade 3 — Geometry", gen_fr:"3e année — Géométrie", grade:3},
+      {slug:"name-polygon", en:"Name a Polygon", fr:"Nommer un polygone", icon:"📐", gen:"Grade 3 — Geometry", gen_fr:"3e année — Géométrie", grade:3},
+      {slug:"count-sides", en:"Count Sides", fr:"Compter les côtés", icon:"📐", gen:"Grade 3 — Geometry", gen_fr:"3e année — Géométrie", grade:3},
+      {slug:"identify-solid", en:"Identify a Solid", fr:"Identifier un solide", icon:"📐", gen:"Grade 3 — Geometry", gen_fr:"3e année — Géométrie", grade:3},
+      {slug:"perimeter-labeled", en:"Labeled Perimeter", fr:"Périmètre (côtés étiquetés)", icon:"📐", gen:"Grade 3 — Geometry", gen_fr:"3e année — Géométrie", grade:3},
+      {slug:"round-ten", en:"Round to 10", fr:"Arrondir à la dizaine", icon:"≈", gen:"Grade 3 — Approximation", gen_fr:"3e année — Approximation", grade:3},
+      {slug:"round-hundred", en:"Round to 100", fr:"Arrondir à la centaine", icon:"≈", gen:"Grade 3 — Approximation", gen_fr:"3e année — Approximation", grade:3},
+      {slug:"count-groups", en:"Count Groups", fr:"Dénombrement par groupes", icon:"≈", gen:"Grade 3 — Approximation", gen_fr:"3e année — Approximation", grade:3},
+      {slug:"fraction-shape", en:"Fraction of a Shape", fr:"Fraction d'une figure", icon:"½", gen:"Grade 3 — Fractions & Decimals", gen_fr:"3e année — Fractions & Décimaux", grade:3},
+      {slug:"fraction-collection", en:"Fraction of a Collection", fr:"Fraction d'une collection", icon:"½", gen:"Grade 3 — Fractions & Decimals", gen_fr:"3e année — Fractions & Décimaux", grade:3},
+      {slug:"read-decimal", en:"Read a Decimal", fr:"Lire un décimal", icon:"½", gen:"Grade 3 — Fractions & Decimals", gen_fr:"3e année — Fractions & Décimaux", grade:3},
+      {slug:"fraction-to-decimal", en:"Fraction → Decimal", fr:"Fraction → Décimal", icon:"½", gen:"Grade 3 — Fractions & Decimals", gen_fr:"3e année — Fractions & Décimaux", grade:3},
+      {slug:"money-change", en:"Calculate Change", fr:"Calculer la monnaie", icon:"💰", gen:"Grade 3 — Money", gen_fr:"3e année — Monnaie", grade:3},
+      {slug:"money-match", en:"Money Composition", fr:"Composer une somme", icon:"💰", gen:"Grade 3 — Money", gen_fr:"3e année — Monnaie", grade:3},
+      {slug:"measure-unit", en:"Choose a Unit", fr:"Choisir une unité (longueur)", icon:"📏", gen:"Grade 3 — Measurement & Time", gen_fr:"3e année — Mesure & Temps", grade:3},
+      {slug:"unit-by-quantity", en:"Unit by Quantity Type", fr:"Unité selon la grandeur", icon:"📏", gen:"Grade 3 — Measurement & Time", gen_fr:"3e année — Mesure & Temps", grade:3},
+      {slug:"read-clock", en:"Read a Clock", fr:"Lire l'heure", icon:"📏", gen:"Grade 3 — Measurement & Time", gen_fr:"3e année — Mesure & Temps", grade:3},
+      {slug:"time-convert", en:"Convert Time Units", fr:"Convertir des unités de temps", icon:"📏", gen:"Grade 3 — Measurement & Time", gen_fr:"3e année — Mesure & Temps", grade:3},
+      {slug:"read-bar-chart", en:"Read a Bar Chart", fr:"Lire un diagramme à bandes", icon:"📊", gen:"Grade 3 — Statistics & Probability", gen_fr:"3e année — Statistiques & Probabilité", grade:3},
+      {slug:"probability-vocab", en:"Probability Vocab", fr:"Vocabulaire des probabilités", icon:"📊", gen:"Grade 3 — Statistics & Probability", gen_fr:"3e année — Statistiques & Probabilité", grade:3},
+      {slug:"cartesian-coord", en:"Cartesian Coordinates", fr:"Repérage cartésien", icon:"📊", gen:"Grade 3 — Statistics & Probability", gen_fr:"3e année — Statistiques & Probabilité", grade:3},
+      {slug:"g5-order-ops", en:"Order of Operations", fr:"Priorité des opérations", icon:"➗", gen:"Grade 5 — Arithmetic", gen_fr:"5e année — Arithmétique", grade:5},
+      {slug:"g5-decimal-mult", en:"Decimal × Natural", fr:"Décimal × entier", icon:"➗", gen:"Grade 5 — Arithmetic", gen_fr:"5e année — Arithmétique", grade:5},
+      {slug:"g5-div-decimal", en:"Natural ÷ → Decimal", fr:"Entier ÷ → décimal", icon:"➗", gen:"Grade 5 — Arithmetic", gen_fr:"5e année — Arithmétique", grade:5},
+      {slug:"g5-decimal-div", en:"Decimal ÷ Natural", fr:"Décimal ÷ entier", icon:"➗", gen:"Grade 5 — Arithmetic", gen_fr:"5e année — Arithmétique", grade:5},
+      {slug:"g5-volume", en:"Volume of a Prism", fr:"Volume d'un pavé droit", icon:"📏", gen:"Grade 5 — Measurement", gen_fr:"5e année — Mesure", grade:5},
+      {slug:"g5-capacity-convert", en:"L ↔ mL", fr:"L ↔ mL", icon:"📏", gen:"Grade 5 — Measurement", gen_fr:"5e année — Mesure", grade:5},
+      {slug:"g5-mass-convert", en:"g ↔ kg", fr:"g ↔ kg", icon:"📏", gen:"Grade 5 — Measurement", gen_fr:"5e année — Mesure", grade:5},
+      {slug:"g5-elapsed-time", en:"Elapsed Time", fr:"Durée écoulée", icon:"📏", gen:"Grade 5 — Measurement", gen_fr:"5e année — Mesure", grade:5},
+      {slug:"g5-temperature", en:"Compare Temperatures", fr:"Comparer des températures", icon:"📏", gen:"Grade 5 — Measurement", gen_fr:"5e année — Mesure", grade:5},
+      {slug:"g5-thermometer", en:"Read a Thermometer", fr:"Lire un thermomètre", icon:"📏", gen:"Grade 5 — Measurement", gen_fr:"5e année — Mesure", grade:5},
+      {slug:"g5-large-integer", en:"Read Large Integers", fr:"Lire de grands nombres", icon:"🔢", gen:"Grade 5 — Number Sense", gen_fr:"5e année — Numération", grade:5},
+      {slug:"g5-decimal-write", en:"Write Decimals", fr:"Écrire un décimal", icon:"🔢", gen:"Grade 5 — Number Sense", gen_fr:"5e année — Numération", grade:5},
+      {slug:"g5-decimal-forms", en:"Decimal Forms", fr:"Formes d'un décimal", icon:"🔢", gen:"Grade 5 — Number Sense", gen_fr:"5e année — Numération", grade:5},
+      {slug:"g5-number-line", en:"Number Line", fr:"Droite numérique", icon:"🔢", gen:"Grade 5 — Number Sense", gen_fr:"5e année — Numération", grade:5},
+      {slug:"g5-arithmetic-mean", en:"Arithmetic Mean", fr:"Moyenne arithmétique", icon:"📊", gen:"Grade 5 — Statistics & Probability", gen_fr:"5e année — Statistiques & Probabilité", grade:5},
+      {slug:"g5-data-table", en:"Data Table", fr:"Tableau de données", icon:"📊", gen:"Grade 5 — Statistics & Probability", gen_fr:"5e année — Statistiques & Probabilité", grade:5},
+      {slug:"g5-pie-chart", en:"Pie Chart", fr:"Diagramme circulaire", icon:"📊", gen:"Grade 5 — Statistics & Probability", gen_fr:"5e année — Statistiques & Probabilité", grade:5},
+      {slug:"g5-probability-frac", en:"Probability as Fraction", fr:"Probabilité (fraction)", icon:"📊", gen:"Grade 5 — Statistics & Probability", gen_fr:"5e année — Statistiques & Probabilité", grade:5},
+      {slug:"g5-probability-forms", en:"Probability Forms", fr:"Formes d'une probabilité", icon:"📊", gen:"Grade 5 — Statistics & Probability", gen_fr:"5e année — Statistiques & Probabilité", grade:5},
+      {slug:"g5-count-outcomes", en:"Count Outcomes", fr:"Dénombrement des résultats", icon:"📊", gen:"Grade 5 — Statistics & Probability", gen_fr:"5e année — Statistiques & Probabilité", grade:5},
+      {slug:"g5-euler", en:"Euler's Formula", fr:"Formule d'Euler", icon:"📊", gen:"Grade 5 — Statistics & Probability", gen_fr:"5e année — Statistiques & Probabilité", grade:5},
+      {slug:"g5-solid-counts", en:"Solid Face/Vertex/Edge", fr:"Faces, sommets, arêtes", icon:"📊", gen:"Grade 5 — Statistics & Probability", gen_fr:"5e année — Statistiques & Probabilité", grade:5},
+    ];
+    function skillSearch() {
+      const lang = '{{ cur_lang }}';
+      const gradeLabel = {
+        'general': lang === 'fr' ? 'Général' : 'General',
+        3: lang === 'fr' ? '3e année' : 'Grade 3',
+        5: lang === 'fr' ? '5e année' : 'Grade 5',
+      };
+      return {
+        q: '', open: false,
+        get groups() {
+          if (!this.q.trim()) return [];
+          const s = this.q.toLowerCase();
+          const matches = SKILLS.filter(sk =>
+            sk[lang].toLowerCase().includes(s) ||
+            (lang === 'fr' ? sk.gen_fr : sk.gen).toLowerCase().includes(s)
+          ).slice(0, 18);
+          const order = [null, 3, 5];
+          const grouped = {};
+          for (const sk of matches) {
+            const g = sk.grade;
+            if (!grouped[g]) grouped[g] = [];
+            grouped[g].push(sk);
+          }
+          return order.filter(g => grouped[g]).map(g => ({
+            key: g === null ? 'general' : String(g),
+            label: gradeLabel[g === null ? 'general' : g],
+            skills: grouped[g],
+          }));
+        },
+        get results() { return this.groups.flatMap(g => g.skills); },
+        groupName(sk) { return lang === 'fr' ? sk.gen_fr : sk.gen; },
+        skillName(sk) { return sk[lang]; },
+        navigate(slug) { window.location.href = '/practice/' + slug + '/?lang=' + lang; },
+        onEnter() { if (this.results.length) this.navigate(this.results[0].slug); }
+      };
+    }
+    document.addEventListener('htmx:configRequest', (e) => {
+      e.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+    });
+    function toast(msg, type='info') {
+      const tones = { success: 'bg-lime', error: 'bg-coral', info: 'bg-brand', warn: 'bg-amber' };
+      const el = document.createElement('div');
+      el.className = `${tones[type]||tones.info} animate-pop rounded-2xl px-4 py-3 text-sm font-black text-white shadow-card`;
+      el.textContent = msg;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => el.remove(), 3200);
+    }
+  </script>
+</body>
+</html>{% endwith %}
