@@ -1,9 +1,12 @@
 {% load quiz_extras %}
+<div id="sidebar-stars" hx-swap-oob="true" class="text-xl font-black text-amber-dark">{{ total_stars }}</div>
+
 <div id="practice-area"
      class="space-y-2 animate-slide-up result-banner"
      data-correct="{{ correct|lower }}"
      data-streak="{{ streak }}"
      data-total="{{ total }}"
+     data-stars-earned="{{ stars_earned }}"
      {% if not suggested_action %}
      hx-get="{% url 'quiz:practice_next' topic %}?lang={{ lang }}&level={{ level }}"
      hx-trigger="load delay:1500ms"

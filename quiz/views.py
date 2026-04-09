@@ -648,18 +648,19 @@ def practice_check(request, topic):
             answer_data = []
 
     # ── Star + interaction tracking ───────────────────────────────────────────
-    points       = q_data.get('points', 1)
+    LEVEL_STARS  = {'easy': 1, 'medium': 2, 'hard': 3}
     stars_earned = 0
+    stars_value  = LEVEL_STARS.get(level, 1)
     ProblemInteraction.objects.create(
         user=request.user, topic=topic, level=level,
         is_correct=correct,
-        points_earned=points if correct else 0,
+        points_earned=stars_value if correct else 0,
         error_type=error_type,
     )
     from django.db.models import F
     if correct:
-        stars_earned = points
-        Student.objects.filter(user=request.user).update(total_stars=F('total_stars') + points)
+        stars_earned = stars_value
+        Student.objects.filter(user=request.user).update(total_stars=F('total_stars') + stars_value)
         student = Student.objects.get(user=request.user)
         sr = student.skill_ratings
         entry = sr.get(topic, {'correct': 0, 'total': 0})
@@ -709,12 +710,15 @@ def practice_check(request, topic):
                 suggested_topic  = skill_info['downgrade']
 
     expl_key = 'explanation_en' if lang != 'fr' else 'explanation_fr'
+    _updated_student = Student.objects.filter(user=request.user).values('total_stars').first()
+    total_stars_now  = _updated_student['total_stars'] if _updated_student else 0
     return render(request, 'partials/practice_feedback.html', {
         'correct':               correct,
         'streak':                stats['streak'],
         'total':                 stats['total'],
         'wrong_streak':          stats['wrong_streak'],
         'stars_earned':          stars_earned,
+        'total_stars':           total_stars_now,
         'explanation':           q_data.get(expl_key, q_data.get('explanation_en', '')),
         'misconception_feedback': misconception_feedback,
         'error_type':            error_type,

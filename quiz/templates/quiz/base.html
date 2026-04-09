@@ -205,7 +205,7 @@
           </div>
           <div class="mt-4 grid grid-cols-2 gap-2">
             <a href="{% url 'quiz:progress' %}?lang={{ cur_lang }}" class="rounded-xl bg-amber-light px-3 py-2.5 text-center">
-              <div class="text-xl font-black text-amber-dark">{{ student.total_stars }}</div>
+              <div id="sidebar-stars" class="text-xl font-black text-amber-dark">{{ student.total_stars }}</div>
               <div class="text-[10px] font-extrabold uppercase tracking-wide text-amber-dark">⭐ {% if cur_lang == 'fr' %}Étoiles{% else %}Stars{% endif %}</div>
             </a>
             <a href="{% url 'quiz:prizes' %}?lang={{ cur_lang }}" class="rounded-xl bg-brand-light px-3 py-2.5 text-center">

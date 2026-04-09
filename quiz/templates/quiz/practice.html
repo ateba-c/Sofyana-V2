@@ -140,6 +140,10 @@
           <span>{% if lang == 'fr' %}Meilleure série{% else %}Best streak{% endif %}</span>
           <span class="text-brand" x-text="best">0</span>
         </div>
+        <div class="mt-2 flex justify-between text-xs font-black text-[var(--text-soft)]">
+          <span>{% if lang == 'fr' %}Étoiles gagnées{% else %}Stars earned{% endif %}</span>
+          <span class="text-amber-500" x-text="'⭐ ' + session_stars">⭐ 0</span>
+        </div>
       </div>
 
       <!-- Suggestions parentales -->
@@ -205,11 +209,13 @@ function practiceUI() {
     total: 0,
     correct_count: 0,
     best: 0,
+    session_stars: 0,
     onStat(d) {
       this.streak = d.streak;
       this.total = d.total;
       if (d.correct) this.correct_count++;
       if (this.streak > this.best) this.best = this.streak;
+      this.session_stars += d.stars_earned || 0;
     }
   };
 }
@@ -221,6 +227,7 @@ document.addEventListener('htmx:afterSettle', () => {
     correct: area.dataset.correct === 'true',
     streak: parseInt(area.dataset.streak || 0, 10),
     total: parseInt(area.dataset.total || 0, 10),
+    stars_earned: parseInt(area.dataset.starsEarned || 0, 10),
   }}));
 });
 </script>
