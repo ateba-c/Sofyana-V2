@@ -23,7 +23,7 @@
     </p>
 
     <!-- Shape canvas -->
-    {% if question.shape_data and question.show_illustration %}
+    {% if question.shape_data %}
     <div class="rounded-xl bg-slate-50 border border-slate-200 p-2 mb-2">
       {% shape_canvas question.shape_data lang %}
     </div>

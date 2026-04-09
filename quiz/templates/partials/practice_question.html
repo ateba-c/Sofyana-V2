@@ -18,7 +18,7 @@
     {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
   </p>
 
-  {% if question.shape_data and question.show_illustration %}
+  {% if question.shape_data %}
   <div class="rounded-xl border border-slate-200 bg-slate-50 p-2 mb-2">
     {% shape_canvas question.shape_data lang %}
   </div>
