@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -19,13 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-s&yek&7uq6=t4szd=^dhz#6@fbt&$*z#b0@qn1&(k8g&l%8+q^'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-s&yek&7uq6=t4szd=^dhz#6@fbt&$*z#b0@qn1&(k8g&l%8+q^')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['www.sofyana.app', 'sofyana.app', '127.0.0.1', 'localhost']
+_hosts = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',')]
 
 
 # Application definition
