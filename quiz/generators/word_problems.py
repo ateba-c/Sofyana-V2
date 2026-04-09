@@ -683,8 +683,9 @@ def number_classify_gen(level='easy'):
         ),
         'explanation_fr': (
             f'Étape 1 : {n} est-il divisible par 2 ? {"Oui — il est pair." if even else "Non — il est impair."}\n'
-            f'Étape 2 : {n} a-t-il exactement 2 diviseurs (1 et lui-même) ? {"Oui — il est premier." if prime else "Non — il n\'est pas premier."}\n'
-            f'Réponse : {n} est {ans_fr}'
+            f'Étape 2 : {n} a-t-il exactement 2 diviseurs (1 et lui-même) ? '
+            + ("Oui — il est premier." if prime else "Non — il n'est pas premier.")
+            + f'\nRéponse : {n} est {ans_fr}'
         ),
         'correct_answers': [ans_fr],
     }
