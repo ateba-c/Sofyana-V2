@@ -38,9 +38,9 @@
          class="rounded-2xl bg-brand px-7 py-4 text-base font-black text-white shadow-warm hover:bg-brand-dark hover:scale-105 transition-all">
         {% if lang == 'fr' %}Commencer gratuitement →{% else %}Start for free →{% endif %}
       </a>
-      <a href="#comment-ca-marche"
+      <a href="{% url 'quiz:login' %}?lang={{ lang }}"
          class="rounded-2xl border-2 border-brand-light bg-white px-7 py-4 text-base font-black text-brand hover:bg-brand-light transition">
-        {% if lang == 'fr' %}Comment ça marche{% else %}How it works{% endif %}
+        {% if lang == 'fr' %}Se connecter{% else %}Log in{% endif %}
       </a>
     </div>
 

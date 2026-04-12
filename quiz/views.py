@@ -1,6 +1,7 @@
 import json
 import random as _random
 from django import forms
+from django.contrib import messages
 from django.contrib.auth import login as auth_login, logout as auth_logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -1232,6 +1233,37 @@ def unassign_topic_view(request):
     assignment_id = request.POST.get('assignment_id', '')
     if assignment_id:
         ParentAssignment.objects.filter(pk=assignment_id, parent=parent).delete()
+    return redirect(f'/parent/?lang={lang}')
+
+
+@require_POST
+@login_required
+def parent_reset_child_password_view(request):
+    lang = request.GET.get('lang', 'en')
+    try:
+        parent = request.user.parent_profile
+    except Exception:
+        return redirect('quiz:index')
+
+    child_username = request.POST.get('child_username', '').strip()
+    new_password   = request.POST.get('new_password', '').strip()
+    confirm        = request.POST.get('confirm_password', '').strip()
+
+    # Verify the child belongs to this parent
+    child_user = parent.children.filter(username__iexact=child_username).first()
+    if not child_user:
+        messages.error(request, 'Child not found or not linked to your account.')
+        return redirect(f'/parent/?lang={lang}')
+    if len(new_password) < 4:
+        messages.error(request, 'Password must be at least 4 characters.')
+        return redirect(f'/parent/?lang={lang}')
+    if new_password != confirm:
+        messages.error(request, 'Passwords do not match.')
+        return redirect(f'/parent/?lang={lang}')
+
+    child_user.set_password(new_password)
+    child_user.save()
+    messages.success(request, f"Password for {child_user.username} has been reset.")
     return redirect(f'/parent/?lang={lang}')
 
 

@@ -25,5 +25,6 @@ urlpatterns = [
     path('parent/register/',                           views.parent_register_view,   name='parent_register'),
     path('parent/assign/',                             views.assign_topic_view,      name='assign_topic'),
     path('parent/unassign/',                           views.unassign_topic_view,    name='unassign_topic'),
+    path('parent/reset-child-password/',               views.parent_reset_child_password_view, name='parent_reset_child_password'),
     path('assignments/complete/',                      views.complete_assignment_view, name='complete_assignment'),
 ]

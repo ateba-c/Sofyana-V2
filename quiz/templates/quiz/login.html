@@ -59,6 +59,12 @@
         {% if lang == 'fr' %}Inscription parent{% else %}Parent sign up{% endif %}
       </a>
     </p>
+    <div class="mt-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs font-bold text-amber-700 text-center">
+      💡 {% if lang == 'fr' %}Mot de passe oublié ? Demandez à un parent de le réinitialiser depuis son{% else %}Forgot your password? Ask a parent to reset it from their{% endif %}
+      <a href="{% url 'quiz:parent_dashboard' %}?lang={{ lang }}" class="underline font-extrabold">
+        {% if lang == 'fr' %}tableau de bord parent{% else %}parent dashboard{% endif %}
+      </a>.
+    </div>
   </div>
 </div>
 {% endblock %}

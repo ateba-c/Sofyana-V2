@@ -31,6 +31,13 @@
   {% if link_success %}
   <div class="rounded-2xl bg-lime-light border border-lime/30 px-5 py-4 text-sm font-bold text-lime-dark">✅ {{ link_success }}</div>
   {% endif %}
+  {% for message in messages %}
+  <div class="rounded-2xl px-5 py-4 text-sm font-bold
+              {% if message.tags == 'success' %}bg-lime-light border border-lime/30 text-lime-dark
+              {% else %}bg-pink-light border border-pink/30 text-pink{% endif %}">
+    {% if message.tags == 'success' %}✅{% else %}⚠️{% endif %} {{ message }}
+  </div>
+  {% endfor %}
 
   <!-- Link child form -->
   <section class="card-glass rounded-[2rem] p-5 sm:p-6">
@@ -241,6 +248,42 @@
             {% endif %}
           {% endif %}{% endfor %}
           {% endwith %}
+        </div>
+
+        <!-- Reset child password -->
+        <div x-data="{ open: false }">
+          <button @click="open = !open" type="button"
+                  class="flex items-center gap-2 text-xs font-extrabold text-[var(--text-soft)] hover:text-brand transition">
+            <span>🔑</span>
+            <span x-text="open ? '{% if lang == 'fr' %}Annuler{% else %}Cancel{% endif %}' : '{% if lang == 'fr' %}Réinitialiser le mot de passe{% else %}Reset password{% endif %}'"></span>
+          </button>
+          <div x-show="open" x-transition class="mt-3">
+            <form method="post" action="{% url 'quiz:parent_reset_child_password' %}?lang={{ lang }}"
+                  class="flex flex-col gap-3 sm:flex-row sm:items-end flex-wrap">
+              {% csrf_token %}
+              <input type="hidden" name="child_username" value="{{ child.username }}">
+              <div class="flex-1 min-w-[160px]">
+                <label class="block text-[10px] font-extrabold uppercase tracking-wide text-[var(--text-soft)] mb-1">
+                  {% if lang == 'fr' %}Nouveau mot de passe{% else %}New password{% endif %}
+                </label>
+                <input type="password" name="new_password" minlength="4" required
+                       class="w-full bg-white border-2 border-brand-light rounded-xl px-3 py-2.5 text-sm font-bold text-ink focus:outline-none focus:border-brand transition"
+                       placeholder="••••••">
+              </div>
+              <div class="flex-1 min-w-[160px]">
+                <label class="block text-[10px] font-extrabold uppercase tracking-wide text-[var(--text-soft)] mb-1">
+                  {% if lang == 'fr' %}Confirmer{% else %}Confirm{% endif %}
+                </label>
+                <input type="password" name="confirm_password" minlength="4" required
+                       class="w-full bg-white border-2 border-brand-light rounded-xl px-3 py-2.5 text-sm font-bold text-ink focus:outline-none focus:border-brand transition"
+                       placeholder="••••••">
+              </div>
+              <button type="submit"
+                      class="rounded-xl bg-brand px-5 py-2.5 text-sm font-black text-white hover:bg-brand-dark transition shadow-card shrink-0">
+                {% if lang == 'fr' %}Enregistrer{% else %}Save{% endif %}
+              </button>
+            </form>
+          </div>
         </div>
 
       </div>
