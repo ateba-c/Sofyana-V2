@@ -233,6 +233,16 @@
             <span class="sidebar-icon">📊</span>
             <span>{% if cur_lang == 'fr' %}Tableau de bord{% else %}Dashboard{% endif %}</span>
           </a>
+          <button type="button" class="sidebar-link w-full text-left"
+                  @click="menuOpen = false; $dispatch('open-add-child')">
+            <span class="sidebar-icon">➕</span>
+            <span>{% if cur_lang == 'fr' %}Ajouter un enfant{% else %}Add child{% endif %}</span>
+          </button>
+          <button type="button" class="sidebar-link w-full text-left"
+                  @click="menuOpen = false; $dispatch('open-reset-password')">
+            <span class="sidebar-icon">🔑</span>
+            <span>{% if cur_lang == 'fr' %}Réinitialiser mot de passe{% else %}Reset password{% endif %}</span>
+          </button>
           {% else %}
           <a href="{% url 'quiz:index' %}?lang={{ cur_lang }}" class="sidebar-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
             <span class="sidebar-icon">🏠</span>

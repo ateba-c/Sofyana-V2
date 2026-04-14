@@ -2,7 +2,10 @@
 {% block title %}{% if lang == 'fr' %}Tableau de bord Parent{% else %}Parent Dashboard{% endif %} — Sofyana{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-6xl space-y-6">
+<div class="mx-auto max-w-6xl space-y-6"
+     x-data="{ addChildOpen: false, resetPasswordOpen: false }"
+     @open-add-child.window="addChildOpen = true"
+     @open-reset-password.window="resetPasswordOpen = true">
 
   <!-- Header -->
   <section class="card-solid rounded-[2rem] p-6 sm:p-8">
@@ -20,6 +23,14 @@
         <span class="inline-flex items-center gap-2 rounded-full bg-teal-light px-4 py-2.5 text-sm font-black text-teal-dark">
           👨‍👩‍👧 {{ children_data|length }} {% if lang == 'fr' %}enfant{{ children_data|length|pluralize }}{% else %}child{{ children_data|length|pluralize:"ren" }}{% endif %}
         </span>
+        <button @click="addChildOpen = true" type="button"
+                class="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-black text-white shadow-card hover:bg-brand-dark transition">
+          ➕ {% if lang == 'fr' %}Ajouter un enfant{% else %}Add child{% endif %}
+        </button>
+        <button @click="resetPasswordOpen = true" type="button"
+                class="inline-flex items-center gap-2 rounded-full bg-white border border-brand-light px-4 py-2.5 text-sm font-black text-brand hover:bg-brand-light transition">
+          🔑 {% if lang == 'fr' %}Réinitialiser{% else %}Reset password{% endif %}
+        </button>
       </div>
     </div>
   </section>
@@ -39,25 +50,87 @@
   </div>
   {% endfor %}
 
-  <!-- Link child form -->
-  <section class="card-glass rounded-[2rem] p-5 sm:p-6">
-    <h2 class="font-display text-xl font-extrabold text-ink mb-3">
-      {% if lang == 'fr' %}Lier un compte enfant{% else %}Link a child's account{% endif %}
-    </h2>
-    <p class="text-sm font-bold text-[var(--text-soft)] mb-4">
-      {% if lang == 'fr' %}Demandez à votre enfant son nom d'utilisateur Sofyana et entrez-le ci-dessous.{% else %}Ask your child for their Sofyana username and enter it below.{% endif %}
-    </p>
-    <form method="post" class="flex gap-3 flex-wrap">
-      {% csrf_token %}
-      <input type="text" name="child_username"
-             class="flex-1 min-w-[200px] bg-white border-2 border-teal-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 text-sm font-bold"
-             placeholder="{% if lang == 'fr' %}Nom d'utilisateur de l'enfant{% else %}Child's username{% endif %}">
-      <button type="submit"
-              class="rounded-xl bg-gradient-to-r from-teal to-lime px-6 py-3 text-sm font-black text-white shadow-card hover:opacity-90 transition">
-        {% if lang == 'fr' %}Lier{% else %}Link{% endif %}
-      </button>
-    </form>
-  </section>
+  <!-- ── Add child modal ── -->
+  <div x-show="addChildOpen" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-sm"
+       @click.self="addChildOpen = false">
+    <div class="card-glass rounded-[2rem] p-6 w-full max-w-sm shadow-warm" @click.stop>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-display text-xl font-extrabold text-ink">
+          ➕ {% if lang == 'fr' %}Ajouter un enfant{% else %}Add child{% endif %}
+        </h2>
+        <button @click="addChildOpen = false" class="rounded-xl bg-soft px-3 py-2 text-sm font-black text-[var(--text-soft)] hover:bg-brand-light transition">✕</button>
+      </div>
+      <p class="text-sm font-bold text-[var(--text-soft)] mb-4">
+        {% if lang == 'fr' %}Demandez à votre enfant son nom d'utilisateur Sofyana.{% else %}Ask your child for their Sofyana username.{% endif %}
+      </p>
+      <form method="post" class="space-y-3">
+        {% csrf_token %}
+        <input type="text" name="child_username"
+               class="w-full bg-white border-2 border-teal-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 text-sm font-bold"
+               placeholder="{% if lang == 'fr' %}Nom d'utilisateur de l'enfant{% else %}Child's username{% endif %}">
+        <button type="submit"
+                class="w-full rounded-xl bg-gradient-to-r from-teal to-lime py-3 text-sm font-black text-white shadow-card hover:opacity-90 transition">
+          {% if lang == 'fr' %}Lier le compte{% else %}Link account{% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Reset child password modal ── -->
+  <div x-show="resetPasswordOpen" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-sm"
+       @click.self="resetPasswordOpen = false">
+    <div class="card-glass rounded-[2rem] p-6 w-full max-w-sm shadow-warm" @click.stop>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-display text-xl font-extrabold text-ink">
+          🔑 {% if lang == 'fr' %}Réinitialiser le mot de passe{% else %}Reset password{% endif %}
+        </h2>
+        <button @click="resetPasswordOpen = false" class="rounded-xl bg-soft px-3 py-2 text-sm font-black text-[var(--text-soft)] hover:bg-brand-light transition">✕</button>
+      </div>
+      {% if children_data %}
+      <form method="post" action="{% url 'quiz:parent_reset_child_password' %}?lang={{ lang }}"
+            class="space-y-3">
+        {% csrf_token %}
+        <div>
+          <label class="block text-[10px] font-extrabold uppercase tracking-wide text-[var(--text-soft)] mb-1.5">
+            {% if lang == 'fr' %}Enfant{% else %}Child{% endif %}
+          </label>
+          <select name="child_username"
+                  class="w-full bg-white border-2 border-brand-light rounded-xl px-3 py-3 text-sm font-bold text-ink focus:outline-none focus:border-brand transition">
+            {% for child in children_data %}
+            <option value="{{ child.username }}">{{ child.avatar }} {{ child.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-extrabold uppercase tracking-wide text-[var(--text-soft)] mb-1.5">
+            {% if lang == 'fr' %}Nouveau mot de passe{% else %}New password{% endif %}
+          </label>
+          <input type="password" name="new_password" minlength="4" required
+                 class="w-full bg-white border-2 border-brand-light rounded-xl px-3 py-3 text-sm font-bold text-ink focus:outline-none focus:border-brand transition"
+                 placeholder="••••••">
+        </div>
+        <div>
+          <label class="block text-[10px] font-extrabold uppercase tracking-wide text-[var(--text-soft)] mb-1.5">
+            {% if lang == 'fr' %}Confirmer{% else %}Confirm{% endif %}
+          </label>
+          <input type="password" name="confirm_password" minlength="4" required
+                 class="w-full bg-white border-2 border-brand-light rounded-xl px-3 py-3 text-sm font-bold text-ink focus:outline-none focus:border-brand transition"
+                 placeholder="••••••">
+        </div>
+        <button type="submit"
+                class="w-full rounded-xl bg-brand py-3 text-sm font-black text-white hover:bg-brand-dark transition shadow-card">
+          {% if lang == 'fr' %}Enregistrer{% else %}Save new password{% endif %}
+        </button>
+      </form>
+      {% else %}
+      <p class="text-sm font-bold text-[var(--text-soft)]">
+        {% if lang == 'fr' %}Aucun enfant lié. Ajoutez un enfant d'abord.{% else %}No children linked yet. Add a child first.{% endif %}
+      </p>
+      {% endif %}
+    </div>
+  </div>
 
   <!-- Children cards -->
   {% if children_data %}
@@ -248,42 +321,6 @@
             {% endif %}
           {% endif %}{% endfor %}
           {% endwith %}
-        </div>
-
-        <!-- Reset child password -->
-        <div x-data="{ open: false }">
-          <button @click="open = !open" type="button"
-                  class="flex items-center gap-2 text-xs font-extrabold text-[var(--text-soft)] hover:text-brand transition">
-            <span>🔑</span>
-            <span x-text="open ? '{% if lang == 'fr' %}Annuler{% else %}Cancel{% endif %}' : '{% if lang == 'fr' %}Réinitialiser le mot de passe{% else %}Reset password{% endif %}'"></span>
-          </button>
-          <div x-show="open" x-transition class="mt-3">
-            <form method="post" action="{% url 'quiz:parent_reset_child_password' %}?lang={{ lang }}"
-                  class="flex flex-col gap-3 sm:flex-row sm:items-end flex-wrap">
-              {% csrf_token %}
-              <input type="hidden" name="child_username" value="{{ child.username }}">
-              <div class="flex-1 min-w-[160px]">
-                <label class="block text-[10px] font-extrabold uppercase tracking-wide text-[var(--text-soft)] mb-1">
-                  {% if lang == 'fr' %}Nouveau mot de passe{% else %}New password{% endif %}
-                </label>
-                <input type="password" name="new_password" minlength="4" required
-                       class="w-full bg-white border-2 border-brand-light rounded-xl px-3 py-2.5 text-sm font-bold text-ink focus:outline-none focus:border-brand transition"
-                       placeholder="••••••">
-              </div>
-              <div class="flex-1 min-w-[160px]">
-                <label class="block text-[10px] font-extrabold uppercase tracking-wide text-[var(--text-soft)] mb-1">
-                  {% if lang == 'fr' %}Confirmer{% else %}Confirm{% endif %}
-                </label>
-                <input type="password" name="confirm_password" minlength="4" required
-                       class="w-full bg-white border-2 border-brand-light rounded-xl px-3 py-2.5 text-sm font-bold text-ink focus:outline-none focus:border-brand transition"
-                       placeholder="••••••">
-              </div>
-              <button type="submit"
-                      class="rounded-xl bg-brand px-5 py-2.5 text-sm font-black text-white hover:bg-brand-dark transition shadow-card shrink-0">
-                {% if lang == 'fr' %}Enregistrer{% else %}Save{% endif %}
-              </button>
-            </form>
-          </div>
         </div>
 
       </div>
