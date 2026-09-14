@@ -140,3 +140,120 @@ class InputSpecTests(TestCase):
         self.assertEqual(input_spec('decimal', 'fr')['placeholder'], '3,5')
         self.assertEqual(input_spec('bogus')['answer_type'], 'bogus')
         self.assertEqual(input_spec(None)['answer_type'], 'text')
+
+
+# ── AI search ────────────────────────────────────────────────────────────────
+
+from unittest import mock
+from django.contrib.auth.models import User
+from django.test import Client, override_settings
+from .models import Skill, ParentProfile, ParentAssignment, SearchQuery, Student
+
+
+class SearchEngineTests(TestCase):
+    def setUp(self):
+        from .ai import search as s
+        s._catalog_cache.clear()
+        Skill.objects.filter(slug='missing-addend').update(
+            keywords_fr='terme manquant, nombre manquant, addition à trou',
+            description_en='Find the missing number in an addition like 12 + ___ = 20.')
+
+    def test_keyword_fallback_matches_keywords_and_names(self):
+        from .ai.search import keyword_search
+        res = keyword_search('le nombre manquant dans une addition', 'fr')
+        self.assertTrue(res)
+        self.assertEqual(res[0]['slug'], 'missing-addend')
+        self.assertTrue(0 < res[0]['score'] <= 1)
+
+    def test_keyword_fallback_empty(self):
+        from .ai.search import keyword_search
+        self.assertEqual(keyword_search('', 'fr'), [])
+        self.assertEqual(keyword_search('zzzz qqqq', 'fr'), [])
+
+    @override_settings(LLM_API_KEY='')
+    def test_search_skills_uses_keyword_when_unconfigured(self):
+        from .ai.search import search_skills
+        res, engine = search_skills('nombre manquant addition', 'fr')
+        self.assertEqual(engine, 'keyword')
+        self.assertEqual(res[0]['slug'], 'missing-addend')
+
+    @override_settings(LLM_API_KEY='x')
+    def test_llm_results_are_validated(self):
+        from .ai.search import search_skills
+        fake = {'results': [{'slug': 'not-a-skill', 'score': 0.9, 'why': 'nope'},
+                            {'slug': 'g5-volume', 'score': '0.8', 'why': 'volume'},
+                            {'slug': 'g5-volume', 'score': 0.7, 'why': 'dup'},
+                            {'slug': 'add', 'score': 7, 'why': 'clamped'}]}
+        with mock.patch('quiz.ai.client.complete_json', return_value=fake):
+            res, engine = search_skills('volume', 'en')
+        self.assertEqual(engine, 'llm')
+        self.assertEqual([r['slug'] for r in res], ['g5-volume', 'add'])
+        self.assertEqual(res[0]['score'], 0.8)
+        self.assertEqual(res[1]['score'], 1.0)
+
+    @override_settings(LLM_API_KEY='x')
+    def test_llm_failure_falls_back(self):
+        from .ai.search import search_skills
+        with mock.patch('quiz.ai.client.complete_json', side_effect=RuntimeError('boom')):
+            res, engine = search_skills('nombre manquant', 'fr')
+        self.assertEqual(engine, 'keyword')
+        self.assertEqual(res[0]['slug'], 'missing-addend')
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'], LLM_API_KEY='')
+class SearchViewTests(TestCase):
+    def setUp(self):
+        from .ai import search as s
+        s._catalog_cache.clear()
+        Skill.objects.filter(slug='missing-addend').update(keywords_fr='nombre manquant, addition à trou')
+        self.kid = User.objects.create_user('kid', password='pw1234')
+        Student.objects.create(user=self.kid)
+        self.parent = User.objects.create_user('mom', password='pw1234')
+        pp = ParentProfile.objects.create(user=self.parent)
+        pp.children.add(self.kid)
+        self.c = Client()
+
+    def test_requires_login(self):
+        self.assertEqual(self.c.get('/search/').status_code, 302)
+
+    def test_page_renders_for_kid_and_parent(self):
+        self.c.login(username='kid', password='pw1234')
+        r = self.c.get('/search/?lang=fr')
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'Trouver un exercice')
+        self.c.login(username='mom', password='pw1234')
+        r = self.c.get('/search/?lang=en')
+        self.assertContains(r, 'assign it to your child')
+
+    def test_kid_search_gets_practice_button_and_is_logged(self):
+        self.c.login(username='kid', password='pw1234')
+        r = self.c.post('/search/run/', {'lang': 'fr', 'q': 'le nombre manquant dans une addition'})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, '/practice/missing-addend/')
+        self.assertContains(r, 'Pratiquer')
+        self.assertNotContains(r, 'Assigner')
+        sq = SearchQuery.objects.get()
+        self.assertEqual(sq.user, self.kid)
+        self.assertEqual(sq.engine, 'keyword')
+        self.assertEqual(sq.results[0]['slug'], 'missing-addend')
+
+    def test_parent_gets_assign_button_and_can_assign_inline(self):
+        self.c.login(username='mom', password='pw1234')
+        r = self.c.post('/search/run/', {'lang': 'fr', 'q': 'nombre manquant addition'})
+        self.assertContains(r, 'Assigner à kid')
+        r = self.c.post('/parent/assign/?lang=fr',
+                        {'child_id': self.kid.pk, 'topic_slug': 'missing-addend'},
+                        HTTP_HX_REQUEST='true')
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'Assigné à kid')
+        self.assertTrue(ParentAssignment.objects.filter(student=self.kid, topic_slug='missing-addend').exists())
+
+    def test_empty_and_bad_image(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.c.login(username='kid', password='pw1234')
+        r = self.c.post('/search/run/', {'lang': 'fr', 'q': ''})
+        self.assertContains(r, 'ajoute une photo')
+        bad = SimpleUploadedFile('x.txt', b'hello', content_type='text/plain')
+        r = self.c.post('/search/run/', {'lang': 'en', 'q': '', 'photo': bad})
+        self.assertContains(r, 'Unsupported image')
+        self.assertEqual(SearchQuery.objects.count(), 0)

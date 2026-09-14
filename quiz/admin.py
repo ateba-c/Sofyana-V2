@@ -1,6 +1,24 @@
 from django.contrib import admin
 from .models import (QuizSet, Question, Choice, Pair, StudentSession, Student, ProblemInteraction,
-                     SkillDomain, Skill)
+                     SkillDomain, Skill, SearchQuery)
+
+
+@admin.register(SearchQuery)
+class SearchQueryAdmin(admin.ModelAdmin):
+    """What kids and parents look for — spot content gaps here."""
+    list_display  = ['created_at', 'user', 'lang', 'short_query', 'has_image', 'engine', 'top_slugs']
+    list_filter   = ['engine', 'lang', 'has_image']
+    search_fields = ['query', 'user__username']
+    readonly_fields = ['user', 'lang', 'query', 'has_image', 'engine', 'results', 'created_at']
+    date_hierarchy = 'created_at'
+
+    @admin.display(description='Query')
+    def short_query(self, obj):
+        return (obj.query[:70] + '…') if len(obj.query) > 70 else obj.query
+
+    @admin.display(description='Top results')
+    def top_slugs(self, obj):
+        return ', '.join(r.get('slug', '') for r in obj.results[:3]) or '—'
 
 
 # ── Skill taxonomy ───────────────────────────────────────────────────────────

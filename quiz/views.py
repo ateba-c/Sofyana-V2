@@ -1214,15 +1214,30 @@ def assign_topic_view(request):
         return redirect('quiz:index')
     topic_slug = request.POST.get('topic_slug', '').strip()
     child_id   = request.POST.get('child_id', '')
+    assigned   = None
     if topic_slug and child_id:
         try:
             child = User.objects.get(pk=child_id)
             if child in parent.children.all():
-                ParentAssignment.objects.get_or_create(
+                assigned, _ = ParentAssignment.objects.get_or_create(
                     parent=parent, student=child, topic_slug=topic_slug
                 )
         except User.DoesNotExist:
             pass
+    if request.headers.get('HX-Request'):
+        # Inline confirmation (used by the AI search results page).
+        from django.http import HttpResponse
+        if assigned:
+            label = (f'✓ Assigné à {assigned.student.username}' if lang == 'fr'
+                     else f'✓ Assigned to {assigned.student.username}')
+            cls = 'bg-lime-light text-lime-dark border border-lime/50'
+        else:
+            label = 'Impossible d\'assigner' if lang == 'fr' else 'Could not assign'
+            cls = 'bg-coral-light text-coral-dark border border-coral/30'
+        return HttpResponse(
+            f'<div class="w-full rounded-xl px-3 py-2.5 text-center text-xs font-black min-h-[40px] '
+            f'flex items-center justify-center {cls}">{label}</div>'
+        )
     return redirect(f'/parent/?lang={lang}')
 
 
@@ -1282,3 +1297,93 @@ def complete_assignment_view(request):
             pk=assignment_id, student=request.user
         ).update(completed_at=timezone.now())
     return redirect(f'/?lang={lang}')
+
+
+# ── AI problem search (Phase 2) ──────────────────────────────────────────────
+
+SEARCH_EXAMPLES = {
+    'fr': ['le nombre qui manque dans 12 + ___ = 20', 'des fractions avec des pizzas',
+           'lire l\'heure sur une horloge', 'combien de côtés a la forme', 'arrondir à la centaine'],
+    'en': ['the missing number in 12 + ___ = 20', 'fractions with pizzas',
+           'reading the time on a clock', 'how many sides does the shape have', 'rounding to the nearest hundred'],
+}
+SEARCH_IMAGE_MAX_BYTES = 6 * 1024 * 1024
+SEARCH_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+
+
+def _search_context(request, lang):
+    parent = getattr(request.user, 'parent_profile', None) if request.user.is_authenticated else None
+    children = list(parent.children.all().order_by('username')) if parent else []
+    return {'lang': lang, 'children': children, 'parent_profile': parent}
+
+
+@login_required
+def search_page(request):
+    lang = request.GET.get('lang', 'en')
+    ctx = _search_context(request, lang)
+    ctx['examples'] = SEARCH_EXAMPLES.get(lang, SEARCH_EXAMPLES['en'])
+    return render(request, 'quiz/search.html', ctx)
+
+
+@login_required
+@require_POST
+def search_run(request):
+    """htmx POST — text and/or photo → ranked skills partial."""
+    from .ai.search import search_skills
+    from .models import SearchQuery
+    import base64
+
+    lang  = request.POST.get('lang', 'en')
+    query = request.POST.get('q', '').strip()[:600]
+    ctx   = _search_context(request, lang)
+
+    image = None
+    photo = request.FILES.get('photo')
+    if photo:
+        ctype = (photo.content_type or '').lower()
+        if ctype not in SEARCH_IMAGE_TYPES:
+            ctx['error'] = ('Format d\'image non pris en charge (JPEG, PNG ou WebP).' if lang == 'fr'
+                            else 'Unsupported image format (use JPEG, PNG or WebP).')
+            return render(request, 'partials/search_results.html', ctx)
+        if photo.size > SEARCH_IMAGE_MAX_BYTES:
+            ctx['error'] = ('La photo est trop grande (max 6 Mo).' if lang == 'fr'
+                            else 'The photo is too large (max 6 MB).')
+            return render(request, 'partials/search_results.html', ctx)
+        image = (base64.b64encode(photo.read()).decode('ascii'), ctype)
+
+    if not query and not image:
+        ctx['error'] = ('Décris l\'exercice ou ajoute une photo.' if lang == 'fr'
+                        else 'Describe the exercise or add a photo.')
+        return render(request, 'partials/search_results.html', ctx)
+
+    results, engine = search_skills(query, lang, image=image)
+
+    SearchQuery.objects.create(
+        user=request.user, lang=lang, query=query, has_image=bool(image),
+        engine=engine, results=results,
+    )
+
+    meta = topic_meta()
+    enriched = []
+    for r in results:
+        m = meta.get(r['slug'])
+        if not m:
+            continue
+        sample = ''
+        gen = GENERATORS.get(r['slug'])
+        if gen:
+            try:
+                q = gen('medium')
+                sample = q.get('prompt_fr' if lang == 'fr' else 'prompt_en', '') or ''
+            except Exception:
+                sample = ''
+        enriched.append({
+            **r,
+            'name':  m['name_fr'] if lang == 'fr' else m['name_en'],
+            'group': m['group_fr'] if lang == 'fr' else m['group_en'],
+            'icon':  m['group_icon'],
+            'grade': m.get('grade'),
+            'sample': sample,
+        })
+    ctx.update({'results': enriched, 'engine': engine})
+    return render(request, 'partials/search_results.html', ctx)

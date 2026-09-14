@@ -191,6 +191,13 @@
               </div>
             </template>
           </div>
+          {% if user.is_authenticated %}
+          <a href="{% url 'quiz:search' %}?lang={{ cur_lang }}"
+             class="mt-1.5 flex items-center gap-2 px-2 text-[11px] font-extrabold text-brand/70 hover:text-brand transition">
+            <span>✨</span>
+            <span>{% if cur_lang == 'fr' %}Décris un exercice, l'IA le retrouve{% else %}Describe an exercise, AI finds it{% endif %}</span>
+          </a>
+          {% endif %}
         </div>
 
         <!-- Student/parent card -->
@@ -247,6 +254,12 @@
           <a href="{% url 'quiz:index' %}?lang={{ cur_lang }}" class="sidebar-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
             <span class="sidebar-icon">🏠</span>
             <span>{% if cur_lang == 'fr' %}Accueil{% else %}Home{% endif %}</span>
+          </a>
+          {% endif %}
+          {% if user.is_authenticated %}
+          <a href="{% url 'quiz:search' %}?lang={{ cur_lang }}" class="sidebar-link {% if request.resolver_match.url_name == 'search' %}active{% endif %}">
+            <span class="sidebar-icon">✨</span>
+            <span>{% if cur_lang == 'fr' %}Trouver un exercice{% else %}Find an exercise{% endif %}</span>
           </a>
           {% endif %}
           {% if user.is_authenticated and student %}

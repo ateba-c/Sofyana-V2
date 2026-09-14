@@ -1,0 +1,86 @@
+{% load quiz_extras %}
+{# ── AI search results (htmx partial) ─────────────────────────────────────── #}
+{% if error %}
+<div class="card-solid rounded-[1.6rem] border border-coral/30 bg-coral-light p-5 text-sm font-bold text-coral-dark animate-slide-up">
+  {{ error }}
+</div>
+{% elif not results %}
+<div class="card-solid rounded-[1.6rem] p-6 text-center animate-slide-up">
+  <div class="text-4xl">🔎</div>
+  <p class="mt-2 font-extrabold text-ink">
+    {% if lang == 'fr' %}Je n'ai rien trouvé qui ressemble à ça.{% else %}I couldn't find anything like that.{% endif %}
+  </p>
+  <p class="mt-1 text-sm font-bold text-slate-600">
+    {% if lang == 'fr' %}Essaie de décrire les nombres, les formes ou la question posée. Ta recherche est gardée pour qu'on ajoute cet exercice bientôt !{% else %}Try describing the numbers, shapes, or the question asked. We keep your search so we can add this exercise soon!{% endif %}
+  </p>
+</div>
+{% else %}
+<div class="space-y-3 animate-slide-up">
+  <div class="flex items-center justify-between px-1">
+    <p class="text-xs font-extrabold uppercase tracking-[0.2em] text-brand/70">
+      {% if lang == 'fr' %}{{ results|length }} résultat{{ results|length|pluralize }}{% else %}{{ results|length }} result{{ results|length|pluralize }}{% endif %}
+    </p>
+    {% if engine == 'keyword' %}
+    <span class="text-[10px] font-bold text-slate-400">{% if lang == 'fr' %}recherche par mots-clés{% else %}keyword search{% endif %}</span>
+    {% endif %}
+  </div>
+
+  {% for r in results %}
+  <article class="card-solid rounded-[1.6rem] p-4 sm:p-5">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-brand-light text-2xl">{{ r.icon }}</div>
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="font-display text-xl font-extrabold text-ink">{{ r.name }}</h2>
+          {% if r.grade %}
+          <span class="rounded-full bg-amber-light px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-700">
+            {% if lang == 'fr' %}{{ r.grade }}e année{% else %}Grade {{ r.grade }}{% endif %}
+          </span>
+          {% endif %}
+          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-slate-500">{{ r.group }}</span>
+          {% if forloop.first and r.score >= 0.7 %}
+          <span class="rounded-full bg-lime-light px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-lime-dark">{% if lang == 'fr' %}Meilleur choix{% else %}Best match{% endif %}</span>
+          {% endif %}
+        </div>
+        {% if r.why %}
+        <p class="mt-1 text-sm font-bold text-slate-600">{{ r.why }}</p>
+        {% endif %}
+        {% if r.sample %}
+        <div class="mt-3 rounded-xl border border-brand-light bg-soft px-3 py-2">
+          <p class="text-[10px] font-extrabold uppercase tracking-wide text-brand/60">{% if lang == 'fr' %}Exemple{% else %}Example{% endif %}</p>
+          <p class="text-sm font-bold text-ink">{{ r.sample|md_bold }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="flex shrink-0 flex-col gap-2 sm:w-44">
+        {% if parent_profile %}
+          {% for child in children %}
+          <form hx-post="{% url 'quiz:assign_topic' %}?lang={{ lang }}" hx-swap="outerHTML" class="w-full">
+            {% csrf_token %}
+            <input type="hidden" name="child_id" value="{{ child.pk }}">
+            <input type="hidden" name="topic_slug" value="{{ r.slug }}">
+            <button type="submit"
+                    class="w-full rounded-xl bg-gradient-to-r from-teal to-brand px-3 py-2.5 text-xs font-black text-white shadow-card hover:opacity-90 transition active:scale-[0.98] min-h-[40px]">
+              📌 {% if lang == 'fr' %}Assigner à{% else %}Assign to{% endif %} {{ child.username }}
+            </button>
+          </form>
+          {% empty %}
+          <p class="text-xs font-bold text-slate-500">{% if lang == 'fr' %}Ajoutez un enfant pour assigner.{% else %}Add a child to assign.{% endif %}</p>
+          {% endfor %}
+          <a href="{% url 'quiz:practice_page' r.slug %}?lang={{ lang }}"
+             class="w-full rounded-xl border border-brand-light bg-white px-3 py-2.5 text-center text-xs font-black text-brand hover:bg-brand-light transition min-h-[40px]">
+            👀 {% if lang == 'fr' %}Voir l'exercice{% else %}Preview{% endif %}
+          </a>
+        {% else %}
+          <a href="{% url 'quiz:practice_page' r.slug %}?lang={{ lang }}"
+             class="w-full rounded-xl bg-gradient-to-r from-brand to-coral px-3 py-3 text-center text-sm font-black text-white shadow-card hover:opacity-90 transition active:scale-[0.98] min-h-[44px]">
+            🚀 {% if lang == 'fr' %}Pratiquer{% else %}Practice{% endif %}
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% endif %}

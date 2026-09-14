@@ -230,3 +230,25 @@ class Skill(models.Model):
     @property
     def grade(self):
         return self.domain.grade
+
+
+class SearchQuery(models.Model):
+    """
+    Every AI search a kid or parent runs.  Kept for two reasons: the editorial
+    team can see what people look for that we don't cover yet (content gaps),
+    and we can measure whether search results get practised/assigned.
+    """
+    user       = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='searches')
+    lang       = models.CharField(max_length=5, default='fr')
+    query      = models.TextField(blank=True)
+    has_image  = models.BooleanField(default=False)
+    engine     = models.CharField(max_length=10, default='llm')       # 'llm' | 'keyword'
+    results    = models.JSONField(default=list, blank=True)           # [{slug, score, why}]
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        who = self.user.username if self.user else 'anon'
+        return f'{who}: {self.query[:50]!r} → {[r.get("slug") for r in self.results][:3]}'

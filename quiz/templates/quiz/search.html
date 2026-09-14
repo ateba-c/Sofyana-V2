@@ -1,0 +1,85 @@
+{% extends 'quiz/base.html' %}
+{% block title %}{% if lang == 'fr' %}Trouver un exercice{% else %}Find an exercise{% endif %}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl space-y-6">
+
+  <section class="card-solid rounded-[2rem] p-6 sm:p-8">
+    <div class="flex items-start gap-4">
+      <a href="{% if parent_profile %}{% url 'quiz:parent_dashboard' %}{% else %}{% url 'quiz:index' %}{% endif %}?lang={{ lang }}"
+         class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.1rem] bg-brand-light text-2xl text-brand shadow-card">←</a>
+      <div class="min-w-0">
+        <p class="text-xs font-extrabold uppercase tracking-[0.24em] text-brand">✨ {% if lang == 'fr' %}Recherche intelligente{% else %}Smart search{% endif %}</p>
+        <h1 class="mt-2 font-display text-3xl font-extrabold text-ink sm:text-4xl">
+          {% if lang == 'fr' %}Trouver un exercice{% else %}Find an exercise{% endif %}
+        </h1>
+        <p class="mt-2 text-sm font-bold text-slate-600 sm:text-base">
+          {% if parent_profile %}
+            {% if lang == 'fr' %}Décrivez l'exercice vu en classe ou dans le devoir, ou prenez-le en photo. On retrouve la compétence et vous l'assignez à votre enfant en un clic.{% else %}Describe the exercise from class or homework, or snap a photo. We find the matching skill and you assign it to your child in one click.{% endif %}
+          {% else %}
+            {% if lang == 'fr' %}Explique avec tes mots l'exercice que tu as vu, ou prends-le en photo. On te trouve les bons entraînements !{% else %}Explain in your own words the exercise you saw, or snap a photo. We'll find the right practice for you!{% endif %}
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <form id="ai-search-form" class="mt-6 space-y-4"
+          hx-post="{% url 'quiz:search_run' %}" hx-target="#search-results" hx-swap="innerHTML"
+          hx-encoding="multipart/form-data" hx-indicator="#search-spinner"
+          x-data="{ q: '', file: null, preview: null,
+                    pick(e) { const f = e.target.files[0]; this.file = f || null;
+                              this.preview = f ? URL.createObjectURL(f) : null; },
+                    clear() { this.file = null; this.preview = null; $refs.photo.value = ''; },
+                    get ready() { return this.q.trim().length >= 3 || this.file; } }">
+      {% csrf_token %}
+      <input type="hidden" name="lang" value="{{ lang }}">
+
+      <div class="rounded-2xl border-2 border-brand-light bg-white p-2 focus-within:border-brand focus-within:shadow-glow transition">
+        <textarea name="q" x-model="q" rows="3" maxlength="600"
+                  class="w-full resize-none bg-transparent px-3 py-2 text-base font-bold text-ink placeholder-brand/40 outline-none"
+                  placeholder="{% if lang == 'fr' %}Ex. : « il faut trouver le nombre qui manque dans 12 + ___ = 20 » ou « des fractions avec des pizzas »{% else %}e.g. “find the missing number in 12 + ___ = 20” or “fractions with pizzas”{% endif %}"></textarea>
+        <div class="flex flex-wrap items-center gap-2 px-2 pb-1">
+          <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-brand-light px-3 py-2 text-xs font-black text-brand hover:bg-brand/20 transition min-h-[40px]">
+            <span>📷</span>
+            <span>{% if lang == 'fr' %}Photo du devoir{% else %}Homework photo{% endif %}</span>
+            <input type="file" name="photo" accept="image/*" capture="environment" class="hidden" x-ref="photo" @change="pick">
+          </label>
+          <template x-if="preview">
+            <div class="flex items-center gap-2">
+              <img :src="preview" alt="" class="h-10 w-10 rounded-lg object-cover border border-brand-light">
+              <button type="button" @click="clear()" class="text-xs font-black text-coral hover:underline">✕ {% if lang == 'fr' %}Retirer{% else %}Remove{% endif %}</button>
+            </div>
+          </template>
+          <span class="flex-1"></span>
+          <button type="submit" :disabled="!ready"
+                  class="rounded-xl bg-gradient-to-r from-brand to-coral px-5 py-2.5 text-sm font-black text-white shadow-card hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition active:scale-[0.98] min-h-[44px]">
+            {% if lang == 'fr' %}Chercher{% else %}Search{% endif %}
+          </button>
+        </div>
+      </div>
+      <div id="search-spinner" class="htmx-indicator flex items-center gap-2 text-sm font-bold text-brand">
+        <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent"></span>
+        {% if lang == 'fr' %}Je cherche…{% else %}Searching…{% endif %}
+      </div>
+    </form>
+
+    {% if examples %}
+    <div class="mt-4 flex flex-wrap gap-2">
+      {% for ex in examples %}
+      <button type="button"
+              @click="document.querySelector('#ai-search-form textarea').value = '{{ ex|escapejs }}'; document.querySelector('#ai-search-form textarea').dispatchEvent(new Event('input')); htmx.trigger('#ai-search-form', 'submit')"
+              class="rounded-full border border-brand-light bg-white px-3 py-1.5 text-xs font-bold text-brand hover:bg-brand-light transition">
+        {{ ex }}
+      </button>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+
+  <div id="search-results"></div>
+</div>
+<style>
+  .htmx-indicator { display: none; }
+  .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: flex; }
+</style>
+{% endblock %}
