@@ -43,13 +43,17 @@ def complete(system: str, user, *, max_tokens: int = 1024, temperature: float = 
     if not is_configured():
         raise RuntimeError('LLM is not configured (LLM_API_KEY missing)')
     content = user if isinstance(user, list) else [{'type': 'text', 'text': user}]
-    resp = get_client().messages.create(
+    kwargs = dict(
         model=settings.LLM_MODEL,
         max_tokens=max_tokens,
-        temperature=temperature,
         system=system,
         messages=[{'role': 'user', 'content': content}],
     )
+    try:
+        resp = get_client().messages.create(temperature=temperature, **kwargs)
+    except TypeError:
+        # Newer anthropic SDKs dropped `temperature` as a typed kwarg; send it in the raw body.
+        resp = get_client().messages.create(extra_body={'temperature': temperature}, **kwargs)
     return ''.join(block.text for block in resp.content if getattr(block, 'type', '') == 'text')
 
 
