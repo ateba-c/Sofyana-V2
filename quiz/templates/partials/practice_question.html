@@ -60,17 +60,26 @@
       </button>
 
     {% elif question.q_type == 'text_input' %}
+      {# Typed input: keyboard, placeholder and hint all come from the problem's answer_type #}
+      {% with spec=question.input %}
       <div class="flex gap-2">
         <input type="text" name="answer" autofocus
+               inputmode="{{ spec.inputmode|default:'text' }}"
+               autocomplete="off" autocapitalize="off" spellcheck="false"
+               data-answer-type="{{ spec.answer_type|default:'text' }}"
                :disabled="submitted"
                @keydown.enter="submit()"
                class="flex-1 bg-white border-2 border-brand-light rounded-xl px-4 py-3 text-ink placeholder-brand-light/70 font-mono text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus:border-brand transition"
-               placeholder="{% if lang == 'fr' %}Votre réponse…{% else %}Your answer…{% endif %}">
+               placeholder="{{ spec.placeholder|default:'…' }}">
         <button type="button" @click="submit()" :disabled="submitted"
                 class="px-5 py-3 rounded-xl font-black text-sm bg-gradient-to-r from-brand to-coral text-white hover:opacity-90 disabled:opacity-40 transition shadow-card active:scale-[0.98] min-h-[44px]">
           OK
         </button>
       </div>
+      {% if spec.hint %}
+      <p class="text-[11px] font-bold text-brand/60 px-1">{{ spec.hint }}</p>
+      {% endif %}
+      {% endwith %}
     {% endif %}
   </form>
 

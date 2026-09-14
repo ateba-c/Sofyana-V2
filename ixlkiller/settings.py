@@ -28,6 +28,33 @@ _hosts = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1')
 ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',')]
 
 
+# ── .env loader (no extra dependency) ────────────────────────────────────────
+# Real env vars win; a BASE_DIR/.env file fills in the gaps for local dev.
+def _load_dotenv(path):
+    try:
+        with open(path, encoding='utf-8') as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                key, _, value = line.partition('=')
+                key, value = key.strip(), value.strip().strip('"').strip("'")
+                os.environ.setdefault(key, value)
+    except OSError:
+        pass
+
+
+_load_dotenv(BASE_DIR / '.env')
+
+# ── LLM provider (see quiz/ai/client.py) ─────────────────────────────────────
+# DeepSeek's Anthropic-compatible endpoint by default; swap via env to use Anthropic.
+LLM_API_KEY  = (os.environ.get('LLM_API_KEY') or os.environ.get('DEEPSEEK_API_KEY')
+                or os.environ.get('ANTHROPIC_API_KEY', ''))
+LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.deepseek.com/anthropic')
+LLM_MODEL    = os.environ.get('LLM_MODEL', 'deepseek-flash')
+LLM_TIMEOUT  = float(os.environ.get('LLM_TIMEOUT', '60'))
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -64,6 +91,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'quiz.context_processors.student_context',
+                'quiz.context_processors.taxonomy_context',
             ],
         },
     },

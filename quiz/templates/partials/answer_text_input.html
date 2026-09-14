@@ -28,13 +28,16 @@
       type="text"
       x-model="value"
       :disabled="submitted"
+      inputmode="{{ input.inputmode|default:'text' }}"
+      autocomplete="off" autocapitalize="off" spellcheck="false"
+      data-answer-type="{{ input.answer_type|default:'text' }}"
       :class="{
-        'border-[#22C55E] bg-[#22C55E]/10 text-[#22C55E]': submitted && correct,
-        'border-[#EF4444] bg-[#EF4444]/10 text-[#EF4444]': submitted && !correct,
-        'border-white/20 bg-white/5 focus:border-brand':   !submitted,
+        'border-lime bg-lime-light text-lime-dark': submitted && correct,
+        'border-pink bg-pink-light text-pink-dark': submitted && !correct,
+        'border-brand-light bg-white text-ink focus:border-brand': !submitted,
       }"
-      placeholder="{% if lang == 'fr' %}Votre réponse…{% else %}Your answer…{% endif %}"
-      class="w-full px-5 py-4 rounded-xl border text-sm font-medium transition-all duration-200 outline-none placeholder-white/30"
+      placeholder="{{ input.placeholder|default:'…' }}"
+      class="w-full px-5 py-4 rounded-xl border-2 font-mono text-base font-bold transition-all duration-200 outline-none placeholder-brand-light/70 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
       autofocus
     />
     <div class="absolute right-4 top-1/2 -translate-y-1/2 text-xl pointer-events-none" x-show="submitted">

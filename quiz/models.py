@@ -165,3 +165,68 @@ class ParentAssignment(models.Model):
     def __str__(self):
         done = '✓' if self.completed_at else '○'
         return f'{done} {self.parent.user.username} → {self.student.username}: {self.topic_slug}'
+
+
+# ── Skill taxonomy (Grade → Domain → Skill) ──────────────────────────────────
+# Editable in the admin; replaces the hardcoded TOPIC_GROUPS / SKILL_MAP lists.
+# The AI editorial studio assigns new problems to a Skill, and AI search
+# matches a kid's or parent's description against Skill descriptions/keywords.
+
+from .answers import ANSWER_TYPES  # noqa: E402
+
+
+class SkillDomain(models.Model):
+    slug     = models.SlugField(max_length=60, unique=True)
+    name_en  = models.CharField(max_length=120)
+    name_fr  = models.CharField(max_length=120, blank=True)
+    icon     = models.CharField(max_length=8, default='🧩')
+    grade    = models.PositiveSmallIntegerField(null=True, blank=True,
+                   help_text='School grade (3, 5…). Blank = general / any grade.')
+    order    = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        g = f'G{self.grade} ' if self.grade else ''
+        return f'{g}{self.name_en}'
+
+
+class Skill(models.Model):
+    slug            = models.SlugField(max_length=60, unique=True,
+                          help_text='Stable id; matches the generator key for code-backed skills.')
+    domain          = models.ForeignKey(SkillDomain, related_name='skills', on_delete=models.PROTECT)
+    name_en         = models.CharField(max_length=120)
+    name_fr         = models.CharField(max_length=120, blank=True)
+    description_en  = models.TextField(blank=True,
+                          help_text='What the exercise looks like to a child. Used by AI search & classification.')
+    description_fr  = models.TextField(blank=True)
+    keywords_en     = models.TextField(blank=True,
+                          help_text='Comma-separated phrases a kid or parent might use to describe this skill.')
+    keywords_fr     = models.TextField(blank=True)
+    curriculum_ref  = models.CharField(max_length=120, blank=True,
+                          help_text='e.g. PFEQ section / progression code')
+    answer_type     = models.CharField(max_length=20, choices=ANSWER_TYPES, blank=True,
+                          help_text='Default typed-answer format. Blank = infer from the problem.')
+    generator_slug  = models.CharField(max_length=60, blank=True,
+                          help_text='Key in quiz.generators.GENERATORS for code-backed skills.')
+    prereq          = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    next_skill      = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    mastery_next    = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    downgrade       = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    level_sequence  = models.JSONField(default=list, blank=True,
+                          help_text="e.g. ['easy', 'medium', 'hard']")
+    is_active       = models.BooleanField(default=True)
+    order           = models.PositiveIntegerField(default=0)
+    created_at      = models.DateTimeField(auto_now_add=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['domain__order', 'order', 'id']
+
+    def __str__(self):
+        return f'{self.slug} — {self.name_en}'
+
+    @property
+    def grade(self):
+        return self.domain.grade

@@ -12,7 +12,9 @@ from django.utils import timezone
 from django.db.models import Sum
 from django.db.models import Count, Q
 from .models import QuizSet, Question, StudentSession, Student, ProblemInteraction, ParentProfile, ParentAssignment, AVATAR_SLUGS, AVATAR_EMOJIS
-from .generators import GENERATORS, TOPIC_GROUPS, SKILL_MAP
+from .generators import GENERATORS
+from .taxonomy import topic_groups, topic_meta, skill_map, answer_type_for, available_grades
+from .answers import check_answer, infer_answer_type, input_spec
 
 
 # ── Error-type human-readable labels (bilingual) ──────────────────────────────
@@ -91,18 +93,6 @@ def _error_label(error_type, lang):
     return error_type.replace('_', ' ').title()
 
 
-TOPIC_META = {
-    topic['slug']: {
-        'slug': topic['slug'],
-        'group_en': group['name_en'],
-        'group_fr': group['name_fr'],
-        'group_icon': group['icon'],
-        'name_en': topic['name_en'],
-        'name_fr': topic['name_fr'],
-    }
-    for group in TOPIC_GROUPS
-    for topic in group['topics']
-}
 
 PRIZE_CATALOG = [
     {'slug': 'cat', 'cost': 25, 'icon': AVATAR_EMOJIS['cat'], 'name_en': 'Curious Cat', 'name_fr': 'Chat Curieux', 'description_en': 'A playful buddy for practice time.', 'description_fr': 'Un ami joueur pour t accompagner.', 'type': 'avatar'},
@@ -182,7 +172,7 @@ def logout_view(request):
 
 
 def _topic_label(topic_slug, lang='en'):
-    meta = TOPIC_META.get(topic_slug, {})
+    meta = topic_meta().get(topic_slug, {})
     if not meta:
         return topic_slug
     return meta['name_fr'] if lang == 'fr' else meta['name_en']
@@ -191,7 +181,7 @@ def _topic_label(topic_slug, lang='en'):
 def _topic_card_groups(student=None, grade_filter=None):
     ratings = (student.skill_ratings if student else {}) or {}
     groups = []
-    for group in TOPIC_GROUPS:
+    for group in topic_groups():
         # Apply grade filter: None/0 = all, N = only groups where grade == N
         if grade_filter and group.get('grade') != grade_filter:
             continue
@@ -290,7 +280,7 @@ def index(request):
         'recent_topics':      recent_topics,
         'student_level':      level,
         'grade_filter':       grade_filter,
-        'available_grades':   sorted(set(g['grade'] for g in TOPIC_GROUPS if g.get('grade'))),
+        'available_grades':   available_grades(),
     })
 
 
@@ -330,6 +320,7 @@ def playground(request, quiz_id):
         'session_answers_json': json.dumps(session.answers),
         'progress':            round((q_index / len(questions)) * 100),
         'shuffled_choices':    choices,
+        'input':               _question_input_spec(question, lang),
     }
     return render(request, 'quiz/playground.html', context)
 
@@ -358,8 +349,20 @@ def question_partial(request, quiz_id, q_index):
         'progress':         round((q_index / len(questions)) * 100),
         'partial':          True,
         'shuffled_choices': choices,
+        'input':            _question_input_spec(question, lang),
     }
     return render(request, 'partials/question_area.html', context)
+
+
+def _question_input_spec(question, lang):
+    """Typed-input spec for a hand-authored (QuizSet) text question."""
+    if question.q_type != 'text_input':
+        return None
+    keys = []
+    for c in question.choices.all():
+        if c.is_correct:
+            keys += [c.label_en, c.label_fr]
+    return input_spec(infer_answer_type(keys), lang)
 
 
 def review_question_partial(request, quiz_id, q_pk):
@@ -476,7 +479,7 @@ def practice_page(request, topic):
     lang  = request.GET.get('lang', 'en')
     level = request.GET.get('level', 'medium')
     topic_info = None
-    for g in TOPIC_GROUPS:
+    for g in topic_groups():
         for t in g['topics']:
             if t['slug'] == topic:
                 topic_info = t
@@ -487,7 +490,7 @@ def practice_page(request, topic):
     if request.user.is_authenticated:
         pas = ParentAssignment.objects.filter(student=request.user, completed_at__isnull=True).select_related('parent__user')[:6]
         # Enrich with topic display name
-        all_topics = {t['slug']: t for g in TOPIC_GROUPS for t in g['topics']}
+        all_topics = topic_meta()
         for pa in pas:
             ti = all_topics.get(pa.topic_slug, {})
             parent_assignments.append({
@@ -497,9 +500,9 @@ def practice_page(request, topic):
                 'parent_name': pa.parent.user.get_full_name() or pa.parent.user.username,
             })
 
-    # Machine recommendations: next + mastery_next from SKILL_MAP
-    skill_info = SKILL_MAP.get(topic, {})
-    all_topics = {t['slug']: t for g in TOPIC_GROUPS for t in g['topics']}
+    # Machine recommendations: next + mastery_next from the skill learning path
+    skill_info = skill_map().get(topic, {})
+    all_topics = topic_meta()
     recommendations = []
     for key, label_fr, label_en, icon in [
         ('next',         'Prochaine étape',    'Next step',        '➡️'),
@@ -545,6 +548,11 @@ def practice_next(request, topic):
         stats['snooze'] = 5
         request.session[key] = stats
     q = GENERATORS[topic](level)
+    # Typed answer: explicit on the problem > editor-declared on the skill > inferred from the key.
+    if q.get('q_type') == 'text_input':
+        q['answer_type'] = (q.get('answer_type') or answer_type_for(topic)
+                            or infer_answer_type(q.get('correct_answers', [])))
+        q['input'] = input_spec(q['answer_type'], lang)
     # Generators that always need an illustration set show_illustration=True themselves;
     # for the rest, show it probabilistically (or always for classic geometry).
     if not q.get('show_illustration'):
@@ -680,7 +688,7 @@ def practice_check(request, topic):
         student.save(update_fields=['skill_ratings'])
 
     # ── Adaptive progression suggestion ──────────────────────────────────────
-    skill_info = SKILL_MAP.get(topic, {})
+    skill_info = skill_map().get(topic, {})
     suggested_action  = None
     suggested_level   = level
     suggested_topic   = None
@@ -746,9 +754,7 @@ def _check_practice(q_data, answer):
         except (ValueError, IndexError, KeyError, TypeError):
             return False
     elif qt == 'text_input':
-        from .generators.base import _normalize_answer
-        norm = _normalize_answer(answer)
-        return norm.lower() in [_normalize_answer(a).lower() for a in q_data.get('correct_answers', [])]
+        return check_answer(answer, q_data.get('correct_answers', []), q_data.get('answer_type'))
     elif qt in ('ordering', 'sorting'):
         try:
             submitted = json.loads(answer)
@@ -780,11 +786,10 @@ def _check_answer(question, answer):
         return str(answer) in correct_ids
 
     elif qt == 'text_input':
-        correct_labels = [
-            c.label_en.strip().lower()
-            for c in question.choices.filter(is_correct=True)
-        ]
-        return str(answer).strip().lower() in correct_labels
+        correct_labels = []
+        for c in question.choices.filter(is_correct=True):
+            correct_labels += [c.label_en, c.label_fr]
+        return check_answer(answer, correct_labels)
 
     elif qt == 'drag_drop':
         # answer = [{id, pos}, ...] — check each item's submitted pos matches its correct order
@@ -865,7 +870,7 @@ def dashboard(request):
         ctx['interactions'] = [
             {
                 'topic': _topic_label(item.topic, lang),
-                'group_icon': TOPIC_META.get(item.topic, {}).get('group_icon', '🧩'),
+                'group_icon': topic_meta().get(item.topic, {}).get('group_icon', '🧩'),
                 'level': item.level,
                 'is_correct': item.is_correct,
                 'points_earned': item.points_earned,
@@ -1178,10 +1183,9 @@ def parent_dashboard_view(request):
         return redirect(f'/parent/?lang={lang}')
 
     # Per-child assignments for parent dashboard display
-    from .generators import TOPIC_GROUPS as TG
     all_topics = [
         {'slug': t['slug'], 'name_en': t['name_en'], 'name_fr': t['name_fr'], 'icon': g['icon']}
-        for g in TG for t in g['topics']
+        for g in topic_groups() for t in g['topics']
     ]
     child_assignments = {}
     for child_user in parent.children.all():

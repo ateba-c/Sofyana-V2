@@ -38,3 +38,6 @@ content*.md
 app_summary.md
 RECOMMENDATIONS.md
 SUMMARY.md
+
+# secrets
+.env

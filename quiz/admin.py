@@ -1,5 +1,51 @@
 from django.contrib import admin
-from .models import QuizSet, Question, Choice, Pair, StudentSession, Student, ProblemInteraction
+from .models import (QuizSet, Question, Choice, Pair, StudentSession, Student, ProblemInteraction,
+                     SkillDomain, Skill)
+
+
+# ── Skill taxonomy ───────────────────────────────────────────────────────────
+
+class SkillInline(admin.TabularInline):
+    model = Skill
+    fields = ['order', 'slug', 'name_en', 'name_fr', 'answer_type', 'is_active']
+    extra = 0
+    show_change_link = True
+    ordering = ['order', 'id']
+
+
+@admin.register(SkillDomain)
+class SkillDomainAdmin(admin.ModelAdmin):
+    list_display  = ['icon', 'name_en', 'name_fr', 'grade', 'order', 'skill_count']
+    list_display_links = ['name_en']
+    list_editable = ['order']
+    list_filter   = ['grade']
+    search_fields = ['name_en', 'name_fr', 'slug']
+    inlines       = [SkillInline]
+
+    @admin.display(description='Skills')
+    def skill_count(self, obj):
+        return obj.skills.count()
+
+
+@admin.register(Skill)
+class SkillAdmin(admin.ModelAdmin):
+    list_display  = ['slug', 'name_en', 'name_fr', 'domain', 'answer_type', 'has_description', 'is_active']
+    list_filter   = ['domain__grade', 'domain', 'answer_type', 'is_active']
+    search_fields = ['slug', 'name_en', 'name_fr', 'description_en', 'description_fr', 'keywords_en', 'keywords_fr']
+    autocomplete_fields = ['prereq', 'next_skill', 'mastery_next', 'downgrade']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = [
+        (None, {'fields': ['slug', 'domain', 'order', 'is_active', ('name_en', 'name_fr')]}),
+        ('What the exercise looks like (used by AI search & classification)', {
+            'fields': ['description_en', 'description_fr', 'keywords_en', 'keywords_fr', 'curriculum_ref']}),
+        ('Answers & generation', {'fields': ['answer_type', 'generator_slug']}),
+        ('Learning path', {'fields': ['prereq', 'next_skill', 'mastery_next', 'downgrade', 'level_sequence']}),
+        ('Timestamps', {'fields': ['created_at', 'updated_at'], 'classes': ['collapse']}),
+    ]
+
+    @admin.display(boolean=True, description='Described')
+    def has_description(self, obj):
+        return bool(obj.description_en or obj.description_fr)
 
 
 class ChoiceInline(admin.TabularInline):
