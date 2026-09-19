@@ -1053,6 +1053,32 @@ def render_shape(shape: dict, vw: float = 260, vh: float = 185,
             out['labels'].append(_label('?', tx, round(line_y - 28, 1),
                                         anchor='middle', size=13, bold=True, color=stroke))
 
+    # ── fraction_number_line (grade-6: units split into d equal parts) ───────
+    elif stype == 'fraction_number_line':
+        d      = max(1, int(shape.get('denominator', 4)))
+        units  = max(1, int(shape.get('units', 1)))
+        target = shape.get('target')            # numerator index of the "?" point, or None
+        margin_l, margin_r = 30, 30
+        line_y = vh / 2
+        line_w = vw - margin_l - margin_r
+        n_ticks = units * d + 1
+        gap = line_w / (n_ticks - 1)
+        lx = margin_l
+        out['lines'].append(dict(x1=lx, y1=line_y, x2=vw - margin_r, y2=line_y, stroke='#374151', width=2))
+        for i in range(n_ticks):
+            x = round(lx + i * gap, 1)
+            whole = (i % d == 0)
+            tick_h = 18 if whole else 9
+            out['lines'].append(dict(x1=x, y1=round(line_y - tick_h / 2, 1), x2=x, y2=round(line_y + tick_h / 2, 1),
+                                     stroke='#374151', width=2 if whole else 1.2))
+            if whole:
+                out['labels'].append(_label(str(i // d), x, round(line_y + 24, 1),
+                                            anchor='middle', size=12, bold=True, color='#374151'))
+        if target is not None:
+            tx = round(lx + int(target) * gap, 1)
+            out['marks'].append(dict(type='dot', x=tx, y=round(line_y - 18, 1)))
+            out['labels'].append(_label('?', tx, round(line_y - 28, 1), anchor='middle', size=13, bold=True, color=stroke))
+
     # ── pie_chart_multi ──────────────────────────────────────────────────────
     elif stype == 'pie_chart_multi':
         categories   = shape.get('categories', ['A', 'B'])
@@ -1191,7 +1217,7 @@ def render_shapes(shape_data: list, count_override: int | None = None) -> list:
     is_expr        = shape_data and all(s.get('type') == 'expression'      for s in shape_data)
     is_frac_expr   = shape_data and all(s.get('type') == 'fraction_expr'   for s in shape_data)
     is_thermometer = shape_data and shape_data[0].get('type') == 'thermometer'
-    is_number_line = shape_data and shape_data[0].get('type') == 'number_line_svg'
+    is_number_line = shape_data and shape_data[0].get('type') in ('number_line_svg', 'fraction_number_line')
     is_pie_chart   = shape_data and shape_data[0].get('type') == 'pie_chart_multi'
 
     if is_thermometer:

@@ -93,6 +93,19 @@ from .g5_stats import (
     g5_euler_gen, g5_solid_counts_gen, g5_pie_chart_gen,
 )
 
+# ── Grade 6 ───────────────────────────────────────────────────────────────────
+from .g6_numeration import (
+    g6_digit_position_gen, g6_digit_value_gen, g6_count_groups_gen,
+    g6_place_value_change_gen, g6_additive_form_gen, g6_symbol_form_gen,
+    g6_multiplicative_form_gen,
+)
+from .g6_compare import g6_compare_gen, g6_order_gen, g6_extreme_gen, g6_money_compare_gen
+from .g6_multiplication import (
+    g6_multiply_gen, g6_partial_products_gen, g6_estimate_product_gen, g6_rate_problem_gen,
+)
+from .g6_fractions import g6_fraction_on_line_gen, g6_fraction_between_gen, g6_fraction_order_gen
+from .g6_strategies import g6_relevant_info_gen, g6_comparative_phrase_gen
+
 
 
 GENERATORS = {
@@ -267,6 +280,38 @@ GENERATORS = {
     'g5-euler':              g5_euler_gen,
     'g5-solid-counts':       g5_solid_counts_gen,
     'g5-pie-chart':          g5_pie_chart_gen,
+
+    # ══════════════════ Grade 6 ════════════════════════════════════════════════
+
+    # Numération & décomposition (§1-2)
+    'g6-digit-position':      g6_digit_position_gen,
+    'g6-digit-value':         g6_digit_value_gen,
+    'g6-count-groups':        g6_count_groups_gen,
+    'g6-place-value-change':  g6_place_value_change_gen,
+    'g6-additive-form':       g6_additive_form_gen,
+    'g6-symbol-form':         g6_symbol_form_gen,
+    'g6-multiplicative-form': g6_multiplicative_form_gen,
+
+    # Comparer et ordonner (§3)
+    'g6-compare':             g6_compare_gen,
+    'g6-order':               g6_order_gen,
+    'g6-extreme':             g6_extreme_gen,
+    'g6-money-compare':       g6_money_compare_gen,
+
+    # Multiplication & estimation (§4-5)
+    'g6-multiply':            g6_multiply_gen,
+    'g6-partial-products':    g6_partial_products_gen,
+    'g6-estimate-product':    g6_estimate_product_gen,
+    'g6-rate-problem':        g6_rate_problem_gen,
+
+    # Fractions sur la droite numérique (§6)
+    'g6-fraction-on-line':    g6_fraction_on_line_gen,
+    'g6-fraction-between':    g6_fraction_between_gen,
+    'g6-fraction-order':      g6_fraction_order_gen,
+
+    # Stratégies de résolution (§7)
+    'g6-relevant-info':       g6_relevant_info_gen,
+    'g6-comparative-phrase':  g6_comparative_phrase_gen,
 }
 
 # ── Skill progression map ─────────────────────────────────────────────────────
@@ -436,6 +481,38 @@ SKILL_MAP = {
     'g5-count-outcomes':    {'prereq': 'g5-probability-frac', 'next': 'g5-euler',            'mastery_next': 'g5-solid-counts',   'downgrade': 'g5-probability-frac', 'level_sequence': ['easy', 'medium', 'hard']},
     'g5-euler':             {'prereq': None,                  'next': 'g5-solid-counts',     'mastery_next': 'g5-count-outcomes', 'downgrade': None,                  'level_sequence': ['easy', 'medium', 'hard']},
     'g5-solid-counts':      {'prereq': 'g5-euler',            'next': 'g5-euler',            'mastery_next': 'g5-count-outcomes', 'downgrade': 'g5-euler',            'level_sequence': ['easy', 'medium', 'hard']},
+
+    # ══════════════════ Grade 6 ═══════════════════════════════════════════════
+
+    # ── Grade 6: Numération ───────────────────────────────────────────────────
+    'g6-digit-position': {'prereq': None, 'next': 'g6-digit-value', 'mastery_next': 'g6-count-groups', 'downgrade': 'g4-digit-position', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-digit-value': {'prereq': 'g6-digit-position', 'next': 'g6-count-groups', 'mastery_next': 'g6-place-value-change', 'downgrade': 'g6-digit-position', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-count-groups': {'prereq': 'g6-digit-value', 'next': 'g6-place-value-change', 'mastery_next': 'g6-additive-form', 'downgrade': 'g6-digit-value', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-place-value-change': {'prereq': 'g6-count-groups', 'next': 'g6-additive-form', 'mastery_next': 'g6-symbol-form', 'downgrade': 'g6-count-groups', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-additive-form': {'prereq': 'g6-digit-value', 'next': 'g6-symbol-form', 'mastery_next': 'g6-multiplicative-form', 'downgrade': 'g6-digit-value', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-symbol-form': {'prereq': 'g6-additive-form', 'next': 'g6-multiplicative-form', 'mastery_next': 'g6-compare', 'downgrade': 'g6-additive-form', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-multiplicative-form': {'prereq': 'g6-additive-form', 'next': 'g6-compare', 'mastery_next': 'g6-order', 'downgrade': 'g6-additive-form', 'level_sequence': ['easy', 'medium', 'hard']},
+
+    # ── Grade 6: Comparer et ordonner ─────────────────────────────────────────
+    'g6-compare': {'prereq': None, 'next': 'g6-order', 'mastery_next': 'g6-extreme', 'downgrade': 'g4-compare', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-order': {'prereq': 'g6-compare', 'next': 'g6-extreme', 'mastery_next': 'g6-money-compare', 'downgrade': 'g6-compare', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-extreme': {'prereq': 'g6-order', 'next': 'g6-money-compare', 'mastery_next': 'g6-multiply', 'downgrade': 'g6-order', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-money-compare': {'prereq': 'g6-compare', 'next': 'g6-multiply', 'mastery_next': 'g6-estimate-product', 'downgrade': 'g6-compare', 'level_sequence': ['easy', 'medium', 'hard']},
+
+    # ── Grade 6: Multiplication & estimation ──────────────────────────────────
+    'g6-multiply': {'prereq': None, 'next': 'g6-partial-products', 'mastery_next': 'g6-estimate-product', 'downgrade': 'multiply', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-partial-products': {'prereq': 'g6-multiply', 'next': 'g6-estimate-product', 'mastery_next': 'g6-rate-problem', 'downgrade': 'g6-multiply', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-estimate-product': {'prereq': 'g6-multiply', 'next': 'g6-rate-problem', 'mastery_next': 'g6-comparative-phrase', 'downgrade': 'g6-multiply', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-rate-problem': {'prereq': 'g6-estimate-product', 'next': 'g6-comparative-phrase', 'mastery_next': 'g6-relevant-info', 'downgrade': 'g6-estimate-product', 'level_sequence': ['easy', 'medium', 'hard']},
+
+    # ── Grade 6: Fractions ────────────────────────────────────────────────────
+    'g6-fraction-on-line': {'prereq': None, 'next': 'g6-fraction-between', 'mastery_next': 'g6-fraction-order', 'downgrade': 'fraction-shape', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-fraction-between': {'prereq': 'g6-fraction-on-line', 'next': 'g6-fraction-order', 'mastery_next': 'compare-fraction', 'downgrade': 'g6-fraction-on-line', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-fraction-order': {'prereq': 'g6-fraction-between', 'next': 'g6-fraction-on-line', 'mastery_next': 'compare-fraction', 'downgrade': 'g6-fraction-between', 'level_sequence': ['easy', 'medium', 'hard']},
+
+    # ── Grade 6: Stratégies ───────────────────────────────────────────────────
+    'g6-relevant-info': {'prereq': None, 'next': 'g6-comparative-phrase', 'mastery_next': 'g6-rate-problem', 'downgrade': 'word-problem', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-comparative-phrase': {'prereq': 'g6-relevant-info', 'next': 'g6-rate-problem', 'mastery_next': 'g6-multiply', 'downgrade': 'g6-relevant-info', 'level_sequence': ['easy', 'medium', 'hard']},
 }
 
 TOPIC_GROUPS = [
@@ -601,5 +678,37 @@ TOPIC_GROUPS = [
         {'slug': 'g5-count-outcomes',    'name_en': 'Count Outcomes',         'name_fr': 'Dénombrement des résultats'},
         {'slug': 'g5-euler',             'name_en': "Euler's Formula",        'name_fr': 'Formule d\'Euler'},
         {'slug': 'g5-solid-counts',      'name_en': 'Solid Face/Vertex/Edge', 'name_fr': 'Faces, sommets, arêtes'},
+    ]},
+
+    # ── Grade 6 groups ─────────────────────────────────────────────────────────
+    {'name_en': 'Grade 6 — Number Sense', 'name_fr': '6e année — Numération', 'icon': '🔢', 'grade': 6, 'topics': [
+        {'slug': 'g6-digit-position',      'name_en': 'Digit Position (to 100 000s)', 'name_fr': 'Position d\'un chiffre (u, d, c, UM, DM, CM)'},
+        {'slug': 'g6-digit-value',         'name_en': 'Digit Value',                  'name_fr': 'Valeur d\'un chiffre'},
+        {'slug': 'g6-count-groups',        'name_en': 'How Many Thousands / Hundreds?', 'name_fr': 'Combien d\'unités de mille / de centaines ?'},
+        {'slug': 'g6-place-value-change',  'name_en': 'Add Place-Value Units',        'name_fr': 'Ajouter des unités de position'},
+        {'slug': 'g6-additive-form',       'name_en': 'Additive Form',                'name_fr': 'Forme additive'},
+        {'slug': 'g6-symbol-form',         'name_en': 'Place-Value Symbols (with regrouping)', 'name_fr': 'Notation u, d, c, UM, DM (avec regroupement)'},
+        {'slug': 'g6-multiplicative-form', 'name_en': 'Multiplicative Form',          'name_fr': 'Forme multiplicative'},
+    ]},
+    {'name_en': 'Grade 6 — Compare & Order', 'name_fr': '6e année — Comparer et ordonner', 'icon': '⚖️', 'grade': 6, 'topics': [
+        {'slug': 'g6-compare',        'name_en': 'Compare with <, >, =',        'name_fr': 'Comparer avec <, >, ='},
+        {'slug': 'g6-order',          'name_en': 'Ascending / Descending Order', 'name_fr': 'Ordre croissant / décroissant'},
+        {'slug': 'g6-extreme',        'name_en': 'Largest & Smallest',          'name_fr': 'Le plus grand, le plus petit'},
+        {'slug': 'g6-money-compare',  'name_en': 'Banknotes: Total & Compare',  'name_fr': 'Billets : total et comparaison'},
+    ]},
+    {'name_en': 'Grade 6 — Multiplication & Estimation', 'name_fr': '6e année — Multiplication et estimation', 'icon': '✖️', 'grade': 6, 'topics': [
+        {'slug': 'g6-multiply',         'name_en': 'Column Multiplication (× 2 digits)', 'name_fr': 'Multiplication posée à 2 chiffres'},
+        {'slug': 'g6-partial-products', 'name_en': 'Partial Products',             'name_fr': 'Produits partiels'},
+        {'slug': 'g6-estimate-product', 'name_en': 'Estimate a Product',           'name_fr': 'Estimer un produit'},
+        {'slug': 'g6-rate-problem',     'name_en': 'Rate Word Problems',           'name_fr': 'Problèmes : estimation et calcul réel'},
+    ]},
+    {'name_en': 'Grade 6 — Fractions', 'name_fr': '6e année — Fractions', 'icon': '½', 'grade': 6, 'topics': [
+        {'slug': 'g6-fraction-on-line', 'name_en': 'Fractions on a Number Line',   'name_fr': 'Fractions sur la droite numérique'},
+        {'slug': 'g6-fraction-between', 'name_en': 'Improper Fractions: Between Which Integers?', 'name_fr': 'Fractions impropres : entre quels entiers ?'},
+        {'slug': 'g6-fraction-order',   'name_en': 'Order Fractions',              'name_fr': 'Ordonner des fractions'},
+    ]},
+    {'name_en': 'Grade 6 — Problem Solving', 'name_fr': '6e année — Stratégies de résolution', 'icon': '🧠', 'grade': 6, 'topics': [
+        {'slug': 'g6-relevant-info',      'name_en': 'Spot the Useless Information', 'name_fr': 'Repérer l\'information inutile'},
+        {'slug': 'g6-comparative-phrase', 'name_en': 'Translate "more than / less than"', 'name_fr': 'Traduire « plus que / moins que »'},
     ]},
 ]
