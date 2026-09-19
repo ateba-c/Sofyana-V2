@@ -56,6 +56,24 @@ from .statistics import read_bar_chart_gen, probability_vocab_gen
 # ── Grade 3 — Géométrie (solides + périmètre étiqueté) ───────────────────────
 from .geometry import identify_solid_gen, perimeter_labeled_gen
 
+# ── Grade 4 ───────────────────────────────────────────────────────────────────
+from .g4_numeration import (
+    g4_roman_to_arabic_gen, g4_arabic_to_roman_gen, g4_roman_match_gen,
+    g4_digit_position_gen, g4_digit_value_gen, g4_expanded_form_gen,
+    g4_count_groups_gen, g4_grouping_problem_gen,
+)
+from .g4_comparison import (
+    g4_before_after_gen, g4_compare_gen, g4_order_numbers_gen,
+    g4_skip_sequence_gen, g4_number_line_step_gen, g4_number_line_point_gen,
+)
+from .g4_geometry import (
+    g4_lines_gen, g4_quadrilateral_name_gen, g4_quadrilateral_riddle_gen,
+    g4_quadrilateral_match_gen, g4_quadrilateral_count_gen,
+)
+from .g4_time import (
+    g4_clock_24h_gen, g4_time_units_gen, g4_elapsed_time_gen, g4_end_time_gen,
+)
+
 # ── Grade 5 ───────────────────────────────────────────────────────────────────
 from .g5_arithmetic import (
     g5_order_ops_gen, g5_div_decimal_gen,
@@ -184,6 +202,39 @@ GENERATORS = {
 
     # Fractions — Fraction d'une collection (Bloc E1)
     'fraction-collection': fraction_collection_gen,
+
+    # ══════════════════ Grade 4 ════════════════════════════════════════════════
+
+    # Numération (§1-2) — chiffres romains, numération de position
+    'g4-roman-to-arabic':   g4_roman_to_arabic_gen,
+    'g4-arabic-to-roman':   g4_arabic_to_roman_gen,
+    'g4-roman-match':       g4_roman_match_gen,
+    'g4-digit-position':    g4_digit_position_gen,
+    'g4-digit-value':       g4_digit_value_gen,
+    'g4-expanded-form':     g4_expanded_form_gen,
+    'g4-count-groups':      g4_count_groups_gen,
+    'g4-grouping-problem':  g4_grouping_problem_gen,
+
+    # Comparaison, ordre & droite numérique (§3-4)
+    'g4-before-after':      g4_before_after_gen,
+    'g4-compare':           g4_compare_gen,
+    'g4-order-numbers':     g4_order_numbers_gen,
+    'g4-skip-sequence':     g4_skip_sequence_gen,
+    'g4-number-line-step':  g4_number_line_step_gen,
+    'g4-number-line-point': g4_number_line_point_gen,
+
+    # Géométrie (§5) — droites & quadrilatères
+    'g4-lines':                 g4_lines_gen,
+    'g4-quadrilateral-name':    g4_quadrilateral_name_gen,
+    'g4-quadrilateral-riddle':  g4_quadrilateral_riddle_gen,
+    'g4-quadrilateral-match':   g4_quadrilateral_match_gen,
+    'g4-quadrilateral-count':   g4_quadrilateral_count_gen,
+
+    # Mesure du temps (§6)
+    'g4-clock-24h':         g4_clock_24h_gen,
+    'g4-time-units':        g4_time_units_gen,
+    'g4-elapsed-time':      g4_elapsed_time_gen,
+    'g4-end-time':          g4_end_time_gen,
 
     # ══════════════════ Grade 5 ════════════════════════════════════════════════
 
@@ -321,6 +372,39 @@ SKILL_MAP = {
     # ── Grade 3: Fraction d'une collection ───────────────────────────────────
     'fraction-collection': {'prereq': 'fraction-shape',  'next': 'compare-fraction',    'mastery_next': 'fraction-add',        'downgrade': 'fraction-shape',   'level_sequence': ['easy', 'medium', 'hard']},
 
+    # ══════════════════ Grade 4 ═══════════════════════════════════════════════
+
+    # ── Grade 4: Numération ───────────────────────────────────────────────────
+    'g4-roman-to-arabic': {'prereq': None, 'next': 'g4-arabic-to-roman', 'mastery_next': 'g4-roman-match', 'downgrade': None, 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-arabic-to-roman': {'prereq': 'g4-roman-to-arabic', 'next': 'g4-roman-match', 'mastery_next': 'g4-digit-position', 'downgrade': 'g4-roman-to-arabic', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-roman-match': {'prereq': 'g4-roman-to-arabic', 'next': 'g4-digit-position', 'mastery_next': 'g4-digit-value', 'downgrade': 'g4-arabic-to-roman', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-digit-position': {'prereq': None, 'next': 'g4-digit-value', 'mastery_next': 'g4-expanded-form', 'downgrade': 'digit-position', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-digit-value': {'prereq': 'g4-digit-position', 'next': 'g4-expanded-form', 'mastery_next': 'g4-count-groups', 'downgrade': 'g4-digit-position', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-expanded-form': {'prereq': 'g4-digit-value', 'next': 'g4-count-groups', 'mastery_next': 'g4-grouping-problem', 'downgrade': 'g4-digit-value', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-count-groups': {'prereq': 'g4-expanded-form', 'next': 'g4-grouping-problem', 'mastery_next': 'g4-before-after', 'downgrade': 'g4-expanded-form', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-grouping-problem': {'prereq': 'g4-count-groups', 'next': 'g4-before-after', 'mastery_next': 'g4-compare', 'downgrade': 'g4-count-groups', 'level_sequence': ['easy', 'medium', 'hard']},
+
+    # ── Grade 4: Comparaison, ordre & droite numérique ────────────────────────
+    'g4-before-after': {'prereq': None, 'next': 'g4-compare', 'mastery_next': 'g4-order-numbers', 'downgrade': 'g4-digit-position', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-compare': {'prereq': 'g4-before-after', 'next': 'g4-order-numbers', 'mastery_next': 'g4-skip-sequence', 'downgrade': 'g4-before-after', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-order-numbers': {'prereq': 'g4-compare', 'next': 'g4-skip-sequence', 'mastery_next': 'g4-number-line-step', 'downgrade': 'g4-compare', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-skip-sequence': {'prereq': 'g4-order-numbers', 'next': 'g4-number-line-step', 'mastery_next': 'g4-number-line-point', 'downgrade': 'g4-order-numbers', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-number-line-step': {'prereq': 'g4-skip-sequence', 'next': 'g4-number-line-point', 'mastery_next': 'g4-lines', 'downgrade': 'g4-skip-sequence', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-number-line-point': {'prereq': 'g4-number-line-step', 'next': 'g4-lines', 'mastery_next': 'g4-quadrilateral-name', 'downgrade': 'g4-number-line-step', 'level_sequence': ['easy', 'medium', 'hard']},
+
+    # ── Grade 4: Géométrie ────────────────────────────────────────────────────
+    'g4-lines': {'prereq': None, 'next': 'g4-quadrilateral-name', 'mastery_next': 'g4-quadrilateral-riddle', 'downgrade': 'parallel-perp', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-quadrilateral-name': {'prereq': 'g4-lines', 'next': 'g4-quadrilateral-riddle', 'mastery_next': 'g4-quadrilateral-match', 'downgrade': 'g4-lines', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-quadrilateral-riddle': {'prereq': 'g4-quadrilateral-name', 'next': 'g4-quadrilateral-match', 'mastery_next': 'g4-quadrilateral-count', 'downgrade': 'g4-quadrilateral-name', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-quadrilateral-match': {'prereq': 'g4-quadrilateral-riddle', 'next': 'g4-quadrilateral-count', 'mastery_next': 'g4-clock-24h', 'downgrade': 'g4-quadrilateral-riddle', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-quadrilateral-count': {'prereq': 'g4-quadrilateral-match', 'next': 'g4-clock-24h', 'mastery_next': 'g4-time-units', 'downgrade': 'g4-quadrilateral-match', 'level_sequence': ['easy', 'medium', 'hard']},
+
+    # ── Grade 4: Mesure du temps ──────────────────────────────────────────────
+    'g4-clock-24h': {'prereq': None, 'next': 'g4-time-units', 'mastery_next': 'g4-elapsed-time', 'downgrade': 'read-clock', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-time-units': {'prereq': 'g4-clock-24h', 'next': 'g4-elapsed-time', 'mastery_next': 'g4-end-time', 'downgrade': 'g4-clock-24h', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-elapsed-time': {'prereq': 'g4-time-units', 'next': 'g4-end-time', 'mastery_next': 'g5-elapsed-time', 'downgrade': 'g4-time-units', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-end-time': {'prereq': 'g4-elapsed-time', 'next': 'g4-clock-24h', 'mastery_next': 'g5-elapsed-time', 'downgrade': 'g4-elapsed-time', 'level_sequence': ['easy', 'medium', 'hard']},
+
     # ══════════════════ Grade 5 ═══════════════════════════════════════════════
 
     # ── Grade 5: Arithmetic ───────────────────────────────────────────────────
@@ -452,6 +536,39 @@ TOPIC_GROUPS = [
         {'slug': 'read-bar-chart',    'name_en': 'Read a Bar Chart',         'name_fr': 'Lire un diagramme à bandes'},
         {'slug': 'probability-vocab', 'name_en': 'Probability Vocab',        'name_fr': 'Vocabulaire des probabilités'},
         {'slug': 'cartesian-coord',   'name_en': 'Cartesian Coordinates',    'name_fr': 'Repérage cartésien'},
+    ]},
+
+    # ── Grade 4 groups ─────────────────────────────────────────────────────────
+    {'name_en': 'Grade 4 — Number Sense', 'name_fr': '4e année — Numération', 'icon': '🔢', 'grade': 4, 'topics': [
+        {'slug': 'g4-roman-to-arabic',  'name_en': 'Read Roman Numerals',        'name_fr': 'Lire des chiffres romains'},
+        {'slug': 'g4-arabic-to-roman',  'name_en': 'Write Roman Numerals',       'name_fr': 'Écrire en chiffres romains'},
+        {'slug': 'g4-roman-match',      'name_en': 'Roman Numerals Match',       'name_fr': 'Chiffres romains (associer)'},
+        {'slug': 'g4-digit-position',   'name_en': 'Digit Position (to 10 000s)', 'name_fr': 'Position d\'un chiffre (jusqu\'aux dizaines de mille)'},
+        {'slug': 'g4-digit-value',      'name_en': 'Digit Value',                'name_fr': 'Valeur d\'un chiffre'},
+        {'slug': 'g4-expanded-form',    'name_en': 'Expanded Form (× place value)', 'name_fr': 'Décomposition multiplicative'},
+        {'slug': 'g4-count-groups',     'name_en': 'How Many Tens / Hundreds?',  'name_fr': 'Combien de dizaines / centaines ?'},
+        {'slug': 'g4-grouping-problem', 'name_en': 'Grouping Word Problems',     'name_fr': 'Problèmes de groupements'},
+    ]},
+    {'name_en': 'Grade 4 — Compare, Order & Number Line', 'name_fr': '4e année — Comparer, ordonner & droite numérique', 'icon': '⚖️', 'grade': 4, 'topics': [
+        {'slug': 'g4-before-after',      'name_en': 'Before & After',            'name_fr': 'Le nombre avant / après'},
+        {'slug': 'g4-compare',           'name_en': 'Compare with <, >, =',      'name_fr': 'Comparer avec <, >, ='},
+        {'slug': 'g4-order-numbers',     'name_en': 'Ascending / Descending Order', 'name_fr': 'Ordre croissant / décroissant'},
+        {'slug': 'g4-skip-sequence',     'name_en': 'Skip-Counting Sequences',   'name_fr': 'Suites de nombres (pas)'},
+        {'slug': 'g4-number-line-step',  'name_en': 'Number Line: Find the Step', 'name_fr': 'Droite numérique : le pas'},
+        {'slug': 'g4-number-line-point', 'name_en': 'Number Line: Find the Point', 'name_fr': 'Droite numérique : situer un nombre'},
+    ]},
+    {'name_en': 'Grade 4 — Geometry', 'name_fr': '4e année — Géométrie', 'icon': '📐', 'grade': 4, 'topics': [
+        {'slug': 'g4-lines',                'name_en': 'Parallel & Perpendicular Lines', 'name_fr': 'Droites parallèles & perpendiculaires'},
+        {'slug': 'g4-quadrilateral-name',   'name_en': 'Name the Quadrilateral',  'name_fr': 'Nommer le quadrilatère'},
+        {'slug': 'g4-quadrilateral-riddle', 'name_en': 'Quadrilateral Riddles',   'name_fr': 'Devinettes : quadrilatères'},
+        {'slug': 'g4-quadrilateral-match',  'name_en': 'Quadrilateral Definitions', 'name_fr': 'Définitions des quadrilatères'},
+        {'slug': 'g4-quadrilateral-count',  'name_en': 'Quadrilateral Properties', 'name_fr': 'Propriétés des quadrilatères'},
+    ]},
+    {'name_en': 'Grade 4 — Time', 'name_fr': '4e année — Mesure du temps', 'icon': '🕓', 'grade': 4, 'topics': [
+        {'slug': 'g4-clock-24h',    'name_en': 'Clock in 24-hour Notation',  'name_fr': 'Horloge en notation 24 h'},
+        {'slug': 'g4-time-units',   'name_en': 'Convert Time Units',         'name_fr': 'Convertir des unités de temps'},
+        {'slug': 'g4-elapsed-time', 'name_en': 'Elapsed Time',               'name_fr': 'Durée écoulée'},
+        {'slug': 'g4-end-time',     'name_en': 'Find the End Time',          'name_fr': 'Trouver l\'heure de fin'},
     ]},
 
     # ── Grade 5 groups ─────────────────────────────────────────────────────────

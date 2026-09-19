@@ -456,6 +456,108 @@ def render_shape(shape: dict, vw: float = 260, vh: float = 185,
             out['labels'].append(_label(lbs['inner'], vw/2, (y_bot+y_top)/2,
                                         size=14, bold=True, color=stroke))
 
+    # ── quadrilateral (grade-4: carré / rectangle / parallélogramme / losange / trapèze)
+    elif stype == 'quadrilateral':
+        import math as _math
+        kind   = shape.get('kind', 'square')
+        marks  = shape.get('marks', True)
+        rotate = float(shape.get('rotate', 0))
+        # Unit-space vertices, counter-clockwise from bottom-left
+        if kind == 'square':
+            pts = [(0, 0), (1, 0), (1, 1), (0, 1)]
+        elif kind == 'rectangle':
+            pts = [(0, 0), (1.6, 0), (1.6, 1), (0, 1)]
+        elif kind == 'parallelogram':
+            pts = [(0, 0), (1.4, 0), (1.9, 1), (0.5, 1)]
+        elif kind == 'rhombus':
+            pts = [(0.75, 0), (1.5, 0.5), (0.75, 1.0), (0, 0.5)]
+        else:  # trapezoid (isosceles)
+            pts = [(0, 0), (1.7, 0), (1.3, 1), (0.4, 1)]
+        # Rotate around centroid, then fit into the canvas
+        cxu = sum(p[0] for p in pts) / 4
+        cyu = sum(p[1] for p in pts) / 4
+        a = _math.radians(rotate)
+        rot = []
+        for x, y in pts:
+            dx, dy = x - cxu, y - cyu
+            rot.append((dx * _math.cos(a) - dy * _math.sin(a), dx * _math.sin(a) + dy * _math.cos(a)))
+        min_x = min(p[0] for p in rot); max_x = max(p[0] for p in rot)
+        min_y = min(p[1] for p in rot); max_y = max(p[1] for p in rot)
+        scale = min(avail_w / (max_x - min_x), avail_h / (max_y - min_y)) * 0.9
+        cx, cy = vw / 2, vh / 2
+        # SVG y grows downward → flip y so the shape sits "upright"
+        P = [(cx + (x - (min_x + max_x) / 2) * scale, cy - (y - (min_y + max_y) / 2) * scale) for x, y in rot]
+        out['path'] = ' '.join([f"M {P[0][0]:.1f},{P[0][1]:.1f}"] +
+                               [f"L {x:.1f},{y:.1f}" for x, y in P[1:]] + ['Z'])
+
+        if marks:
+            def _len(i):
+                x1, y1 = P[i]; x2, y2 = P[(i + 1) % 4]
+                return _math.hypot(x2 - x1, y2 - y1)
+
+            def _ticks(i, n):
+                """n small tick marks across the middle of side i (equal-side notation)."""
+                x1, y1 = P[i]; x2, y2 = P[(i + 1) % 4]
+                ln = _len(i)
+                ux, uy = (x2 - x1) / ln, (y2 - y1) / ln       # along the side
+                px, py = -uy, ux                                # perpendicular
+                mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+                for k in range(n):
+                    off = (k - (n - 1) / 2) * 5
+                    bx, by = mx + ux * off, my + uy * off
+                    out['marks'].append(dict(type='path', sw=2,
+                        d=f"M {bx - px * 5:.1f},{by - py * 5:.1f} L {bx + px * 5:.1f},{by + py * 5:.1f}"))
+
+            def _arrows(i, n):
+                """n chevrons on side i (parallel-side notation), drawn just past the midpoint."""
+                x1, y1 = P[i]; x2, y2 = P[(i + 1) % 4]
+                if i >= 2:                      # opposite sides run the other way round the
+                    x1, y1, x2, y2 = x2, y2, x1, y1   # polygon; flip so chevrons point the same way
+                ln = _len(i)
+                ux, uy = (x2 - x1) / ln, (y2 - y1) / ln
+                px, py = -uy, ux
+                mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+                for k in range(n):
+                    off = 9 + k * 7
+                    tx, ty = mx + ux * off, my + uy * off
+                    out['marks'].append(dict(type='path', sw=2,
+                        d=(f"M {tx - ux * 6 + px * 5:.1f},{ty - uy * 6 + py * 5:.1f} "
+                           f"L {tx:.1f},{ty:.1f} "
+                           f"L {tx - ux * 6 - px * 5:.1f},{ty - uy * 6 - py * 5:.1f}")))
+
+            def _right_angle(i):
+                """Small square at vertex i (between sides i-1 and i)."""
+                x0, y0 = P[i]
+                xa, ya = P[(i - 1) % 4]; xb, yb = P[(i + 1) % 4]
+                la = _math.hypot(xa - x0, ya - y0); lb = _math.hypot(xb - x0, yb - y0)
+                s_ = 9
+                ax, ay = (xa - x0) / la * s_, (ya - y0) / la * s_
+                bx, by = (xb - x0) / lb * s_, (yb - y0) / lb * s_
+                out['marks'].append(dict(type='path', sw=1.8,
+                    d=(f"M {x0 + ax:.1f},{y0 + ay:.1f} L {x0 + ax + bx:.1f},{y0 + ay + by:.1f} "
+                       f"L {x0 + bx:.1f},{y0 + by:.1f}")))
+
+            if kind == 'square':
+                for i in range(4):
+                    _ticks(i, 1); _right_angle(i)
+            elif kind == 'rectangle':
+                _ticks(0, 1); _ticks(2, 1); _ticks(1, 2); _ticks(3, 2)
+                for i in range(4):
+                    _right_angle(i)
+            elif kind == 'parallelogram':
+                _ticks(0, 1); _ticks(2, 1); _ticks(1, 2); _ticks(3, 2)
+                _arrows(0, 1); _arrows(2, 1); _arrows(1, 2); _arrows(3, 2)
+            elif kind == 'rhombus':
+                for i in range(4):
+                    _ticks(i, 1)
+                _arrows(0, 1); _arrows(2, 1); _arrows(1, 2); _arrows(3, 2)
+            else:  # trapezoid
+                _arrows(0, 1); _arrows(2, 1)
+
+        if lbs.get('inner'):
+            out['labels'].append(_label(lbs['inner'], vw / 2, vh / 2 + 5,
+                                        size=14, bold=True, color=stroke))
+
     # ── angle (grade-3: identify acute / right / obtuse) ─────────────────────
     elif stype == 'angle':
         degrees = float(shape.get('degrees', 60))
@@ -911,7 +1013,10 @@ def render_shape(shape: dict, vw: float = 260, vh: float = 185,
         nl_start  = shape.get('nl_start', 0)
         nl_end    = shape.get('nl_end', 100)
         nl_step   = shape.get('nl_step', 10)
-        nl_target = shape.get('nl_target', 50)
+        nl_target = shape.get('nl_target', 50)      # None → no "?" marker
+        nl_labels = shape.get('nl_labels')          # None → label every tick
+        if nl_labels is not None:
+            nl_labels = {int(v) for v in nl_labels}
 
         margin_l = 40
         margin_r = 40
@@ -935,16 +1040,18 @@ def render_shape(shape: dict, vw: float = 260, vh: float = 185,
                 x2=x, y2=round(line_y + tick_h / 2, 1),
                 stroke='#374151', width=2 if not is_target else 1,
             ))
-            out['labels'].append(_label(
-                str(val), x, round(line_y + tick_h / 2 + 14, 1),
-                anchor='middle', size=10, bold=is_target, color='#374151',
-            ))
+            if nl_labels is None or val in nl_labels:
+                out['labels'].append(_label(
+                    str(val), x, round(line_y + tick_h / 2 + 14, 1),
+                    anchor='middle', size=10, bold=is_target, color='#374151',
+                ))
 
         # Target dot + question mark
-        tx = round(lx + ((nl_target - nl_start) / nl_step) * tick_gap, 1)
-        out['marks'].append(dict(type='dot', x=tx, y=round(line_y - 18, 1)))
-        out['labels'].append(_label('?', tx, round(line_y - 28, 1),
-                                    anchor='middle', size=13, bold=True, color=stroke))
+        if nl_target is not None:
+            tx = round(lx + ((nl_target - nl_start) / nl_step) * tick_gap, 1)
+            out['marks'].append(dict(type='dot', x=tx, y=round(line_y - 18, 1)))
+            out['labels'].append(_label('?', tx, round(line_y - 28, 1),
+                                        anchor='middle', size=13, bold=True, color=stroke))
 
     # ── pie_chart_multi ──────────────────────────────────────────────────────
     elif stype == 'pie_chart_multi':
