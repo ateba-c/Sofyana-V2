@@ -162,7 +162,7 @@
              class="flex items-center justify-between rounded-[0.85rem] px-3 py-2 min-h-[44px] text-xs font-black transition
                     {% if pa.slug == topic %}bg-amber text-white shadow-warm{% else %}bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200{% endif %}">
             <span class="min-w-0 truncate">{% if lang == 'fr' %}{{ pa.name_fr }}{% else %}{{ pa.name_en }}{% endif %}</span>
-            <span class="ml-1 shrink-0 text-[10px] opacity-60">{{ pa.parent_name }}</span>
+            <span class="ml-1 shrink-0 text-[10px] opacity-60">{% if pa.grade %}{% if lang == 'fr' %}{{ pa.grade }}e{% else %}G{{ pa.grade }}{% endif %} · {% endif %}{{ pa.parent_name }}</span>
           </a>
           {% endfor %}
         </div>

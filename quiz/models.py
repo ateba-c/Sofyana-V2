@@ -110,6 +110,8 @@ class Student(models.Model):
     total_stars   = models.PositiveIntegerField(default=0)
     unlocked_avatars = models.JSONField(default=list, blank=True)
     skill_ratings = models.JSONField(default=dict, blank=True)  # {topic: {correct: int, total: int}}
+    grade         = models.PositiveSmallIntegerField(null=True, blank=True,
+                        help_text='School grade the child is in; the home page opens on it by default.')
     created_at    = models.DateTimeField(auto_now_add=True)
 
     def avatar_emoji(self):

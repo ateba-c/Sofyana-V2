@@ -6,7 +6,7 @@ Topics:
   g5_capacity_convert_gen typed       – L ↔ mL
   g5_mass_convert_gen     typed       – g ↔ kg
   g5_elapsed_time_gen     typed       – duration between two clock times
-  g5_temperature_gen      QCM         – compare temperatures (incl. negatives)
+  g5_temperature_gen      QCM         – compare temperatures (0 °C and above)
   g5_thermometer_gen      typed + SVG – read a thermometer
 """
 import random
@@ -285,23 +285,23 @@ def g5_elapsed_time_gen(level='easy'):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def g5_temperature_gen(level='easy'):
-    """QCM — compare temperatures; includes negatives at medium/hard."""
+    """QCM — compare temperatures (non-negative: primary school)."""
     if level == 'easy':
         temps = random.sample(range(0, 41), 5)
         question = random.choice(['coldest', 'warmest'])
     elif level == 'medium':
-        temps = [random.randint(-15, 30) for _ in range(5)]
+        temps = [random.randint(0, 30) for _ in range(5)]
         # ensure distinct
         temps = list(set(temps))
         while len(temps) < 5:
-            temps.append(random.randint(-15, 30))
+            temps.append(random.randint(0, 30))
         temps = list(set(temps))[:5]
         question = random.choice(['coldest', 'warmest'])
     else:
-        temps = [random.randint(-25, 35) for _ in range(5)]
+        temps = [random.randint(0, 35) for _ in range(5)]
         temps = list(set(temps))
         while len(temps) < 5:
-            temps.append(random.randint(-25, 35))
+            temps.append(random.randint(0, 35))
         temps = list(set(temps))[:5]
         question = 'coldest'  # always coldest for hard (more common error with negatives)
 
@@ -360,10 +360,10 @@ def g5_thermometer_gen(level='easy'):
         temp = random.choice(range(0, 41, 5))
     elif level == 'medium':
         min_t, max_t, step = -10, 40, 5
-        temp = random.choice(range(-10, 41, 5))
+        temp = random.choice(range(0, 41, 5))
     else:
         min_t, max_t, step = -20, 40, 10
-        temp = random.choice(range(-20, 41, 10))
+        temp = random.choice(range(0, 41, 2))
 
     temp_str = f"{temp} °C"
 

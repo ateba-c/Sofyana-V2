@@ -61,19 +61,57 @@
         </h2>
         <button @click="addChildOpen = false" class="rounded-xl bg-soft px-3 py-2 text-sm font-black text-[var(--text-soft)] hover:bg-brand-light transition">✕</button>
       </div>
-      <p class="text-sm font-bold text-[var(--text-soft)] mb-4">
-        {% if lang == 'fr' %}Demandez à votre enfant son nom d'utilisateur Sofyana.{% else %}Ask your child for their Sofyana username.{% endif %}
-      </p>
-      <form method="post" class="space-y-3">
-        {% csrf_token %}
-        <input type="text" name="child_username"
-               class="w-full bg-white border-2 border-teal-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 text-sm font-bold"
-               placeholder="{% if lang == 'fr' %}Nom d'utilisateur de l'enfant{% else %}Child's username{% endif %}">
-        <button type="submit"
-                class="w-full rounded-xl bg-gradient-to-r from-teal to-lime py-3 text-sm font-black text-white shadow-card hover:opacity-90 transition">
-          {% if lang == 'fr' %}Lier le compte{% else %}Link account{% endif %}
-        </button>
-      </form>
+      <div x-data="{ mode: 'create' }">
+        <div class="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-soft p-1 text-xs font-black">
+          <button type="button" @click="mode = 'create'" :class="mode === 'create' ? 'bg-white shadow-card text-brand' : 'text-[var(--text-soft)]'" class="rounded-lg py-2 transition">
+            {% if lang == 'fr' %}Créer un compte{% else %}Create account{% endif %}
+          </button>
+          <button type="button" @click="mode = 'link'" :class="mode === 'link' ? 'bg-white shadow-card text-brand' : 'text-[var(--text-soft)]'" class="rounded-lg py-2 transition">
+            {% if lang == 'fr' %}Lier un compte existant{% else %}Link existing account{% endif %}
+          </button>
+        </div>
+
+        <!-- Create a child account (linked to this parent automatically) -->
+        <form x-show="mode === 'create'" method="post" action="{% url 'quiz:parent_create_child' %}?lang={{ lang }}" class="space-y-3">
+          {% csrf_token %}
+          <p class="text-sm font-bold text-[var(--text-soft)]">
+            {% if lang == 'fr' %}Le compte sera lié à votre profil automatiquement.{% else %}The account will be linked to you automatically.{% endif %}
+          </p>
+          <input type="text" name="child_username" required minlength="2"
+                 class="w-full bg-white border-2 border-teal-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 text-sm font-bold"
+                 placeholder="{% if lang == 'fr' %}Nom d'utilisateur de l'enfant{% else %}Child's username{% endif %}">
+          <input type="password" name="child_password" required minlength="4"
+                 class="w-full bg-white border-2 border-teal-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 text-sm font-bold"
+                 placeholder="{% if lang == 'fr' %}Mot de passe (4 caractères min.){% else %}Password (min. 4 characters){% endif %}">
+          <label class="block text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            {% if lang == 'fr' %}Année scolaire{% else %}School grade{% endif %}
+          </label>
+          <select name="child_grade" class="w-full bg-white border-2 border-teal-light rounded-xl px-4 py-3 text-sm font-bold text-ink focus:outline-none focus:border-teal">
+            {% for g in available_grades %}
+            <option value="{{ g }}">{% if lang == 'fr' %}{{ g }}e année{% else %}Grade {{ g }}{% endif %}</option>
+            {% endfor %}
+          </select>
+          <button type="submit"
+                  class="w-full rounded-xl bg-gradient-to-r from-teal to-lime py-3 text-sm font-black text-white shadow-card hover:opacity-90 transition">
+            {% if lang == 'fr' %}Créer et lier{% else %}Create and link{% endif %}
+          </button>
+        </form>
+
+        <!-- Link an account the child already made -->
+        <form x-show="mode === 'link'" x-cloak method="post" class="space-y-3">
+          {% csrf_token %}
+          <p class="text-sm font-bold text-[var(--text-soft)]">
+            {% if lang == 'fr' %}Demandez à votre enfant son nom d'utilisateur Sofyana.{% else %}Ask your child for their Sofyana username.{% endif %}
+          </p>
+          <input type="text" name="child_username"
+                 class="w-full bg-white border-2 border-teal-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 text-sm font-bold"
+                 placeholder="{% if lang == 'fr' %}Nom d'utilisateur de l'enfant{% else %}Child's username{% endif %}">
+          <button type="submit"
+                  class="w-full rounded-xl bg-gradient-to-r from-teal to-lime py-3 text-sm font-black text-white shadow-card hover:opacity-90 transition">
+            {% if lang == 'fr' %}Lier le compte{% else %}Link account{% endif %}
+          </button>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -147,6 +185,17 @@
             <div class="mt-1 flex flex-wrap gap-2">
               <span class="rounded-full bg-coral-light px-3 py-1 text-xs font-extrabold text-coral-dark">⭐ {{ child.total_stars }} {% if lang == 'fr' %}étoiles{% else %}stars{% endif %}</span>
               <span class="rounded-full bg-brand-light px-3 py-1 text-xs font-extrabold text-brand">📚 {{ child.all_time_total }} {% if lang == 'fr' %}questions{% else %}questions{% endif %}</span>
+              <form method="post" action="{% url 'quiz:parent_set_child_grade' %}?lang={{ lang }}" class="inline-flex items-center">
+                {% csrf_token %}
+                <input type="hidden" name="child_id" value="{{ child.user_id }}">
+                <select name="child_grade" onchange="this.form.submit()" title="{% if lang == 'fr' %}Année scolaire par défaut{% else %}Default school grade{% endif %}"
+                        class="rounded-full bg-amber-light px-3 py-1 text-xs font-extrabold text-amber-800 border-0 focus:outline-none focus:ring-2 focus:ring-amber/40">
+                  <option value="" {% if not child.grade %}selected{% endif %}>🎓 {% if lang == 'fr' %}Année ?{% else %}Grade ?{% endif %}</option>
+                  {% for g in available_grades %}
+                  <option value="{{ g }}" {% if child.grade == g %}selected{% endif %}>🎓 {% if lang == 'fr' %}{{ g }}e année{% else %}Grade {{ g }}{% endif %}</option>
+                  {% endfor %}
+                </select>
+              </form>
             </div>
           </div>
         </div>
@@ -280,8 +329,14 @@
               {% csrf_token %}
               <input type="hidden" name="child_id" value="{{ child.user_id }}">
               <select name="topic_slug" class="flex-1 min-w-[180px] rounded-xl border border-brand-light bg-white px-3 py-2.5 text-sm font-bold text-ink focus:border-brand focus:outline-none">
-                {% for topic in all_topics %}
-                <option value="{{ topic.slug }}">{{ topic.icon }} {% if lang == 'fr' %}{{ topic.name_fr }}{% else %}{{ topic.name_en }}{% endif %}</option>
+                {% for group in topic_groups %}
+                <optgroup label="{{ group.icon }} {% if lang == 'fr' %}{{ group.name_fr }}{% else %}{{ group.name_en }}{% endif %}{% if not group.grade %} — {% if lang == 'fr' %}toutes les années{% else %}all grades{% endif %}{% endif %}">
+                  {% for topic in group.topics %}
+                  <option value="{{ topic.slug }}" {% if group.grade and group.grade == child.grade and forloop.parentloop.first %}{% endif %}>
+                    {% if group.grade %}[{% if lang == 'fr' %}{{ group.grade }}e{% else %}G{{ group.grade }}{% endif %}] {% endif %}{% if lang == 'fr' %}{{ topic.name_fr }}{% else %}{{ topic.name_en }}{% endif %}
+                  </option>
+                  {% endfor %}
+                </optgroup>
                 {% endfor %}
               </select>
               <button type="submit" class="rounded-xl bg-brand px-4 py-2.5 text-sm font-black text-white hover:bg-brand-dark transition">
@@ -300,11 +355,12 @@
                 <span class="text-lg shrink-0">{% if a.completed_at %}✅{% else %}📋{% endif %}</span>
                 <div class="min-w-0 flex-1">
                   <p class="text-sm font-extrabold text-ink truncate">
-                    {% for topic in all_topics %}{% if topic.slug == a.topic_slug %}
-                      {{ topic.icon }} {% if lang == 'fr' %}{{ topic.name_fr }}{% else %}{{ topic.name_en }}{% endif %}
-                    {% endif %}{% endfor %}
+                    {% if a.topic %}{{ a.topic.icon }} {% if lang == 'fr' %}{{ a.topic.name_fr }}{% else %}{{ a.topic.name_en }}{% endif %}{% else %}{{ a.topic_slug }}{% endif %}
                   </p>
-                  {% if a.completed_at %}<p class="text-[11px] font-bold text-lime-dark">{% if lang == 'fr' %}Terminé{% else %}Completed{% endif %}</p>{% endif %}
+                  <p class="text-[11px] font-bold text-[var(--text-soft)]">
+                    {% if a.topic.grade %}<span class="rounded-full bg-amber-light px-2 py-0.5 text-amber-800">{% if lang == 'fr' %}{{ a.topic.grade }}e année{% else %}Grade {{ a.topic.grade }}{% endif %}</span>{% else %}<span class="rounded-full bg-soft px-2 py-0.5">{% if lang == 'fr' %}Toutes les années{% else %}All grades{% endif %}</span>{% endif %}
+                    {% if a.completed_at %}<span class="text-lime-dark ml-1">✓ {% if lang == 'fr' %}Terminé — réassignez pour de nouveaux exercices{% else %}Completed — assign again for new exercises{% endif %}</span>{% endif %}
+                  </p>
                 </div>
                 <form method="post" action="{% url 'quiz:unassign_topic' %}?lang={{ lang }}" class="shrink-0">
                   {% csrf_token %}

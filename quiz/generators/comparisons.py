@@ -161,11 +161,12 @@ def compare_int_gen(level='medium'):
         a = random.randint(1, 100)
         b = random.randint(1, 100)
     elif level == 'medium':
-        a = random.randint(-100, 100)
-        b = random.randint(-100, 100)
+        a = random.randint(1, 1000)
+        b = random.randint(1, 1000)
     else:
-        a = random.randint(-9999, 9999)
-        b = random.randint(-9999, 9999)
+        # Primary school: whole numbers only, never negative.
+        a = random.randint(100, 99_999)
+        b = random.randint(100, 99_999)
     correct = _sym(a, b)
     q = {
         'a_str': str(a),

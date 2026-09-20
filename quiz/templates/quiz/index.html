@@ -21,7 +21,7 @@
         <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--text-soft)] hidden sm:block">
           {% if lang == 'fr' %}Année{% else %}Grade{% endif %}
         </span>
-        <a href="?lang={{ lang }}"
+        <a href="?lang={{ lang }}&grade=0"
            class="flex h-8 w-8 items-center justify-center rounded-full text-xs font-black transition
                   {% if not grade_filter %}bg-brand text-white shadow-warm{% else %}bg-white border-2 border-brand/25 text-brand/60 hover:border-brand/60{% endif %}">
           ✦
@@ -90,7 +90,10 @@
               {% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == a.topic_slug %}{{ t.name_en }}{% endif %}{% endfor %}{% endfor %}
             {% endif %}
           </p>
-          {% if a.note %}<p class="text-xs font-bold text-[var(--text-soft)] mt-0.5">{{ a.note }}</p>{% endif %}
+          <p class="text-xs font-bold text-[var(--text-soft)] mt-0.5">
+            {% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == a.topic_slug %}{% if g.grade %}<span class="rounded-full bg-amber-light px-2 py-0.5 text-amber-800">{% if lang == 'fr' %}{{ g.grade }}e année{% else %}Grade {{ g.grade }}{% endif %}</span>{% endif %}{% endif %}{% endfor %}{% endfor %}
+            {% if a.note %}{{ a.note }}{% endif %}
+          </p>
           {% if a.completed_at %}<p class="text-xs font-bold text-lime-dark mt-0.5">{% if lang == 'fr' %}Terminé !{% else %}Completed!{% endif %}</p>{% endif %}
         </div>
         <div class="flex shrink-0 gap-2">
@@ -200,7 +203,7 @@
         <p class="text-xs font-extrabold uppercase tracking-[0.24em] text-brand">{% if lang == 'fr' %}Chemin des compétences{% else %}Skill path{% endif %}</p>
         <h2 class="mt-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">
           {% if grade_filter %}
-            {% if lang == 'fr' %}3e année — compétences{% else %}Grade {{ grade_filter }} skills{% endif %}
+            {% if lang == 'fr' %}{{ grade_filter }}e année — compétences{% else %}Grade {{ grade_filter }} skills{% endif %}
           {% else %}
             {% if lang == 'fr' %}Où veux-tu aller aujourd'hui ?{% else %}Where do you want to go today?{% endif %}
           {% endif %}

@@ -178,137 +178,77 @@ def squares_gen(level='medium'):
                                 f'Réponse : {sq} = {root}²'),
         }
 
-    else:  # hard
-        # 25% chance: mix_match — match √N to its value
+    else:  # hard — squares only (no square roots in primary school)
+        # 25% chance: mix_match — match n² to its value
         if random.random() < 0.25:
-            sq_pool = random.sample(SQUARES[2:], 4)   # skip 1 and 4
-            pairs   = [{'left': f'√{sq}', 'right': str(int(sq ** 0.5))} for sq in sq_pool]
-            explanation_en = 'Correct pairs:\n' + '\n'.join(
-                f'{p["left"]} = {p["right"]}' for p in pairs
-            )
-            explanation_fr = 'Paires correctes :\n' + '\n'.join(
-                f'{p["left"]} = {p["right"]}' for p in pairs
-            )
+            roots = random.sample(range(3, 15), 4)
+            pairs = [{'left': f'{r}²', 'right': str(r * r)} for r in roots]
             return {
                 'q_type':          'mix_match',
-                'prompt_en':       'Match each square root to its value.',
-                'prompt_fr':       'Associez chaque racine carrée à sa valeur.',
-                'hint_en':         '√N is the number that, multiplied by itself, gives N.',
-                'hint_fr':         '√N est le nombre qui, multiplié par lui-même, donne N.',
+                'prompt_en':       'Match each square to its value.',
+                'prompt_fr':       'Associe chaque carré à sa valeur.',
+                'hint_en':         'n² means n × n.',
+                'hint_fr':         'n² veut dire n × n.',
+                'show_illustration': False,
                 'shape_data':      [],
+                'choices':         [],
                 'pairs':           pairs,
-                'correct_answers': [],
+                'correct_answers': [p['right'] for p in pairs],
                 'time_limit':      35,
-                'points':          4,
-                'explanation_en':  explanation_en,
-                'explanation_fr':  explanation_fr,
+                'points':          3,
+                'explanation_en':  '\n'.join(f'{r}² = {r} × {r} = {r * r}' for r in roots),
+                'explanation_fr':  '\n'.join(f'{r}² = {r} × {r} = {r * r}' for r in roots),
             }
 
         if random.random() < 0.5:
-            # "What is √N?"
-            sq   = random.choice(SQUARES[2:])              # skip 1 and 4
-            root = int(sq ** 0.5)
+            # "What is 12²?"
+            root = random.randint(6, 15)
+            sq = root * root
             tagged_candidates = [
-                (
-                    str(root + 1),
-                    'off_by_one',
-                    "Very close — remember √N is the number that, squared, gives N.",
-                    "Très proche — rappelle-toi que √N est le nombre qui, au carré, donne N.",
-                ),
-                (
-                    str(root - 1),
-                    'off_by_one',
-                    "Very close — remember √N is the number that, squared, gives N.",
-                    "Très proche — rappelle-toi que √N est le nombre qui, au carré, donne N.",
-                ),
-                (
-                    str(root + 2),
-                    'off_by_one',
-                    "Very close — remember √N is the number that, squared, gives N.",
-                    "Très proche — rappelle-toi que √N est le nombre qui, au carré, donne N.",
-                ),
-                (
-                    str(root * 2),
-                    'not_square',
-                    "That number is not a perfect square — try multiplying a whole number by itself.",
-                    "Ce nombre n'est pas un carré parfait — essaie de multiplier un entier par lui-même.",
-                ),
+                (str(root * 2), 'doubled', 'n² means n × n, not n × 2.', 'n² veut dire n × n, pas n × 2.'),
+                (str((root + 1) ** 2), 'off_by_one', 'Check: which number times itself?', 'Vérifie : quel nombre fois lui-même ?'),
+                (str((root - 1) ** 2), 'off_by_one', 'Check: which number times itself?', 'Vérifie : quel nombre fois lui-même ?'),
+                (str(sq + root), 'wrong_product', 'Multiply carefully.', 'Multiplie soigneusement.'),
+                (str(sq - root), 'wrong_product', 'Multiply carefully.', 'Multiplie soigneusement.'),
             ]
-            choices = _tagged_shuffle_mc(str(root), tagged_candidates)
             return {
                 'q_type':          'multiple_choice',
-                'prompt_en':       f'What is √{sq}?',
-                'prompt_fr':       f'Quelle est la valeur de √{sq} ?',
-                'hint_en':         f'Which whole number multiplied by itself equals {sq}?',
-                'hint_fr':         f'Quel entier multiplié par lui-même donne {sq} ?',
+                'prompt_en':       f'What is {root}²?',
+                'prompt_fr':       f'Combien vaut {root}² ?',
+                'hint_en':         f'{root}² = {root} × {root}.',
+                'hint_fr':         f'{root}² = {root} × {root}.',
+                'show_illustration': False,
                 'shape_data':      [],
-                'choices':         choices,
-                'correct_answers': [str(root)],
-                'time_limit':      25,
-                'points':          3,
-                'explanation_en':  (f'Step 1: Ask: which number × itself = {sq}?\n'
-                                   f'Step 2: Check: {root} × {root} = {sq}.\n'
-                                   f'Answer: √{sq} = {root}'),
-                'explanation_fr':  (f'Étape 1 : Demande : quel nombre × lui-même = {sq} ?\n'
-                                   f'Étape 2 : Vérifie : {root} × {root} = {sq}.\n'
-                                   f'Réponse : √{sq} = {root}'),
-            }
-        else:
-            # "What is N²?"
-            n   = random.randint(2, 14)
-            sq  = n * n
-            tagged_candidates = [
-                (
-                    str((n + 1) ** 2),
-                    'off_by_one',
-                    "Very close — remember N² means N × N.",
-                    "Très proche — rappelle-toi que N² signifie N × N.",
-                ),
-                (
-                    str((n - 1) ** 2),
-                    'off_by_one',
-                    "Very close — remember N² means N × N.",
-                    "Très proche — rappelle-toi que N² signifie N × N.",
-                ),
-                (
-                    str(n * 2),
-                    'wrong_formula',
-                    "You doubled N instead of squaring it — N² = N × N, not N × 2.",
-                    "Tu as doublé N au lieu de le mettre au carré — N² = N × N, pas N × 2.",
-                ),
-                (
-                    str(n * (n + 1)),
-                    'off_by_one',
-                    "Very close — remember N² means N × N.",
-                    "Très proche — rappelle-toi que N² signifie N × N.",
-                ),
-                (
-                    str(n * (n - 1)),
-                    'off_by_one',
-                    "Very close — remember N² means N × N.",
-                    "Très proche — rappelle-toi que N² signifie N × N.",
-                ),
-            ]
-            choices = _tagged_shuffle_mc(str(sq), tagged_candidates)
-            return {
-                'q_type':          'multiple_choice',
-                'prompt_en':       f'What is {n}²?',
-                'prompt_fr':       f'Combien vaut {n}² ?',
-                'hint_en':         f'Multiply {n} by itself.',
-                'hint_fr':         f'Multipliez {n} par lui-même.',
-                'shape_data':      [],
-                'choices':         choices,
+                'choices':         _tagged_shuffle_mc(str(sq), tagged_candidates),
+                'pairs':           [],
                 'correct_answers': [str(sq)],
                 'time_limit':      20,
                 'points':          2,
-                'explanation_en':  (f'Step 1: Write as multiplication: {n}² = {n} × {n}.\n'
-                                   f'Answer: {n}² = {sq}'),
-                'explanation_fr':  (f'Étape 1 : Écris comme multiplication : {n}² = {n} × {n}.\n'
-                                   f'Réponse : {n}² = {sq}'),
+                'explanation_en':  f'{root}² = {root} × {root} = {sq}',
+                'explanation_fr':  f'{root}² = {root} × {root} = {sq}',
             }
 
+        # "Which number, multiplied by itself, gives N?"
+        root = random.randint(4, 15)
+        sq = root * root
+        return {
+            'q_type':          'text_input',
+            'answer_type':     'integer',
+            'prompt_en':       f'Which number, multiplied by itself, gives {sq}?',
+            'prompt_fr':       f'Quel nombre, multiplié par lui-même, donne {sq} ?',
+            'hint_en':         f'Try the squares you know: 10 × 10 = 100, 12 × 12 = 144…',
+            'hint_fr':         f'Essaie les carrés que tu connais : 10 × 10 = 100, 12 × 12 = 144…',
+            'show_illustration': False,
+            'shape_data':      [],
+            'choices':         [],
+            'pairs':           [],
+            'correct_answers': [str(root)],
+            'time_limit':      25,
+            'points':          2,
+            'explanation_en':  f'{root} × {root} = {sq}, so the number is {root}.',
+            'explanation_fr':  f'{root} × {root} = {sq}, donc le nombre est {root}.',
+        }
 
-# ── PRIME NUMBERS ──────────────────────────────────────────────────────────────
 
 def primes_gen(level='medium'):
     if level == 'easy':

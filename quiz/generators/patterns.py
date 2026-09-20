@@ -39,6 +39,9 @@ def number_sequence_gen(level='easy'):
         n_shown   = 4
         ascending = random.choice([True, False])
 
+    if not ascending:
+        # Never let a descending sequence reach a negative term (primary school).
+        start = max(start, step * (n_shown + 1))
     terms = []
     for i in range(n_shown + 1):
         if ascending:

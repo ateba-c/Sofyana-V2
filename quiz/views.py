@@ -261,11 +261,16 @@ def index(request):
     # Student level
     level = _student_level(student.total_stars if student else 0)
 
-    # Grade filter (school grade, separate from gamification level)
-    try:
-        grade_filter = int(request.GET.get('grade', 0)) or None
-    except (ValueError, TypeError):
-        grade_filter = None
+    # Grade filter (school grade, separate from gamification level).
+    # No ?grade → the child's own grade; ?grade=0 → every grade.
+    raw_grade = request.GET.get('grade')
+    if raw_grade is None:
+        grade_filter = (student.grade if student and student.grade in available_grades() else None)
+    else:
+        try:
+            grade_filter = int(raw_grade) or None
+        except (ValueError, TypeError):
+            grade_filter = None
 
     is_guest = not request.user.is_authenticated
     template = 'quiz/index_landing.html' if is_guest else 'quiz/index.html'
@@ -488,13 +493,14 @@ def practice_page(request, topic):
     # Parent assignments for this student
     parent_assignments = []
     if request.user.is_authenticated:
-        pas = ParentAssignment.objects.filter(student=request.user, completed_at__isnull=True).select_related('parent__user')[:6]
+        pas = ParentAssignment.objects.filter(student=request.user, completed_at__isnull=True).select_related('parent__user')
         # Enrich with topic display name
         all_topics = topic_meta()
         for pa in pas:
             ti = all_topics.get(pa.topic_slug, {})
             parent_assignments.append({
                 'slug': pa.topic_slug,
+                'grade': ti.get('grade'),
                 'name_fr': ti.get('name_fr', pa.topic_slug),
                 'name_en': ti.get('name_en', pa.topic_slug),
                 'parent_name': pa.parent.user.get_full_name() or pa.parent.user.username,
@@ -1146,13 +1152,16 @@ def parent_dashboard_view(request):
             student = child_user.student
             avatar = student.avatar_emoji()
             total_stars = student.total_stars
+            child_grade = student.grade
         except Exception:
             avatar = '🧒'
             total_stars = 0
+            child_grade = None
 
         children_data.append({
             'username':       child_user.username,
             'user_id':        child_user.pk,
+            'grade':          child_grade,
             'avatar':         avatar,
             'total_stars':    total_stars,
             'week_total':     total_week,
@@ -1184,21 +1193,26 @@ def parent_dashboard_view(request):
 
     # Per-child assignments for parent dashboard display
     all_topics = [
-        {'slug': t['slug'], 'name_en': t['name_en'], 'name_fr': t['name_fr'], 'icon': g['icon']}
+        {'slug': t['slug'], 'name_en': t['name_en'], 'name_fr': t['name_fr'], 'icon': g['icon'],
+         'grade': g.get('grade'), 'group_en': g['name_en'], 'group_fr': g['name_fr']}
         for g in topic_groups() for t in g['topics']
     ]
+    topic_by_slug = {t['slug']: t for t in all_topics}
     child_assignments = {}
     for child_user in parent.children.all():
-        child_assignments[child_user.username] = list(
-            ParentAssignment.objects.filter(parent=parent, student=child_user)
-            .order_by('-assigned_at')
-        )
+        rows = []
+        for a in ParentAssignment.objects.filter(parent=parent, student=child_user).order_by('-assigned_at'):
+            a.topic = topic_by_slug.get(a.topic_slug)
+            rows.append(a)
+        child_assignments[child_user.username] = rows
 
     return render(request, 'quiz/parent_dashboard.html', {
         'lang':             lang,
         'children_data':    children_data,
         'child_assignments': child_assignments,
         'all_topics':       all_topics,
+        'topic_groups':     topic_groups(),
+        'available_grades': available_grades(),
         'link_error':       request.GET.get('link_error', ''),
         'link_success':     request.GET.get('link_success', ''),
     })
@@ -1219,9 +1233,14 @@ def assign_topic_view(request):
         try:
             child = User.objects.get(pk=child_id)
             if child in parent.children.all():
-                assigned, _ = ParentAssignment.objects.get_or_create(
+                assigned, created = ParentAssignment.objects.get_or_create(
                     parent=parent, student=child, topic_slug=topic_slug
                 )
+                if not created:
+                    # Assigned again → fresh homework: clear completion, move to the top.
+                    assigned.completed_at = None
+                    assigned.assigned_at = timezone.now()
+                    assigned.save(update_fields=['completed_at', 'assigned_at'])
         except User.DoesNotExist:
             pass
     if request.headers.get('HX-Request'):
@@ -1238,6 +1257,62 @@ def assign_topic_view(request):
             f'<div class="w-full rounded-xl px-3 py-2.5 text-center text-xs font-black min-h-[40px] '
             f'flex items-center justify-center {cls}">{label}</div>'
         )
+    return redirect(f'/parent/?lang={lang}')
+
+
+@require_POST
+@login_required
+def parent_create_child_view(request):
+    """Parent creates the child's student account; it is linked to the parent immediately."""
+    lang = request.GET.get('lang', 'en')
+    try:
+        parent = request.user.parent_profile
+    except Exception:
+        return redirect('quiz:index')
+    username = request.POST.get('child_username', '').strip()
+    password = request.POST.get('child_password', '').strip()
+    grade_raw = request.POST.get('child_grade', '').strip()
+    fr = lang == 'fr'
+    if len(username) < 2:
+        messages.error(request, "Le nom d'utilisateur doit avoir au moins 2 caractères." if fr else 'Username must be at least 2 characters.')
+        return redirect(f'/parent/?lang={lang}')
+    if User.objects.filter(username__iexact=username).exists():
+        messages.error(request, "Ce nom d'utilisateur est déjà pris." if fr else 'That username is already taken.')
+        return redirect(f'/parent/?lang={lang}')
+    if len(password) < 4:
+        messages.error(request, 'Le mot de passe doit avoir au moins 4 caractères.' if fr else 'Password must be at least 4 characters.')
+        return redirect(f'/parent/?lang={lang}')
+    try:
+        grade = int(grade_raw)
+        if grade not in available_grades():
+            grade = None
+    except (ValueError, TypeError):
+        grade = None
+    user = User.objects.create_user(username=username, password=password)
+    Student.objects.create(user=user, grade=grade)
+    parent.children.add(user)
+    messages.success(request, (f"Compte de {username} créé et lié à votre profil." if fr
+                               else f"{username}'s account was created and linked to you."))
+    return redirect(f'/parent/?lang={lang}')
+
+
+@require_POST
+@login_required
+def parent_set_child_grade_view(request):
+    lang = request.GET.get('lang', 'en')
+    try:
+        parent = request.user.parent_profile
+    except Exception:
+        return redirect('quiz:index')
+    child = parent.children.filter(pk=request.POST.get('child_id', '')).first()
+    if child and hasattr(child, 'student'):
+        try:
+            grade = int(request.POST.get('child_grade', ''))
+            grade = grade if grade in available_grades() else None
+        except (ValueError, TypeError):
+            grade = None
+        child.student.grade = grade
+        child.student.save(update_fields=['grade'])
     return redirect(f'/parent/?lang={lang}')
 
 
