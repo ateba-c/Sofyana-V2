@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.db.models import Sum
 from django.db.models import Count, Q
 from .models import QuizSet, Question, StudentSession, Student, ProblemInteraction, ParentProfile, ParentAssignment, AVATAR_SLUGS, AVATAR_EMOJIS
-from .generators import GENERATORS
+from .generators import GENERATORS, LEVEL_NAMES, generator_for
 from .taxonomy import topic_groups, topic_meta, skill_map, answer_type_for, available_grades
 from .answers import check_answer, infer_answer_type, input_spec
 from .labels import resolve_lang, localize_problem
@@ -484,6 +484,20 @@ def practice_page(request, topic):
         raise Http404
     lang  = resolve_lang(request)
     level = request.GET.get('level', 'medium')
+    level_seq = skill_map().get(topic, {}).get('level_sequence') or ['easy', 'medium', 'hard']
+    if level not in level_seq:
+        level = 'medium' if 'medium' in level_seq else level_seq[0]
+    # The 4th level (problem solving) opens after 5 correct answers at the hard level.
+    resolution_unlocked = True
+    locked_notice = ''
+    if 'resolution' in level_seq:
+        hard_correct = ProblemInteraction.objects.filter(user=request.user, topic=topic, level='hard', is_correct=True).count()
+        resolution_unlocked = hard_correct >= 5
+        if level == 'resolution' and not resolution_unlocked:
+            level = 'hard'
+            locked_notice = (f"Réussis {5 - hard_correct} question{'s' if 5 - hard_correct > 1 else ''} de plus au niveau Difficile pour débloquer la Résolution."
+                             if lang == 'fr' else
+                             f"Get {5 - hard_correct} more correct at Hard to unlock Problem solving.")
     topic_info = None
     for g in topic_groups():
         for t in g['topics']:
@@ -533,7 +547,9 @@ def practice_page(request, topic):
         'lang':               lang,
         'topic_info':         topic_info,
         'topic_groups':       _topic_card_groups(request.user.student),
-        'levels':             [('easy', 'Easy', 'Facile'), ('medium', 'Medium', 'Moyen'), ('hard', 'Hard', 'Difficile')],
+        'levels':             [(lv, LEVEL_NAMES[lv][0], LEVEL_NAMES[lv][1]) for lv in level_seq],
+        'resolution_unlocked': resolution_unlocked,
+        'locked_notice':      locked_notice,
         'parent_assignments': parent_assignments,
         'recommendations':    recommendations,
     })
@@ -554,7 +570,8 @@ def practice_next(request, topic):
         stats = request.session.get(key, {})
         stats['snooze'] = 5
         request.session[key] = stats
-    q = localize_problem(GENERATORS[topic](level), lang)
+    gen = generator_for(topic, level) or GENERATORS[topic]
+    q = localize_problem(gen(level), lang)
     # Typed answer: explicit on the problem > editor-declared on the skill > inferred from the key.
     if q.get('q_type') == 'text_input':
         q['answer_type'] = (q.get('answer_type') or answer_type_for(topic)
@@ -747,6 +764,8 @@ def practice_check(request, topic):
         'lang':                  lang,
         'suggested_action':      suggested_action,
         'suggested_level':       suggested_level,
+        'suggested_level_name':  LEVEL_NAMES.get(suggested_level, (suggested_level, suggested_level))[1 if lang == 'fr' else 0],
+        'level_name':            LEVEL_NAMES.get(level, (level, level))[1 if lang == 'fr' else 0],
         'suggested_topic':       suggested_topic,
     })
 

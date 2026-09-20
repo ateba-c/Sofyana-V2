@@ -24,9 +24,10 @@
       <div class="flex gap-1.5 shrink-0">
         {% for slug, name_en, name_fr in levels %}
         <a href="{% url 'quiz:practice_page' topic %}?lang={{ lang }}&level={{ slug }}"
-           class="rounded-full px-2.5 sm:px-3 min-h-[44px] flex items-center text-xs font-black transition
-                  {% if level == slug %}bg-brand text-white shadow-warm{% else %}bg-white border border-slate-200 text-slate-500 hover:border-brand hover:text-brand{% endif %}">
-          {% if lang == 'fr' %}{{ name_fr }}{% else %}{{ name_en }}{% endif %}
+           title="{% if slug == 'resolution' %}{% if lang == 'fr' %}Problèmes à résoudre en plusieurs étapes{% else %}Multi-step word problems{% endif %}{% endif %}"
+           class="rounded-full px-2.5 sm:px-3 min-h-[44px] flex items-center gap-1 text-xs font-black transition
+                  {% if level == slug %}bg-brand text-white shadow-warm{% elif slug == 'resolution' and not resolution_unlocked %}bg-slate-100 border border-slate-200 text-slate-400{% elif slug == 'resolution' %}bg-amber-light border border-amber text-amber-800 hover:bg-amber hover:text-white{% else %}bg-white border border-slate-200 text-slate-500 hover:border-brand hover:text-brand{% endif %}">
+          {% if slug == 'resolution' %}{% if resolution_unlocked %}🧩{% else %}🔒{% endif %} {% endif %}{% if lang == 'fr' %}{{ name_fr }}{% else %}{{ name_en }}{% endif %}
         </a>
         {% endfor %}
       </div>
@@ -65,6 +66,11 @@
     <section class="min-w-0 space-y-3">
 
       <!-- Question (htmx swap target — always full width of this column) -->
+      {% if locked_notice %}
+      <div class="mb-3 rounded-2xl border border-amber bg-amber-light px-4 py-3 text-sm font-bold text-amber-800">
+        🔒 {{ locked_notice }}
+      </div>
+      {% endif %}
       <div id="practice-area"
            class="card-glass rounded-[2rem] p-4 sm:p-6 lg:p-7 animate-slide-up"
            hx-get="{% url 'quiz:practice_next' topic %}?lang={{ lang }}&level={{ level }}"

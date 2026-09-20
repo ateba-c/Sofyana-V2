@@ -106,6 +106,7 @@ from .g6_multiplication import (
 from .g6_fractions import g6_fraction_on_line_gen, g6_fraction_between_gen, g6_fraction_order_gen
 from .g6_strategies import g6_relevant_info_gen, g6_comparative_phrase_gen
 
+from .resolution import RESOLUTION, RESOLUTION_FAMILIES
 
 
 GENERATORS = {
@@ -514,6 +515,24 @@ SKILL_MAP = {
     'g6-relevant-info': {'prereq': None, 'next': 'g6-comparative-phrase', 'mastery_next': 'g6-rate-problem', 'downgrade': 'word-problem', 'level_sequence': ['easy', 'medium', 'hard']},
     'g6-comparative-phrase': {'prereq': 'g6-relevant-info', 'next': 'g6-rate-problem', 'mastery_next': 'g6-multiply', 'downgrade': 'g6-relevant-info', 'level_sequence': ['easy', 'medium', 'hard']},
 }
+
+# ── 4th level "Résolution": qualifying skills get a longer level sequence ─────
+LEVEL_NAMES = {
+    'easy':       ('Easy', 'Facile'),
+    'medium':     ('Medium', 'Moyen'),
+    'hard':       ('Hard', 'Difficile'),
+    'resolution': ('Problem solving', 'Résolution'),
+}
+for _slug in RESOLUTION_FAMILIES:
+    if _slug in SKILL_MAP and 'resolution' not in SKILL_MAP[_slug]['level_sequence']:
+        SKILL_MAP[_slug]['level_sequence'] = SKILL_MAP[_slug]['level_sequence'] + ['resolution']
+
+
+def generator_for(slug, level):
+    """The callable that produces a problem for (slug, level); the 4th level has its own generators."""
+    if level == 'resolution' and slug in RESOLUTION:
+        return RESOLUTION[slug]
+    return GENERATORS.get(slug)
 
 TOPIC_GROUPS = [
     # ── Existing advanced groups (not grade-specific) ──────────────────────────

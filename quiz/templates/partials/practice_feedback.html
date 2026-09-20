@@ -158,12 +158,12 @@
 
     {% if suggested_action == 'level_up' %}
     <p class="text-sm font-bold text-brand mb-3">
-      🚀 {% if lang == 'fr' %}5 bonnes réponses d'affilée ! Tu es prêt(e) pour le niveau supérieur.{% else %}5 correct in a row! You're ready for the next level.{% endif %}
+      🚀 {% if suggested_level == 'resolution' %}{% if lang == 'fr' %}5 bonnes réponses d'affilée ! Tu as débloqué la Résolution : des vrais problèmes à résoudre.{% else %}5 correct in a row! You unlocked Problem solving: real problems to solve.{% endif %}{% else %}{% if lang == 'fr' %}5 bonnes réponses d'affilée ! Tu es prêt(e) pour le niveau supérieur.{% else %}5 correct in a row! You're ready for the next level.{% endif %}{% endif %}
     </p>
     <div class="flex gap-2 flex-wrap">
       <a href="{% url 'quiz:practice_page' topic %}?level={{ suggested_level }}&lang={{ lang }}"
          class="px-4 py-2.5 rounded-xl text-sm font-black bg-brand hover:bg-brand-dark text-white transition hover:opacity-90 active:scale-[0.98]">
-        {% if lang == 'fr' %}Passer au niveau {{ suggested_level }}{% else %}Try {{ suggested_level }} level{% endif %}
+        {% if lang == 'fr' %}Passer au niveau {{ suggested_level_name }}{% else %}Try the {{ suggested_level_name }} level{% endif %}
       </a>
       <a href="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
          hx-get="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
@@ -197,7 +197,7 @@
     <div class="flex gap-2 flex-wrap">
       <a href="{% url 'quiz:practice_page' topic %}?level={{ suggested_level }}&lang={{ lang }}"
          class="px-4 py-2.5 rounded-xl text-sm font-black bg-coral text-white hover:bg-coral-dark transition active:scale-[0.98]">
-        {% if lang == 'fr' %}Passer au niveau {{ suggested_level }}{% else %}Switch to {{ suggested_level }}{% endif %}
+        {% if lang == 'fr' %}Passer au niveau {{ suggested_level_name }}{% else %}Switch to {{ suggested_level_name }}{% endif %}
       </a>
       <a href="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
          hx-get="{% url 'quiz:practice_next' topic %}?level={{ level }}&lang={{ lang }}&snooze=1"
