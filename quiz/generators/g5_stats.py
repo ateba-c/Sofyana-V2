@@ -12,6 +12,7 @@ Topics:
   g5_pie_chart_gen          QCM + SVG   – read a pie chart
 """
 import random
+from quiz.labels import translate_label as _L
 from .base import _tagged_shuffle_mc
 
 
@@ -355,7 +356,7 @@ def g5_data_table_gen(level='easy'):
         correct = str(total)
         prompt_fr = (f"Tableau des {ctx_fr} : {', '.join(f'{c}: {v}' for c,v in zip(cats,values))}. "
                      f"Combien d'élèves au total ont répondu ?")
-        prompt_en = (f"Table of {ctx_en}: {', '.join(f'{c}: {v}' for c,v in zip(cats,values))}. "
+        prompt_en = (f"Table of {ctx_en}: {', '.join(f'{_L(c, "en")}: {v}' for c,v in zip(cats,values))}. "
                      f"How many students answered in total?")
         tagged_candidates = [
             (str(total - values[-1]), 'forgot_last',
@@ -379,8 +380,8 @@ def g5_data_table_gen(level='easy'):
         min_cat = cats[values.index(min_v)]
         prompt_fr = (f"Tableau des {ctx_fr} : {', '.join(f'{c}: {v}' for c,v in zip(cats,values))}. "
                      f"Combien de plus {max_cat} a-t-il par rapport à {min_cat} ?")
-        prompt_en = (f"Table of {ctx_en}: {', '.join(f'{c}: {v}' for c,v in zip(cats,values))}. "
-                     f"How many more does {max_cat} have compared to {min_cat}?")
+        prompt_en = (f"Table of {ctx_en}: {', '.join(f'{_L(c, "en")}: {v}' for c,v in zip(cats,values))}. "
+                     f"How many more does {_L(max_cat, 'en')} have compared to {_L(min_cat, 'en')}?")
         tagged_candidates = [
             (str(max_v),     'max_not_diff',   'Subtract the two values.', 'Soustrait les deux valeurs.'),
             (str(min_v),     'min_not_diff',   'Subtract the two values.', 'Soustrait les deux valeurs.'),
@@ -389,12 +390,13 @@ def g5_data_table_gen(level='easy'):
         ]
 
     table_str = ' | '.join(f"{c}: {v}" for c, v in zip(cats, values))
+    table_str_en = ' | '.join(f"{_L(c, 'en')}: {v}" for c, v in zip(cats, values))
     full_prompt_fr = f"Tableau : {table_str}. {prompt_fr}"
-    full_prompt_en = f"Table: {table_str}. {prompt_en}"
+    full_prompt_en = f"Table: {table_str_en}. {prompt_en}"
 
     if q_type in ('largest', 'smallest'):
         full_prompt_fr = prompt_fr + f" (Tableau : {table_str})"
-        full_prompt_en = prompt_en + f" (Table: {table_str})"
+        full_prompt_en = prompt_en + f" (Table: {table_str_en})"
 
     tagged_candidates = [c for c in tagged_candidates if c[0] != str(correct)]
 
@@ -412,7 +414,7 @@ def g5_data_table_gen(level='easy'):
             f'Step 1: Read the table values for each category.\n'
             f'Step 2: Identify the question type (largest / smallest / total / difference).\n'
             f'Step 3: Apply the correct operation to the relevant values.\n'
-            f'Answer: {correct}'
+            f'Answer: {_L(correct, 'en')}'
         ),
         'explanation_fr': (
             f'Étape 1 : Lis les valeurs du tableau pour chaque catégorie.\n'
@@ -620,7 +622,7 @@ def g5_pie_chart_gen(level='easy'):
         idx     = random.randint(0, n_cats - 1)
         correct = str(props[idx]) + ' %'
         prompt_fr = f"D'après le diagramme circulaire des {ctx_fr}, quel pourcentage représente « {cats[idx]} » ?"
-        prompt_en = f"According to the pie chart about {ctx_en}, what percentage does '{cats[idx]}' represent?"
+        prompt_en = f"According to the pie chart about {ctx_en}, what percentage does '{_L(cats[idx], 'en')}' represent?"
         tagged_candidates = [
             (str(props[i]) + ' %', 'wrong_sector',
              'Find the correct sector for that category.',
@@ -651,7 +653,7 @@ def g5_pie_chart_gen(level='easy'):
         'explanation_en': (
             f'Step 1: Identify each sector in the pie chart and its percentage label.\n'
             f'Step 2: Find the sector for the category asked.\n'
-            f'Answer: {correct}'
+            f'Answer: {_L(correct, 'en')}'
         ),
         'explanation_fr': (
             f'Étape 1 : Identifie chaque secteur du diagramme circulaire et son pourcentage.\n'

@@ -298,7 +298,7 @@ def g4_digit_position_gen(level='easy'):
         'explanation_en': (
             f'Step 1: Starting from the right, the positions are: {", ".join(_POS_EN[:k])}.\n'
             f'Step 2: The digit {d} is the {i + 1}{"st" if i == 0 else "nd" if i == 1 else "rd" if i == 2 else "th"} digit from the right.\n'
-            f'Answer: {_POS_EN[i]} ({correct})'
+            f'Answer: {_POS_EN[i]}'
         ),
         'explanation_fr': (
             f'Étape 1 : En partant de la droite, les positions sont : {", ".join(_POS_FR[:k])}.\n'

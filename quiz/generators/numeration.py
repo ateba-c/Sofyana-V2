@@ -526,7 +526,7 @@ def base10_match_gen(level: str = 'medium') -> dict:
         'time_limit': 45,
         'points': count,
         'explanation_fr': '\n'.join(f'{p["left"]} → {p["right"]}' for p in pairs),
-        'explanation_en': '\n'.join(f'{p["left"]} → {p["right"]}' for p in pairs),
+        'explanation_en': '\n'.join(f'{p["left"]} → {p["right_en"]}' for p in pairs),
     }
 
 

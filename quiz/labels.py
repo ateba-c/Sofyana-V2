@@ -80,7 +80,7 @@ _FR_EN = [
     # categories (tables / pie charts)
     ('Printemps', 'Spring'), ('Été', 'Summer'), ('Automne', 'Fall'), ('Hiver', 'Winter'),
     ('Rouge', 'Red'), ('Bleu', 'Blue'), ('Vert', 'Green'), ('Jaune', 'Yellow'),
-    ('Chat', 'Cat'), ('Chien', 'Dog'), ('Oiseau', 'Bird'), ('Poisson', 'Fish'),
+    ('Chat', 'Cat'), ('Chien', 'Dog'), ('Oiseau', 'Bird'), ('Poisson', 'Fish'), ('Lapin', 'Rabbit'),
     ('Pomme', 'Apple'), ('Raisin', 'Grapes'), ('Banane', 'Banana'), ('Orange', 'Orange'),
     ('Football', 'Soccer'), ('Natation', 'Swimming'),
     # probability words
@@ -163,6 +163,13 @@ def localize_problem(q, lang):
         p['right'] = _pick(p, 'right', lang)
     for it in q.get('items') or []:
         it['label'] = _pick(it, 'label', lang)
+    # Text drawn inside illustrations (bar-chart labels, pie-chart categories, titles)
+    for shape in q.get('shape_data') or []:
+        for key in ('chart_labels', 'categories'):
+            if isinstance(shape.get(key), list):
+                shape[key] = [translate_label(x, lang) for x in shape[key]]
+        if shape.get('title'):
+            shape['title'] = translate_label(shape['title'], lang)
     if q.get('q_type') == 'mix_match' and q.get('pairs'):
         q['correct_answers'] = [p['right'] for p in q['pairs']]
     elif q.get('q_type') in ('ordering', 'sorting') and q.get('items'):

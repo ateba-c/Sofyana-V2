@@ -92,3 +92,17 @@ class StickyLanguageTests(TestCase):
         r = self.client.post('/practice/g4-lines/check/', {'answer': str(idx), 'level': 'easy', 'lang': 'en'})
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.context['correct'])
+
+
+class IllustrationAndPromptTests(SimpleTestCase):
+    def test_chart_labels_and_english_prompts_have_no_french_categories(self):
+        cats = re.compile(r"(?<![\wÀ-ÿ])(Chat|Chien|Oiseau|Poisson|Lapin|Pomme|Raisin|Banane|Natation|Rouge|Bleu|Vert|Jaune|Été|Automne|Hiver|Printemps)(?![\wÀ-ÿ])")
+        for slug in ('read-bar-chart', 'g5-data-table', 'g5-pie-chart'):
+            for level in ('easy', 'medium', 'hard'):
+                for _ in range(20):
+                    q = localize_problem(GENERATORS[slug](level), 'en')
+                    self.assertIsNone(cats.search(q['prompt_en']), f'{slug}: {q["prompt_en"]}')
+                    for shape in q.get('shape_data') or []:
+                        for key in ('chart_labels', 'categories'):
+                            for lab in shape.get(key) or []:
+                                self.assertIsNone(cats.search(lab), f'{slug} svg: {lab}')
