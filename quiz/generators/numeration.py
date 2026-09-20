@@ -181,10 +181,12 @@ def read_number_gen(level: str = 'medium') -> dict:
     pool = []
     for (dv, etype, fb_en, fb_fr) in distractors:
         lbl_fr = _to_fr(dv)
+        lbl_en = _to_en(dv)
         if lbl_fr not in seen:
             seen.add(lbl_fr)
             pool.append({
                 'label': lbl_fr,
+                'label_en': lbl_en,
                 'correct': False,
                 'error_type': etype,
                 'feedback_en': fb_en,
@@ -198,13 +200,14 @@ def read_number_gen(level: str = 'medium') -> dict:
         v = n + pad * 11
         if v <= 9999:
             lbl = _to_fr(v)
+            lbl_en = _to_en(v)
             if lbl not in seen:
                 seen.add(lbl)
-                pool.append({'label': lbl, 'correct': False,
+                pool.append({'label': lbl, 'label_en': lbl_en, 'correct': False,
                              'error_type': 'distractor', 'feedback_en': '', 'feedback_fr': ''})
         pad += 1
     pos = random.randint(0, 4)
-    pool.insert(pos, {'label': correct_fr, 'correct': True,
+    pool.insert(pos, {'label': correct_fr, 'label_en': correct_en, 'correct': True,
                       'error_type': '', 'feedback_en': '', 'feedback_fr': ''})
     choices = pool[:5]
 
@@ -499,7 +502,16 @@ def base10_match_gen(level: str = 'medium') -> dict:
             parts.append(f'{u} unité{"s" if u > 1 else ""}')
         return ' '.join(parts) if parts else '0 unité'
 
-    pairs = [{'left': str(n), 'right': _base10_fr(n)} for n in numbers]
+    def _base10_en(n):
+        th, c, d, u = n // 1000, (n // 100) % 10, (n // 10) % 10, n % 10
+        parts = []
+        if th: parts.append(f'{th} thousand{"s" if th > 1 else ""}')
+        if c:  parts.append(f'{c} hundred{"s" if c > 1 else ""}')
+        if d:  parts.append(f'{d} ten{"s" if d > 1 else ""}')
+        if u:  parts.append(f'{u} one{"s" if u > 1 else ""}')
+        return ' '.join(parts) if parts else '0 ones'
+
+    pairs = [{'left': str(n), 'right': _base10_fr(n), 'right_en': _base10_en(n)} for n in numbers]
 
     return {
         'q_type': 'mix_match',

@@ -26,3 +26,9 @@ def taxonomy_context(request):
     payload = json.dumps(skill_index(), ensure_ascii=False)
     payload = payload.replace('</', '<\\/').replace('<', '\\u003c').replace('>', '\\u003e')
     return {'skill_index_json': mark_safe(payload)}
+
+
+def lang_context(request):
+    """Session-sticky UI language for templates whose view does not pass one."""
+    from .labels import resolve_lang
+    return {'lang': resolve_lang(request)}

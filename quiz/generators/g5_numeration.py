@@ -138,7 +138,7 @@ def g5_large_integer_gen(level='easy'):
     distractors = distractors[:4]
 
     tagged_candidates = [
-        (_to_fr(d), 'wrong_group',
+        ((_to_fr(d), _to_en(d)), 'wrong_group',
          'Read each group of digits carefully: thousands, then hundreds.',
          'Lis chaque groupe de chiffres attentivement : milliers, puis centaines.')
         for d in distractors
@@ -152,7 +152,7 @@ def g5_large_integer_gen(level='easy'):
         'hint_en':          'Split the number into two groups: thousands and simple units.',
         'show_illustration': False,
         'shape_data':       [],
-        'choices':          _tagged_shuffle_mc(correct_fr, tagged_candidates),
+        'choices':          _tagged_shuffle_mc((correct_fr, _to_en(n)), tagged_candidates),
         'pairs':            [],
         'explanation_en': (
             f'Step 1: Split {_fmt_n(n)} into groups of three from the right: thousands | units.\n'
@@ -265,7 +265,7 @@ def g5_decimal_forms_gen(level='easy'):
     pairs = []
     for dec_str, frac_str, decomp_fr, decomp_en in chosen:
         if random.random() < 0.5:
-            pairs.append({'left': dec_str, 'right': decomp_fr})
+            pairs.append({'left': dec_str, 'right': decomp_fr, 'right_en': decomp_en})
         else:
             pairs.append({'left': dec_str, 'right': frac_str})
 

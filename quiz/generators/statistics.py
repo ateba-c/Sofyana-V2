@@ -164,6 +164,7 @@ def probability_vocab_gen(level='easy'):
     for fr, en in choices_fixed:
         choices.append({
             'value':    fr,
+            'label':    fr,
             'label_fr': fr,
             'label_en': en,
             'correct':  (fr == ans_fr),

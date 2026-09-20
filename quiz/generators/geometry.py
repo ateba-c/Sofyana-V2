@@ -717,7 +717,7 @@ def identify_solid_gen(level='easy'):
     pairs = []
     for name_fr in chosen:
         desc_fr, _ = _SOLIDS_FR[name_fr]
-        pairs.append({'left': name_fr, 'right': desc_fr})
+        pairs.append({'left': name_fr, 'left_en': _SOLIDS_EN.get(name_fr, name_fr), 'right': desc_fr})
 
     return {
         'q_type':          'mix_match',

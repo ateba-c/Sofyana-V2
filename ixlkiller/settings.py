@@ -91,6 +91,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'quiz.context_processors.student_context',
+                'quiz.context_processors.lang_context',
                 'quiz.context_processors.taxonomy_context',
             ],
         },

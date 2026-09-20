@@ -31,18 +31,34 @@ def _is_positive(s):
         return True   # keep things like '9π', '12π', etc.
 
 
+def _split_label(label):
+    """A label may be a plain string or a (fr, en) pair → (label_fr, label_en_or_None)."""
+    if isinstance(label, (tuple, list)) and len(label) == 2:
+        return str(label[0]), str(label[1])
+    return str(label), None
+
+
+def _choice(label, correct, error_type='', fb_en='', fb_fr=''):
+    fr, en = _split_label(label)
+    d = {'label': fr, 'correct': correct, 'error_type': error_type, 'feedback_en': fb_en, 'feedback_fr': fb_fr}
+    if en is not None:
+        d['label_en'] = en
+    return d
+
+
 def _shuffle_mc(correct_str, candidates):
     """
     Build a 5-item MC choices list with the correct answer at a random position.
-    Only positive (> 0) candidates are accepted.
+    Only positive (> 0) candidates are accepted.  Labels may be (fr, en) pairs.
     """
-    seen = {str(correct_str)}
+    correct_fr, correct_en = _split_label(correct_str)
+    seen = {correct_fr}
     pool = []
     for c in candidates:
-        s = str(c)
-        if s not in seen and _is_positive(s):
-            seen.add(s)
-            pool.append(s)
+        fr, en = _split_label(c)
+        if fr not in seen and _is_positive(fr):
+            seen.add(fr)
+            pool.append((fr, en) if en is not None else fr)
         if len(pool) == 4:
             break
     # Fallback padding — always positive
@@ -50,7 +66,7 @@ def _shuffle_mc(correct_str, candidates):
     while len(pool) < 4:
         try:
             base_val = abs(int(float(
-                correct_str.split('/')[0] if '/' in correct_str else correct_str
+                correct_fr.split('/')[0] if '/' in correct_fr else correct_fr
             )))
         except (ValueError, AttributeError):
             base_val = 1
@@ -59,10 +75,9 @@ def _shuffle_mc(correct_str, candidates):
             seen.add(s)
             pool.append(s)
         pad += 1
-    choices = [{'label': d, 'correct': False, 'error_type': '', 'feedback_en': '', 'feedback_fr': ''}
-               for d in pool[:4]]
+    choices = [_choice(d, False) for d in pool[:4]]
     pos = random.randint(0, 4)
-    choices.insert(pos, {'label': str(correct_str), 'correct': True, 'error_type': '', 'feedback_en': '', 'feedback_fr': ''})
+    choices.insert(pos, _choice(correct_str, True))
     return choices[:5]
 
 
@@ -77,20 +92,22 @@ def _tagged_shuffle_mc(correct_str, tagged_candidates):
 
     Returns list of dicts: {label, correct, error_type, feedback_en, feedback_fr}
     """
-    seen = {str(correct_str)}
+    correct_fr, correct_en = _split_label(correct_str)
+    seen = {correct_fr}
     pool = []
     for c in tagged_candidates:
         if isinstance(c, tuple):
-            label = str(c[0])
+            # (label, error_type, fb_en, fb_fr) — label itself may be a (fr, en) pair
+            label = c[0]
             error_type = c[1] if len(c) > 1 else ''
             fb_en = c[2] if len(c) > 2 else ''
             fb_fr = c[3] if len(c) > 3 else ''
         else:
             label, error_type, fb_en, fb_fr = str(c), '', '', ''
-        if label not in seen and _is_positive(label):
-            seen.add(label)
-            pool.append({'label': label, 'correct': False,
-                         'error_type': error_type, 'feedback_en': fb_en, 'feedback_fr': fb_fr})
+        fr, en = _split_label(label)
+        if fr not in seen and _is_positive(fr):
+            seen.add(fr)
+            pool.append(_choice(label, False, error_type, fb_en, fb_fr))
         if len(pool) == 4:
             break
     # Fallback padding — always positive, no misconception tag
@@ -98,20 +115,19 @@ def _tagged_shuffle_mc(correct_str, tagged_candidates):
     while len(pool) < 4:
         try:
             base_val = abs(int(float(
-                correct_str.split('/')[0] if '/' in correct_str else correct_str
+                correct_fr.split('/')[0] if '/' in correct_fr else correct_fr
             )))
         except (ValueError, AttributeError):
             base_val = 1
         s = str(base_val + pad * 37)
         if s not in seen:
             seen.add(s)
-            pool.append({'label': s, 'correct': False, 'error_type': 'distractor',
-                         'feedback_en': '', 'feedback_fr': ''})
+            pool.append(_choice(s, False, 'distractor'))
         pad += 1
     pos = random.randint(0, 4)
-    pool.insert(pos, {'label': str(correct_str), 'correct': True,
-                      'error_type': '', 'feedback_en': '', 'feedback_fr': ''})
+    pool.insert(pos, _choice(correct_str, True))
     return pool[:5]
+
 
 
 def _normalize_answer(s: str) -> str:

@@ -167,7 +167,7 @@ def _props_en(k):
 
 def _kind_distractors(kind):
     return [
-        (QUADS[k]['fr'], 'wrong_quadrilateral',
+        ((QUADS[k]['fr'], QUADS[k]['en']), 'wrong_quadrilateral',
          f'A {QUADS[k]["en"]} has {_props_en(k)}.',
          f'Un {QUADS[k]["fr"]} a {_props_fr(k)}.')
         for k in _KINDS if k != kind
@@ -189,7 +189,7 @@ def g4_quadrilateral_name_gen(level='easy'):
         'hint_en':          'Look at the parallel sides (arrows), equal sides (tick marks) and right angles (small squares).',
         'show_illustration': True,
         'shape_data':       [{'type': 'quadrilateral', 'kind': kind, 'marks': marks, 'rotate': rotate}],
-        'choices':          _tagged_shuffle_mc(QUADS[kind]['fr'], _kind_distractors(kind)),
+        'choices':          _tagged_shuffle_mc((QUADS[kind]['fr'], QUADS[kind]['en']), _kind_distractors(kind)),
         'pairs':            [],
         'explanation_en':   f'This shape has {_props_en(kind)} → {QUADS[kind]["en"]}.',
         'explanation_fr':   f'Cette figure a {_props_fr(kind)} → {QUADS[kind]["fr"]}.',
@@ -204,7 +204,7 @@ def g4_quadrilateral_riddle_gen(level='easy'):
     if level == 'hard' and random.random() < 0.5:
         # Reverse riddle: name → pick the correct description
         correct_fr, correct_en = random.choice(QUADS[kind]['defs'])
-        tagged = [(random.choice(QUADS[k]['defs'])[0], 'wrong_property',
+        tagged = [(random.choice(QUADS[k]['defs']), 'wrong_property',
                    f'That describes a {QUADS[k]["en"]}.', f'Cela décrit un {QUADS[k]["fr"]}.')
                   for k in _KINDS if k != kind]
         return {
@@ -214,7 +214,7 @@ def g4_quadrilateral_riddle_gen(level='easy'):
             'hint_fr':          f'Un {QUADS[kind]["fr"]} a {_props_fr(kind)}.',
             'hint_en':          f'A {QUADS[kind]["en"]} has {_props_en(kind)}.',
             'show_illustration': False, 'shape_data': [],
-            'choices':          _tagged_shuffle_mc(correct_fr, tagged),
+            'choices':          _tagged_shuffle_mc((correct_fr, correct_en), tagged),
             'pairs':            [],
             'explanation_en':   f'A {QUADS[kind]["en"]}: {_props_en(kind)}.',
             'explanation_fr':   f'Un {QUADS[kind]["fr"]} : {_props_fr(kind)}.',
@@ -228,7 +228,7 @@ def g4_quadrilateral_riddle_gen(level='easy'):
         'hint_fr':          'Pense aux côtés parallèles, aux côtés égaux et aux angles droits de chaque quadrilatère.',
         'hint_en':          'Think about the parallel sides, equal sides and right angles of each quadrilateral.',
         'show_illustration': False, 'shape_data': [],
-        'choices':          _tagged_shuffle_mc(QUADS[kind]['fr'], _kind_distractors(kind)),
+        'choices':          _tagged_shuffle_mc((QUADS[kind]['fr'], QUADS[kind]['en']), _kind_distractors(kind)),
         'pairs':            [],
         'explanation_en':   f'{d_en} → {QUADS[kind]["en"]} ({_props_en(kind)}).',
         'explanation_fr':   f'{d_fr} → {QUADS[kind]["fr"]} ({_props_fr(kind)}).',
@@ -239,7 +239,10 @@ def g4_quadrilateral_riddle_gen(level='easy'):
 def g4_quadrilateral_match_gen(level='easy'):
     count = 3 if level == 'easy' else 4 if level == 'medium' else 5
     kinds = random.sample(_KINDS, count)
-    pairs = [{'left': random.choice(QUADS[k]['defs'])[0], 'right': QUADS[k]['fr']} for k in kinds]
+    pairs = []
+    for k in kinds:
+        d_fr, d_en = random.choice(QUADS[k]['defs'])
+        pairs.append({'left': d_fr, 'left_en': d_en, 'right': QUADS[k]['fr'], 'right_en': QUADS[k]['en']})
     return {
         'q_type':           'mix_match',
         'prompt_fr':        'Associe chaque description au bon quadrilatère.',

@@ -70,13 +70,13 @@ def g6_fraction_between_gen(level='easy'):
     if num % d == 0:
         num += 1
     lo = num // d
-    correct = f'{lo} et {lo + 1}'
+    correct = (f'{lo} et {lo + 1}', f'{lo} and {lo + 1}')
     tagged = [(f'{lo + 1} et {lo + 2}', 'off_by_one', 'How many whole units fit in the fraction?', "Combien d'unités entières entrent dans la fraction ?"),
               (f'{max(0, lo - 1)} et {lo}', 'off_by_one', 'How many whole units fit in the fraction?', "Combien d'unités entières entrent dans la fraction ?"),
               (f'{num - d} et {num}', 'confused_numerator', 'Divide the numerator by the denominator.', 'Divise le numérateur par le dénominateur.'),
               ('0 et 1', 'thinks_proper', f'{num}/{d} is bigger than 1 because {num} > {d}.', f'{num}/{d} est plus grand que 1 car {num} > {d}.'),
               (f'{d} et {d + 1}', 'confused_denominator', 'Divide the numerator by the denominator.', 'Divise le numérateur par le dénominateur.')]
-    seen = {correct}
+    seen = {correct[0]}
     tagged = [t for t in tagged if t[0] not in seen and not seen.add(t[0])]
     return {
         'q_type': 'multiple_choice',
@@ -88,7 +88,7 @@ def g6_fraction_between_gen(level='easy'):
         'choices': _tagged_shuffle_mc(correct, tagged), 'pairs': [],
         'explanation_en': f'{num} ÷ {d} = {lo} remainder {num - d * lo} → {num}/{d} = {lo} + {num - d * lo}/{d}, between {lo} and {lo + 1}.',
         'explanation_fr': f'{num} ÷ {d} = {lo} reste {num - d * lo} → {num}/{d} = {lo} + {num - d * lo}/{d}, entre {lo} et {lo + 1}.',
-        'correct_answers': [correct, f'{lo} and {lo + 1}'],
+        'correct_answers': [correct[0], correct[1]],
     }
 
 

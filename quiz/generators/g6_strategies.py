@@ -55,12 +55,12 @@ def g6_relevant_info_gen(level='easy'):
     random.shuffle(order)
     story_fr = ' '.join(facts_fr[i] for i in order)
     story_en = ' '.join(facts_en[i] for i in order)
-    correct = s['dist_fr']
+    correct = (s['dist_fr'], s['dist_en'])
     tagged = [
-        (s['fact1_fr'], 'needed_fact', 'This gives the starting value you need.', 'Cette donnée donne la valeur de départ nécessaire.'),
-        (s['fact2_fr'], 'needed_fact', 'This gives the comparison you need.', 'Cette donnée donne la comparaison nécessaire.'),
-        ('Toutes les informations sont utiles.', 'all_useful', 'One fact talks about something else entirely.', "Une donnée parle d'autre chose."),
-        ("Aucune information n'est utile.", 'none_useful', 'Two facts are needed to answer.', 'Deux données sont nécessaires pour répondre.'),
+        ((s['fact1_fr'], s['fact1_en']), 'needed_fact', 'This gives the starting value you need.', 'Cette donnée donne la valeur de départ nécessaire.'),
+        ((s['fact2_fr'], s['fact2_en']), 'needed_fact', 'This gives the comparison you need.', 'Cette donnée donne la comparaison nécessaire.'),
+        (('Toutes les informations sont utiles.', 'All the information is useful.'), 'all_useful', 'One fact talks about something else entirely.', "Une donnée parle d'autre chose."),
+        (("Aucune information n'est utile.", 'No information is useful.'), 'none_useful', 'Two facts are needed to answer.', 'Deux données sont nécessaires pour répondre.'),
     ]
     return {
         'q_type': 'multiple_choice',
@@ -72,7 +72,7 @@ def g6_relevant_info_gen(level='easy'):
         'choices': _tagged_shuffle_mc(correct, tagged), 'pairs': [],
         'explanation_en': f"The question is about the {s['attr_en']}. Useless: “{s['dist_en']}”. Needed: {s['calc']}.",
         'explanation_fr': f"La question porte sur la {s['attr_fr']}. Inutile : « {s['dist_fr']} ». Nécessaire : {s['calc']}.",
-        'correct_answers': [correct, s['dist_en']],
+        'correct_answers': [s['dist_fr'], s['dist_en']],
     }
 
 

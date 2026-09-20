@@ -544,9 +544,11 @@ def g5_solid_counts_gen(level='easy'):
         desc_kind = random.choice(['all', 'faces_edges'])
         if desc_kind == 'all':
             desc = f"{F} faces, {V} sommets, {E} arêtes"
+            desc_en = f"{F} faces, {V} vertices, {E} edges"
         else:
             desc = f"{F} face{'s' if F > 1 else ''}, {E} arête{'s' if E > 1 else ''}"
-        pairs.append({'left': name_fr, 'right': desc})
+            desc_en = f"{F} face{'s' if F > 1 else ''}, {E} edge{'s' if E > 1 else ''}"
+        pairs.append({'left': name_fr, 'left_en': name_en, 'right': desc, 'right_en': desc_en})
 
     return {
         'q_type':           'mix_match',

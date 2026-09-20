@@ -15,6 +15,7 @@ from .models import QuizSet, Question, StudentSession, Student, ProblemInteracti
 from .generators import GENERATORS
 from .taxonomy import topic_groups, topic_meta, skill_map, answer_type_for, available_grades
 from .answers import check_answer, infer_answer_type, input_spec
+from .labels import resolve_lang, localize_problem
 
 
 # ── Error-type human-readable labels (bilingual) ──────────────────────────────
@@ -133,7 +134,7 @@ class RegisterForm(forms.Form):
 # ── Auth views ────────────────────────────────────────────────────────────────
 
 def register_view(request):
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
@@ -150,7 +151,7 @@ def register_view(request):
 
 
 def login_view(request):
-    lang  = request.GET.get('lang', 'en')
+    lang  = resolve_lang(request)
     error = ''
     if request.method == 'POST':
         user = authenticate(
@@ -228,7 +229,7 @@ def _student_level(stars):
 
 
 def index(request):
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     # Parents land on their own dashboard
     if request.user.is_authenticated and hasattr(request.user, 'parent_profile'):
         from django.urls import reverse
@@ -291,7 +292,7 @@ def index(request):
 
 def playground(request, quiz_id):
     quiz    = get_object_or_404(QuizSet, pk=quiz_id)
-    lang    = request.GET.get('lang', 'en')
+    lang    = resolve_lang(request)
     q_index = int(request.GET.get('q', 0))
     questions = list(quiz.questions.prefetch_related('choices', 'pairs').all())
 
@@ -333,7 +334,7 @@ def playground(request, quiz_id):
 def question_partial(request, quiz_id, q_index):
     """htmx partial — swaps just the question area"""
     quiz      = get_object_or_404(QuizSet, pk=quiz_id)
-    lang      = request.GET.get('lang', 'en')
+    lang      = resolve_lang(request)
     questions = list(quiz.questions.prefetch_related('choices', 'pairs').all())
     q_index   = max(0, min(int(q_index), len(questions) - 1))
     question  = questions[q_index]
@@ -373,7 +374,7 @@ def _question_input_spec(question, lang):
 def review_question_partial(request, quiz_id, q_pk):
     """Frozen review partial: shows submitted answer vs correct answer."""
     quiz     = get_object_or_404(QuizSet, pk=quiz_id)
-    lang     = request.GET.get('lang', 'en')
+    lang     = resolve_lang(request)
     question = get_object_or_404(Question, pk=q_pk)
 
     session_id = request.session.get(f'session_{quiz_id}')
@@ -422,7 +423,7 @@ def submit_answer(request, quiz_id, q_index):
         lang   = body.get('lang', 'en')
     except (json.JSONDecodeError, AttributeError):
         answer = request.POST.get('answer')
-        lang   = request.POST.get('lang', 'en')
+        lang   = resolve_lang(request)
 
     correct    = _check_answer(question, answer)
     points_won = question.points if correct else 0
@@ -456,7 +457,7 @@ def submit_answer(request, quiz_id, q_index):
 
 def scoreboard(request, quiz_id):
     quiz       = get_object_or_404(QuizSet, pk=quiz_id)
-    lang       = request.GET.get('lang', 'en')
+    lang       = resolve_lang(request)
     session_id = request.session.get(f'session_{quiz_id}')
     session    = StudentSession.objects.get(pk=session_id) if session_id else None
     questions  = list(quiz.questions.prefetch_related('choices', 'pairs').all())
@@ -481,7 +482,7 @@ def practice_page(request, topic):
     if topic not in GENERATORS:
         from django.http import Http404
         raise Http404
-    lang  = request.GET.get('lang', 'en')
+    lang  = resolve_lang(request)
     level = request.GET.get('level', 'medium')
     topic_info = None
     for g in topic_groups():
@@ -545,7 +546,7 @@ def practice_next(request, topic):
         from django.http import Http404
         raise Http404
     import random as _random
-    lang  = request.GET.get('lang', 'en')
+    lang  = resolve_lang(request)
     level = request.GET.get('level', 'medium')
     # Student dismissed a suggestion — snooze it for 5 more questions
     if request.GET.get('snooze') == '1':
@@ -553,7 +554,7 @@ def practice_next(request, topic):
         stats = request.session.get(key, {})
         stats['snooze'] = 5
         request.session[key] = stats
-    q = GENERATORS[topic](level)
+    q = localize_problem(GENERATORS[topic](level), lang)
     # Typed answer: explicit on the problem > editor-declared on the skill > inferred from the key.
     if q.get('q_type') == 'text_input':
         q['answer_type'] = (q.get('answer_type') or answer_type_for(topic)
@@ -582,7 +583,7 @@ def practice_check(request, topic):
     if not q_data:
         from django.http import Http404
         raise Http404
-    lang   = request.POST.get('lang', 'en')
+    lang   = resolve_lang(request)
     level  = request.POST.get('level', 'medium')
     answer = request.POST.get('answer', '').strip()
 
@@ -818,7 +819,7 @@ def _check_answer(question, answer):
 
 @login_required
 def profile_view(request):
-    lang    = request.GET.get('lang', 'en')
+    lang    = resolve_lang(request)
     student = request.user.student
     if request.method == 'POST':
         slug = request.POST.get('avatar', '')
@@ -838,7 +839,7 @@ def profile_view(request):
 def dashboard(request):
     from datetime import date, timedelta
 
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     tab = request.GET.get('tab', 'session')
     tabs = [
         ('session', 'Activity', 'Activité'),
@@ -964,7 +965,7 @@ def dashboard(request):
 
 @login_required
 def prizes_view(request):
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     student = request.user.student
     unlocked = set(student.unlocked_avatars or [])
     unlocked.add('rocket')
@@ -1005,7 +1006,7 @@ def prizes_view(request):
 
 @login_required
 def profile_view(request):
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     student = request.user.student
     unlocked = set(student.unlocked_avatars or [])
     unlocked.add('rocket')
@@ -1063,7 +1064,7 @@ class ParentRegisterForm(forms.Form):
 
 
 def parent_register_view(request):
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     if request.method == 'POST':
         form = ParentRegisterForm(request.POST)
         if form.is_valid():
@@ -1083,7 +1084,7 @@ def parent_register_view(request):
 @login_required
 def parent_dashboard_view(request):
     from datetime import date, timedelta
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     try:
         parent = request.user.parent_profile
     except Exception:
@@ -1221,7 +1222,7 @@ def parent_dashboard_view(request):
 @require_POST
 @login_required
 def assign_topic_view(request):
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     try:
         parent = request.user.parent_profile
     except Exception:
@@ -1264,7 +1265,7 @@ def assign_topic_view(request):
 @login_required
 def parent_create_child_view(request):
     """Parent creates the child's student account; it is linked to the parent immediately."""
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     try:
         parent = request.user.parent_profile
     except Exception:
@@ -1299,7 +1300,7 @@ def parent_create_child_view(request):
 @require_POST
 @login_required
 def parent_set_child_grade_view(request):
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     try:
         parent = request.user.parent_profile
     except Exception:
@@ -1319,7 +1320,7 @@ def parent_set_child_grade_view(request):
 @require_POST
 @login_required
 def unassign_topic_view(request):
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     try:
         parent = request.user.parent_profile
     except Exception:
@@ -1333,7 +1334,7 @@ def unassign_topic_view(request):
 @require_POST
 @login_required
 def parent_reset_child_password_view(request):
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     try:
         parent = request.user.parent_profile
     except Exception:
@@ -1365,7 +1366,7 @@ def parent_reset_child_password_view(request):
 @login_required
 def complete_assignment_view(request):
     from django.utils import timezone
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     assignment_id = request.POST.get('assignment_id', '')
     if assignment_id:
         ParentAssignment.objects.filter(
@@ -1394,7 +1395,7 @@ def _search_context(request, lang):
 
 @login_required
 def search_page(request):
-    lang = request.GET.get('lang', 'en')
+    lang = resolve_lang(request)
     ctx = _search_context(request, lang)
     ctx['examples'] = SEARCH_EXAMPLES.get(lang, SEARCH_EXAMPLES['en'])
     return render(request, 'quiz/search.html', ctx)
@@ -1408,7 +1409,7 @@ def search_run(request):
     from .models import SearchQuery
     import base64
 
-    lang  = request.POST.get('lang', 'en')
+    lang  = resolve_lang(request)
     query = request.POST.get('q', '').strip()[:600]
     ctx   = _search_context(request, lang)
 
