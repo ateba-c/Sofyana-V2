@@ -32,6 +32,7 @@
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-2">
           <h2 class="font-display text-xl font-extrabold text-ink">{{ r.name }}</h2>
+          {% if r.grade and r.grade == my_grade %}<span class="rounded-full bg-brand px-2 py-0.5 text-[10px] font-black text-white">★ {% if lang == 'fr' %}mon année{% else %}my grade{% endif %}</span>{% endif %}
           {% if r.grade %}
           <span class="rounded-full bg-amber-light px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-700">
             {% if lang == 'fr' %}{{ r.grade }}e année{% else %}Grade {{ r.grade }}{% endif %}

@@ -207,7 +207,7 @@
             <div class="flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-gradient-to-br from-brand-light to-amber-light text-3xl">{{ student.avatar_emoji }}</div>
             <div class="min-w-0">
               <div class="truncate text-lg font-black text-ink">{{ user.username }}</div>
-              <div class="text-xs font-bold text-brand">{% if cur_lang == 'fr' %}Prêt(e) pour l'aventure !{% else %}Ready to explore!{% endif %}</div>
+              <div class="text-xs font-bold text-brand">{% if student and student.grade %}🎓 {% if cur_lang == 'fr' %}{{ student.grade }}e année{% else %}Grade {{ student.grade }}{% endif %}{% elif cur_lang == 'fr' %}Prêt(e) pour l'aventure !{% else %}Ready to explore!{% endif %}</div>
             </div>
           </div>
           <div class="mt-4 grid grid-cols-2 gap-2">
@@ -399,11 +399,9 @@
     const SKILLS = {{ skill_index_json|safe }};
     function skillSearch() {
       const lang = '{{ cur_lang }}';
-      const gradeLabel = {
-        'general': lang === 'fr' ? 'Général' : 'General',
-        3: lang === 'fr' ? '3e année' : 'Grade 3',
-        5: lang === 'fr' ? '5e année' : 'Grade 5',
-      };
+      const myGrade = {{ student.grade|default:'null' }};
+      const gradeLabel = (g) => g === null ? (lang === 'fr' ? 'Général' : 'General')
+        : (lang === 'fr' ? g + 'e année' : 'Grade ' + g) + (g === myGrade ? (lang === 'fr' ? ' ★ mon année' : ' ★ my grade') : '');
       return {
         q: '', open: false,
         get groups() {
@@ -413,17 +411,21 @@
             sk[lang].toLowerCase().includes(s) ||
             (lang === 'fr' ? sk.gen_fr : sk.gen).toLowerCase().includes(s)
           ).slice(0, 18);
-          const order = [null, 3, 5];
-          const grouped = {};
+          const grouped = new Map();
           for (const sk of matches) {
-            const g = sk.grade;
-            if (!grouped[g]) grouped[g] = [];
-            grouped[g].push(sk);
+            const g = sk.grade === undefined ? null : sk.grade;
+            if (!grouped.has(g)) grouped.set(g, []);
+            grouped.get(g).push(sk);
           }
-          return order.filter(g => grouped[g]).map(g => ({
+          // The student's own grade first, then the other grades in order, then general skills.
+          const order = [...grouped.keys()].sort((a, b) => {
+            const rank = g => g === myGrade ? 0 : g === null ? 2 : 1;
+            return rank(a) - rank(b) || (a ?? 0) - (b ?? 0);
+          });
+          return order.map(g => ({
             key: g === null ? 'general' : String(g),
-            label: gradeLabel[g === null ? 'general' : g],
-            skills: grouped[g],
+            label: gradeLabel(g),
+            skills: grouped.get(g),
           }));
         },
         get results() { return this.groups.flatMap(g => g.skills); },

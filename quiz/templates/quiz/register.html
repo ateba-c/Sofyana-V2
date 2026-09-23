@@ -81,6 +81,20 @@
           </div>
         </div>
 
+        <div class="mt-4">
+          <label class="block text-xs font-extrabold text-[var(--text-soft)] uppercase tracking-wide mb-1.5">
+            {% if lang == 'fr' %}Mon année scolaire{% else %}My grade{% endif %}
+          </label>
+          <select name="grade"
+                  class="w-full bg-white border-2 border-brand-light rounded-xl px-4 py-3 text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm font-bold transition">
+            <option value="">{% if lang == 'fr' %}Je ne sais pas / toutes les années{% else %}Not sure / all grades{% endif %}</option>
+            {% for g in available_grades %}
+            <option value="{{ g }}" {% if form.grade.value|stringformat:'s' == g|stringformat:'s' %}selected{% endif %}>🎓 {% if lang == 'fr' %}{{ g }}e année{% else %}Grade {{ g }}{% endif %}</option>
+            {% endfor %}
+          </select>
+          <p class="text-[11px] font-bold text-[var(--text-soft)] mt-1">{% if lang == 'fr' %}Tes exercices s'afficheront en premier. Tu pourras changer d'année dans ton profil.{% else %}Your exercises will show up first. You can change it later in your profile.{% endif %}</p>
+        </div>
+
         <button type="submit"
                 class="mt-6 w-full bg-brand hover:bg-brand-dark text-white font-black py-4 rounded-xl transition hover:opacity-90 text-sm shadow-card">
           {% if lang == 'fr' %}Créer mon compte 🚀{% else %}Create my account 🚀{% endif %}

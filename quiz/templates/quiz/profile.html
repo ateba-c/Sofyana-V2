@@ -35,6 +35,36 @@
     </div>
   </section>
 
+  <!-- My grade -->
+  <section class="card-solid rounded-[2rem] p-5 sm:p-7">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div>
+        <h2 class="font-display text-2xl font-extrabold text-ink">🎓 {% if lang == 'fr' %}Mon année scolaire{% else %}My grade{% endif %}</h2>
+        <p class="mt-1 text-sm font-bold text-slate-600">
+          {% if student.grade %}
+            {% if lang == 'fr' %}Tu es en <strong>{{ student.grade }}e année</strong> : ces exercices s'affichent en premier à l'accueil et dans la recherche. Tu as progressé ? Choisis l'année suivante !{% else %}You are in <strong>grade {{ student.grade }}</strong>: those exercises show up first on the home page and in search. Moved up? Pick the next grade!{% endif %}
+          {% else %}
+            {% if lang == 'fr' %}Choisis ton année pour voir tes exercices en premier.{% else %}Pick your grade to see your exercises first.{% endif %}
+          {% endif %}
+        </p>
+      </div>
+      <form method="post" class="flex flex-wrap gap-2 shrink-0">
+        {% csrf_token %}
+        <input type="hidden" name="grade" value="">
+        {% for g in available_grades %}
+        <button type="submit" name="grade" value="{{ g }}"
+                class="rounded-full px-4 py-2.5 text-sm font-black transition {% if student.grade == g %}bg-brand text-white shadow-card{% else %}bg-white border border-brand-light text-brand hover:bg-brand-light{% endif %}">
+          {% if lang == 'fr' %}{{ g }}e année{% else %}Grade {{ g }}{% endif %}
+        </button>
+        {% endfor %}
+        <button type="submit" name="grade" value=""
+                class="rounded-full px-4 py-2.5 text-sm font-black transition {% if not student.grade %}bg-slate-700 text-white shadow-card{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-100{% endif %}">
+          {% if lang == 'fr' %}Toutes{% else %}All{% endif %}
+        </button>
+      </form>
+    </div>
+  </section>
+
   <section class="card-glass rounded-[2rem] p-5 sm:p-7">
     <div class="mb-5 flex items-center justify-between gap-3">
       <div>

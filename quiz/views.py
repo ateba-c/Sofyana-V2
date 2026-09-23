@@ -113,10 +113,20 @@ PRIZE_CATALOG = [
 
 # ── Auth forms ────────────────────────────────────────────────────────────────
 
+def _parse_grade(raw):
+    """'4' → 4 when that grade has content, else None (= all grades)."""
+    try:
+        g = int(raw)
+    except (ValueError, TypeError):
+        return None
+    return g if g in available_grades() else None
+
+
 class RegisterForm(forms.Form):
     username  = forms.CharField(min_length=2, max_length=30)
     password1 = forms.CharField(widget=forms.PasswordInput, min_length=4)
     password2 = forms.CharField(widget=forms.PasswordInput, min_length=4)
+    grade     = forms.CharField(required=False)
 
     def clean_username(self):
         u = self.cleaned_data['username']
@@ -142,12 +152,13 @@ def register_view(request):
                 username=form.cleaned_data['username'],
                 password=form.cleaned_data['password1'],
             )
-            Student.objects.create(user=user)
+            Student.objects.create(user=user, grade=_parse_grade(form.cleaned_data.get('grade')))
             auth_login(request, user)
             return redirect('quiz:index')
     else:
         form = RegisterForm()
-    return render(request, 'quiz/register.html', {'form': form, 'lang': lang})
+    return render(request, 'quiz/register.html', {'form': form, 'lang': lang,
+                                                  'available_grades': available_grades()})
 
 
 def login_view(request):
@@ -1043,6 +1054,16 @@ def profile_view(request):
     unlocked.add('rocket')
     unlocked.add(student.avatar_slug)
     if request.method == 'POST':
+        if 'grade' in request.POST:
+            student.grade = _parse_grade(request.POST.get('grade'))
+            student.save(update_fields=['grade'])
+            fr = lang == 'fr'
+            if student.grade:
+                messages.success(request, (f'Tu es maintenant en {student.grade}e année. Tes exercices s\'affichent en premier !' if fr
+                                           else f'You are now in grade {student.grade}. Your exercises show up first!'))
+            else:
+                messages.success(request, ('Tu vois maintenant toutes les années.' if fr else 'You now see every grade.'))
+            return redirect(f"{request.path}?lang={lang}")
         slug = request.POST.get('avatar', '')
         if slug in AVATAR_SLUGS and slug in unlocked:
             student.avatar_slug = slug
@@ -1060,6 +1081,7 @@ def profile_view(request):
         'avatars': avatars,
         'solved_count': interactions.count(),
         'accuracy_pct': round(interactions.filter(is_correct=True).count() / interactions.count() * 100) if interactions.exists() else 0,
+        'available_grades': available_grades(),
     })
 
 
@@ -1588,5 +1610,10 @@ def search_run(request):
             'grade': m.get('grade'),
             'sample': sample,
         })
-    ctx.update({'results': enriched, 'engine': engine})
+    student = getattr(request.user, 'student', None)
+    my_grade = student.grade if student else None
+    if my_grade:
+        # Stable: keeps the engine's relevance order inside each bucket.
+        enriched.sort(key=lambda r: 0 if r.get('grade') == my_grade else 1)
+    ctx.update({'results': enriched, 'engine': engine, 'my_grade': my_grade})
     return render(request, 'partials/search_results.html', ctx)
