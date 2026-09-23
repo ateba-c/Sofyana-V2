@@ -2,7 +2,7 @@
 Regression tests for the parent-feedback round (Sept 2026):
 - parents create a child account that is linked to them, with a default grade
 - the child's home page opens on their grade
-- re-assigning a completed topic resets it; all assignments show in the practice sidebar
+- re-assigning a completed topic adds fresh homework and keeps the history; all assignments show in the practice sidebar
 - no square roots and no negative numbers anywhere in generated problems
 """
 import re
@@ -72,7 +72,7 @@ class ParentFlowTests(TestCase):
         kid.student.refresh_from_db()
         self.assertEqual(kid.student.grade, 5)
 
-    def test_reassign_completed_topic_resets_it(self):
+    def test_reassign_completed_topic_adds_fresh_homework(self):
         self.client.post('/parent/create-child/', {'child_username': 'kid', 'child_password': 'abcd', 'child_grade': '4'})
         kid = User.objects.get(username='kid')
         self.client.post('/parent/assign/', {'child_id': kid.pk, 'topic_slug': 'g4-roman-to-arabic'})
@@ -81,8 +81,9 @@ class ParentFlowTests(TestCase):
         a.save()
         self.client.post('/parent/assign/', {'child_id': kid.pk, 'topic_slug': 'g4-roman-to-arabic'})
         a.refresh_from_db()
-        self.assertIsNone(a.completed_at)
-        self.assertEqual(ParentAssignment.objects.filter(student=kid).count(), 1)
+        self.assertIsNotNone(a.completed_at)   # history kept
+        self.assertEqual(ParentAssignment.objects.filter(student=kid).count(), 2)
+        self.assertEqual(ParentAssignment.objects.filter(student=kid, completed_at__isnull=True).count(), 1)
 
     def test_all_open_assignments_in_practice_sidebar(self):
         self.client.post('/parent/create-child/', {'child_username': 'kid', 'child_password': 'abcd', 'child_grade': '4'})
@@ -105,6 +106,6 @@ class ParentFlowTests(TestCase):
             r = self.client.get(f'/parent/?lang={lang}')
             self.assertEqual(r.status_code, 200)
             html = r.content.decode()
-            self.assertIn('<optgroup', html)
+            self.assertIn('name="topic_slugs"', html)
             self.assertIn('6e année' if lang == 'fr' else 'Grade 6', html)
             self.assertIn('parent/create-child/', html)

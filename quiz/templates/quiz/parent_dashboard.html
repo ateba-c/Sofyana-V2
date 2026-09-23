@@ -174,7 +174,7 @@
   {% if children_data %}
   <div class="space-y-6">
     {% for child in children_data %}
-    <section class="card-solid rounded-[2.25rem] overflow-hidden">
+    <section id="child-{{ child.user_id }}" class="card-solid rounded-[2.25rem] overflow-hidden">
 
       <!-- Child header -->
       <div class="bg-gradient-to-r from-brand/10 to-amber/10 px-6 py-5 border-b border-brand-light/50">
@@ -206,7 +206,11 @@
         <!-- This week stats -->
         <div>
           <h3 class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)] mb-3">{% if lang == 'fr' %}Cette semaine{% else %}This week{% endif %}</h3>
-          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div class="rounded-[1.25rem] bg-amber-light/70 p-4 text-center">
+              <div class="text-2xl font-black text-amber-800">{{ child.week_minutes }}</div>
+              <div class="text-[10px] font-extrabold uppercase tracking-wide text-amber-800/70 mt-1">⏱ {% if lang == 'fr' %}Minutes{% else %}Minutes{% endif %}</div>
+            </div>
             <div class="rounded-[1.25rem] bg-brand-light/70 p-4 text-center">
               <div class="text-2xl font-black text-brand">{{ child.week_total }}</div>
               <div class="text-[10px] font-extrabold uppercase tracking-wide text-brand/70 mt-1">{% if lang == 'fr' %}Questions{% else %}Questions{% endif %}</div>
@@ -248,6 +252,35 @@
               <div class="w-full rounded-t-lg transition-all"
                    style="height: {% if bar.total > 0 %}{% widthratio bar.total 30 100 %}%{% else %}4px{% endif %}; min-height:4px; background: {% if bar.total > 0 %}linear-gradient(180deg, #F97316, #F59E0B){% else %}#FED7AA{% endif %}"></div>
               <span class="text-[9px] font-bold text-[var(--text-soft)]">{{ bar.date|date:"D"|slice:":1" }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Daily journal (last 14 days) -->
+        {% if child.daily_log %}
+        <div x-data="{ open: false }">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)]">{% if lang == 'fr' %}Journal quotidien{% else %}Daily journal{% endif %}</h3>
+            <button @click="open = !open" class="text-xs font-black text-brand" x-text="open ? '{% if lang == 'fr' %}Réduire{% else %}Show less{% endif %}' : '{% if lang == 'fr' %}14 jours{% else %}14 days{% endif %}'"></button>
+          </div>
+          <div class="space-y-1.5">
+            {% for day in child.daily_log %}
+            <div class="flex items-center gap-3 rounded-xl bg-white border border-brand-light/50 px-3 py-2" {% if forloop.counter > 3 %}x-show="open" x-cloak{% endif %}>
+              <div class="w-16 shrink-0">
+                <div class="text-xs font-black text-ink">{{ day.date|date:"D j" }}</div>
+                <div class="text-[10px] font-bold text-[var(--text-soft)]">{{ day.date|date:"M" }}</div>
+              </div>
+              <div class="flex flex-wrap gap-1.5 text-[10px] font-extrabold shrink-0">
+                <span class="rounded-full bg-brand-light px-2 py-0.5 text-brand">{{ day.total }} Q</span>
+                <span class="rounded-full {% if day.pct >= 70 %}bg-lime-light text-lime-dark{% else %}bg-pink-light text-pink{% endif %} px-2 py-0.5">{{ day.pct }}%</span>
+                <span class="rounded-full bg-amber-light px-2 py-0.5 text-amber-800">{{ day.minutes }} min</span>
+                <span class="rounded-full bg-coral-light px-2 py-0.5 text-coral-dark">⭐ {{ day.stars }}</span>
+              </div>
+              <div class="min-w-0 flex-1 text-[11px] font-bold text-[var(--text-soft)] truncate">
+                {% for t in day.topics %}{{ t }}{% if not forloop.last %} · {% endif %}{% endfor %}
+              </div>
             </div>
             {% endfor %}
           </div>
@@ -308,10 +341,12 @@
         {% endif %}
 
         <!-- Homework assignments -->
-        <div x-data="{ showAssign: false }">
+        <div x-data="{ showAssign: {% if child.open_count == 0 %}true{% else %}false{% endif %}, selected: [], q: '',
+                       toggle(slug) { this.selected.includes(slug) ? this.selected = this.selected.filter(x => x !== slug) : this.selected.push(slug) } }">
           <div class="flex items-center justify-between mb-3">
             <h3 class="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--text-soft)]">
-              {% if lang == 'fr' %}Devoirs assignés{% else %}Assigned homework{% endif %}
+              {% if lang == 'fr' %}Devoirs{% else %}Homework{% endif %}
+              <span class="ml-1 normal-case tracking-normal text-brand">{{ child.open_count }} {% if lang == 'fr' %}en cours{% else %}open{% endif %} · {{ child.done_count }} {% if lang == 'fr' %}terminés{% else %}done{% endif %}</span>
             </h3>
             <button @click="showAssign = !showAssign"
                     class="rounded-xl bg-brand px-3 py-2 text-xs font-black text-white hover:bg-brand-dark transition flex items-center gap-1">
@@ -320,53 +355,111 @@
             </button>
           </div>
 
-          <!-- Assign form -->
+          <!-- Assign form: multi-select with the child's grade first -->
           <div x-show="showAssign" x-transition class="mb-4 rounded-2xl bg-brand-light/30 border border-brand-light p-4">
-            <p class="text-xs font-bold text-[var(--text-soft)] mb-3">
-              {% if lang == 'fr' %}Choisissez une compétence à assigner à {{ child.username }}{% else %}Choose a skill to assign to {{ child.username }}{% endif %}
-            </p>
-            <form method="post" action="{% url 'quiz:assign_topic' %}?lang={{ lang }}" class="flex gap-2 flex-wrap">
+            <form method="post" action="{% url 'quiz:assign_topic' %}?lang={{ lang }}">
               {% csrf_token %}
               <input type="hidden" name="child_id" value="{{ child.user_id }}">
-              <select name="topic_slug" class="flex-1 min-w-[180px] rounded-xl border border-brand-light bg-white px-3 py-2.5 text-sm font-bold text-ink focus:border-brand focus:outline-none">
-                {% for group in topic_groups %}
-                <optgroup label="{{ group.icon }} {% if lang == 'fr' %}{{ group.name_fr }}{% else %}{{ group.name_en }}{% endif %}{% if not group.grade %} — {% if lang == 'fr' %}toutes les années{% else %}all grades{% endif %}{% endif %}">
-                  {% for topic in group.topics %}
-                  <option value="{{ topic.slug }}" {% if group.grade and group.grade == child.grade and forloop.parentloop.first %}{% endif %}>
-                    {% if group.grade %}[{% if lang == 'fr' %}{{ group.grade }}e{% else %}G{{ group.grade }}{% endif %}] {% endif %}{% if lang == 'fr' %}{{ topic.name_fr }}{% else %}{{ topic.name_en }}{% endif %}
-                  </option>
-                  {% endfor %}
-                </optgroup>
+
+              {% if child.suggestions %}
+              <p class="text-xs font-black text-ink mb-2">💡 {% if lang == 'fr' %}Suggestions pour {{ child.username }}{% else %}Suggestions for {{ child.username }}{% endif %}</p>
+              <div class="flex flex-wrap gap-2 mb-4">
+                {% for sg in child.suggestions %}
+                <button type="button" @click="toggle('{{ sg.slug }}')"
+                        :class="selected.includes('{{ sg.slug }}') ? 'bg-brand text-white border-brand' : 'bg-white text-ink border-brand-light hover:border-brand'"
+                        class="rounded-xl border px-3 py-2 text-left transition"
+                        title="{% if lang == 'fr' %}{{ sg.reason_fr }}{% else %}{{ sg.reason_en }}{% endif %}">
+                  <span class="block text-xs font-extrabold">{{ sg.icon }} {% if lang == 'fr' %}{{ sg.name_fr }}{% else %}{{ sg.name_en }}{% endif %}{% if sg.grade %} <span class="opacity-70">({% if lang == 'fr' %}{{ sg.grade }}e{% else %}G{{ sg.grade }}{% endif %})</span>{% endif %}</span>
+                  <span class="block text-[10px] font-bold opacity-80">{% if lang == 'fr' %}{{ sg.reason_fr }}{% else %}{{ sg.reason_en }}{% endif %}</span>
+                </button>
                 {% endfor %}
-              </select>
-              <button type="submit" class="rounded-xl bg-brand px-4 py-2.5 text-sm font-black text-white hover:bg-brand-dark transition">
-                {% if lang == 'fr' %}Assigner →{% else %}Assign →{% endif %}
-              </button>
+              </div>
+              {% endif %}
+
+              <div class="flex items-center gap-2 mb-2">
+                <input type="search" x-model="q" placeholder="{% if lang == 'fr' %}Filtrer les compétences…{% else %}Filter skills…{% endif %}"
+                       class="flex-1 rounded-xl border border-brand-light bg-white px-3 py-2 text-sm font-bold text-ink focus:border-brand focus:outline-none">
+                <button type="button" @click="selected = []" x-show="selected.length" class="text-xs font-black text-coral">{% if lang == 'fr' %}Tout décocher{% else %}Clear{% endif %}</button>
+              </div>
+
+              <div class="max-h-72 overflow-y-auto rounded-xl border border-brand-light bg-white divide-y divide-brand-light/40">
+                {% for group in child.assign_groups %}
+                <div x-data="{ open: {% if group.grade == child.grade or not child.grade and forloop.first %}true{% else %}false{% endif %} }">
+                  <button type="button" @click="open = !open" class="w-full flex items-center justify-between px-3 py-2 text-left {% if group.grade == child.grade %}bg-amber-light/40{% else %}bg-soft/60{% endif %}">
+                    <span class="text-xs font-black text-ink">{{ group.icon }} {% if lang == 'fr' %}{{ group.name_fr }}{% else %}{{ group.name_en }}{% endif %}
+                      {% if group.grade %}<span class="ml-1 rounded-full bg-amber-light px-2 py-0.5 text-[10px] text-amber-800">{% if lang == 'fr' %}{{ group.grade }}e année{% else %}Grade {{ group.grade }}{% endif %}</span>{% else %}<span class="ml-1 rounded-full bg-soft px-2 py-0.5 text-[10px]">{% if lang == 'fr' %}toutes les années{% else %}all grades{% endif %}</span>{% endif %}
+                      {% if group.grade == child.grade %}<span class="ml-1 text-[10px] text-brand">★ {% if lang == 'fr' %}son année{% else %}their grade{% endif %}</span>{% endif %}
+                    </span>
+                    <span class="text-xs font-black text-brand" x-text="(open || q) ? '−' : '+'"></span>
+                  </button>
+                  <div x-show="open || q" class="px-2 py-1">
+                    {% for topic in group.topics %}
+                    <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-brand-light/40 cursor-pointer"
+                           x-show="!q || '{% if lang == 'fr' %}{{ topic.name_fr|escapejs }}{% else %}{{ topic.name_en|escapejs }}{% endif %}'.toLowerCase().includes(q.toLowerCase())">
+                      <input type="checkbox" name="topic_slugs" value="{{ topic.slug }}"
+                             :checked="selected.includes('{{ topic.slug }}')" @change="toggle('{{ topic.slug }}')"
+                             class="h-4 w-4 rounded border-brand-light text-brand focus:ring-brand">
+                      <span class="text-sm font-bold text-ink">{% if lang == 'fr' %}{{ topic.name_fr }}{% else %}{{ topic.name_en }}{% endif %}</span>
+                    </label>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+
+              <div class="mt-3 flex items-center justify-between gap-3">
+                <span class="text-xs font-bold text-[var(--text-soft)]">
+                  <span x-text="selected.length"></span> {% if lang == 'fr' %}sélectionnée(s){% else %}selected{% endif %}
+                </span>
+                <button type="submit" :disabled="!selected.length"
+                        class="rounded-xl bg-brand px-4 py-2.5 text-sm font-black text-white hover:bg-brand-dark transition disabled:opacity-40 disabled:cursor-not-allowed">
+                  {% if lang == 'fr' %}Assigner à {{ child.username }} →{% else %}Assign to {{ child.username }} →{% endif %}
+                </button>
+              </div>
             </form>
           </div>
 
-          <!-- Existing assignments list -->
-          {% with assignments=child_assignments|default_if_none:'' %}
+          <!-- Assignment history -->
           {% for username, alist in child_assignments.items %}{% if username == child.username %}
             {% if alist %}
             <div class="space-y-2">
               {% for a in alist %}
-              <div class="flex items-center gap-3 rounded-xl border border-brand-light/50 bg-white px-4 py-3">
-                <span class="text-lg shrink-0">{% if a.completed_at %}✅{% else %}📋{% endif %}</span>
-                <div class="min-w-0 flex-1">
-                  <p class="text-sm font-extrabold text-ink truncate">
-                    {% if a.topic %}{{ a.topic.icon }} {% if lang == 'fr' %}{{ a.topic.name_fr }}{% else %}{{ a.topic.name_en }}{% endif %}{% else %}{{ a.topic_slug }}{% endif %}
-                  </p>
-                  <p class="text-[11px] font-bold text-[var(--text-soft)]">
-                    {% if a.topic.grade %}<span class="rounded-full bg-amber-light px-2 py-0.5 text-amber-800">{% if lang == 'fr' %}{{ a.topic.grade }}e année{% else %}Grade {{ a.topic.grade }}{% endif %}</span>{% else %}<span class="rounded-full bg-soft px-2 py-0.5">{% if lang == 'fr' %}Toutes les années{% else %}All grades{% endif %}</span>{% endif %}
-                    {% if a.completed_at %}<span class="text-lime-dark ml-1">✓ {% if lang == 'fr' %}Terminé — réassignez pour de nouveaux exercices{% else %}Completed — assign again for new exercises{% endif %}</span>{% endif %}
-                  </p>
+              <div class="rounded-xl border border-brand-light/50 bg-white px-4 py-3 {% if a.completed_at %}opacity-80{% endif %}">
+                <div class="flex items-center gap-3">
+                  <span class="text-lg shrink-0">{% if a.completed_at %}✅{% elif a.started_at %}✏️{% else %}📋{% endif %}</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-extrabold text-ink truncate">
+                      {% if a.topic %}{{ a.topic.icon }} {% if lang == 'fr' %}{{ a.topic.name_fr }}{% else %}{{ a.topic.name_en }}{% endif %}{% else %}{{ a.topic_slug }}{% endif %}
+                      {% if a.topic.grade %}<span class="ml-1 rounded-full bg-amber-light px-2 py-0.5 text-[10px] text-amber-800">{% if lang == 'fr' %}{{ a.topic.grade }}e{% else %}G{{ a.topic.grade }}{% endif %}</span>{% endif %}
+                    </p>
+                    <p class="text-[11px] font-bold text-[var(--text-soft)] mt-0.5">
+                      {% if lang == 'fr' %}Assigné le {{ a.assigned_at|date:"j M, H:i" }}{% else %}Assigned {{ a.assigned_at|date:"M j, H:i" }}{% endif %}
+                      {% if a.started_at %} · {% if lang == 'fr' %}commencé le {{ a.started_at|date:"j M" }}{% else %}started {{ a.started_at|date:"M j" }}{% endif %}{% endif %}
+                      {% if a.completed_at %} · <span class="text-lime-dark">{% if lang == 'fr' %}terminé le {{ a.completed_at|date:"j M, H:i" }}{% else %}done {{ a.completed_at|date:"M j, H:i" }}{% endif %}</span>{% endif %}
+                    </p>
+                    <div class="mt-1.5 flex items-center gap-2">
+                      <div class="flex-1 h-2 rounded-full bg-slate-100"><div class="h-full rounded-full {% if a.completed_at %}bg-lime{% else %}bg-gradient-to-r from-brand to-pink{% endif %}" style="width:{{ a.progress_pct }}%"></div></div>
+                      <span class="text-[10px] font-extrabold text-[var(--text-soft)] shrink-0">
+                        {{ a.questions_done }}/{{ a.goal }} Q{% if a.accuracy_pct is not None %} · {{ a.accuracy_pct }}%{% endif %} · {{ a.minutes_spent }} min
+                      </span>
+                    </div>
+                  </div>
+                  <div class="shrink-0 flex gap-1.5">
+                    {% if a.completed_at %}
+                    <form method="post" action="{% url 'quiz:assign_topic' %}?lang={{ lang }}">
+                      {% csrf_token %}
+                      <input type="hidden" name="child_id" value="{{ child.user_id }}">
+                      <input type="hidden" name="topic_slug" value="{{ a.topic_slug }}">
+                      <button type="submit" class="rounded-lg bg-brand-light px-2.5 py-1.5 text-xs font-black text-brand hover:bg-brand hover:text-white transition" title="{% if lang == 'fr' %}Réassigner (nouveaux exercices){% else %}Assign again (new exercises){% endif %}">↻</button>
+                    </form>
+                    {% endif %}
+                    <form method="post" action="{% url 'quiz:unassign_topic' %}?lang={{ lang }}">
+                      {% csrf_token %}
+                      <input type="hidden" name="assignment_id" value="{{ a.pk }}">
+                      <button type="submit" class="rounded-lg bg-coral-light px-2.5 py-1.5 text-xs font-black text-coral hover:bg-coral hover:text-white transition" title="{% if lang == 'fr' %}Retirer{% else %}Remove{% endif %}">✕</button>
+                    </form>
+                  </div>
                 </div>
-                <form method="post" action="{% url 'quiz:unassign_topic' %}?lang={{ lang }}" class="shrink-0">
-                  {% csrf_token %}
-                  <input type="hidden" name="assignment_id" value="{{ a.pk }}">
-                  <button type="submit" class="rounded-lg bg-coral-light px-2.5 py-1.5 text-xs font-black text-coral hover:bg-coral hover:text-white transition">✕</button>
-                </form>
               </div>
               {% endfor %}
             </div>
@@ -376,7 +469,6 @@
             </p>
             {% endif %}
           {% endif %}{% endfor %}
-          {% endwith %}
         </div>
 
       </div>

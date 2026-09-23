@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 
@@ -152,21 +153,67 @@ class ParentProfile(models.Model):
 
 
 class ParentAssignment(models.Model):
-    """A skill topic assigned by a parent to a specific child student."""
+    """A skill topic assigned by a parent to a specific child student.
+
+    One row per assignment *event*: re-assigning a completed topic creates a
+    new row so the history (when it was assigned, started, finished, how long
+    it took) stays visible to both the parent and the child.
+    """
+    DEFAULT_GOAL = 10
+
     parent     = models.ForeignKey(ParentProfile, on_delete=models.CASCADE, related_name='assignments')
     student    = models.ForeignKey(User, on_delete=models.CASCADE, related_name='parent_assignments')
     topic_slug = models.CharField(max_length=50, db_index=True)
     note       = models.CharField(max_length=200, blank=True)
+    goal       = models.PositiveSmallIntegerField(default=DEFAULT_GOAL,
+                     help_text='Questions the child must answer for the assignment to count as done')
     assigned_at  = models.DateTimeField(auto_now_add=True)
+    started_at   = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    questions_done     = models.PositiveSmallIntegerField(default=0)
+    correct_done       = models.PositiveSmallIntegerField(default=0)
+    time_spent_seconds = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ['-assigned_at']
-        unique_together = [('parent', 'student', 'topic_slug')]
 
     def __str__(self):
         done = '✓' if self.completed_at else '○'
         return f'{done} {self.parent.user.username} → {self.student.username}: {self.topic_slug}'
+
+    @property
+    def is_done(self):
+        return self.completed_at is not None
+
+    @property
+    def progress_pct(self):
+        if self.completed_at:
+            return 100
+        if not self.goal:
+            return 0
+        return min(100, round(self.questions_done / self.goal * 100))
+
+    @property
+    def accuracy_pct(self):
+        return round(self.correct_done / self.questions_done * 100) if self.questions_done else None
+
+    @property
+    def minutes_spent(self):
+        return round(self.time_spent_seconds / 60)
+
+    def record_answer(self, is_correct, seconds, now=None):
+        """Fold one answered question into this assignment; auto-completes at the goal."""
+        now = now or timezone.now()
+        if self.started_at is None:
+            self.started_at = now
+        self.questions_done += 1
+        if is_correct:
+            self.correct_done += 1
+        self.time_spent_seconds += max(0, int(seconds or 0))
+        if self.completed_at is None and self.goal and self.questions_done >= self.goal:
+            self.completed_at = now
+        self.save(update_fields=['started_at', 'questions_done', 'correct_done',
+                                 'time_spent_seconds', 'completed_at'])
 
 
 # ── Skill taxonomy (Grade → Domain → Skill) ──────────────────────────────────

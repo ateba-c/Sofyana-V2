@@ -172,6 +172,9 @@ def logout_view(request):
     return redirect('quiz:index')
 
 
+MAX_QUESTION_SECONDS = 300
+
+
 def _topic_label(topic_slug, lang='en'):
     meta = topic_meta().get(topic_slug, {})
     if not meta:
@@ -242,9 +245,9 @@ def index(request):
     # Parent assignments for this student
     parent_assignments = []
     if student:
-        parent_assignments = list(
-            ParentAssignment.objects.filter(student=request.user)
-            .select_related('parent__user')
+        parent_assignments = sorted(
+            ParentAssignment.objects.filter(student=request.user).select_related('parent__user'),
+            key=lambda a: (a.completed_at is not None, -a.assigned_at.timestamp()),
         )
 
     # Recent topics (for "Recent skills" tab)
@@ -583,6 +586,8 @@ def practice_next(request, topic):
         q['show_illustration'] = (
             topic in ('geometry-area', 'geometry-perimeter') or _random.random() < 0.30
         )
+    import time as _time
+    q['served_at'] = _time.time()
     request.session[f'pq_{topic}'] = q
     return render(request, 'partials/practice_question.html', {
         'question': q,
@@ -684,12 +689,19 @@ def practice_check(request, topic):
     LEVEL_STARS  = {'easy': 1, 'medium': 2, 'hard': 3}
     stars_earned = 0
     stars_value  = LEVEL_STARS.get(level, 1)
+    import time as _time
+    served_at = q_data.get('served_at')
+    # Seconds spent on this question, capped so a forgotten tab doesn't count as an hour.
+    time_taken = int(min(MAX_QUESTION_SECONDS, max(0, _time.time() - served_at))) if served_at else 0
     ProblemInteraction.objects.create(
         user=request.user, topic=topic, level=level,
         is_correct=correct,
         points_earned=stars_value if correct else 0,
         error_type=error_type,
+        time_taken_seconds=time_taken,
     )
+    for pa in ParentAssignment.objects.filter(student=request.user, topic_slug=topic, completed_at__isnull=True):
+        pa.record_answer(correct, time_taken)
     from django.db.models import F
     if correct:
         stars_earned = stars_value
@@ -1100,6 +1112,62 @@ def parent_register_view(request):
     return render(request, 'quiz/parent_register.html', {'form': form, 'lang': lang})
 
 
+def _assign_groups_for_grade(grade):
+    """Skill groups for the assign picker: the child's grade first, then the other
+    grades in order, then the cross-grade groups."""
+    def rank(g):
+        gg = g.get('grade')
+        if grade and gg == grade:
+            return (0, 0)
+        if gg:
+            return (1, gg)
+        return (2, 0)
+    return sorted(topic_groups(), key=rank)
+
+
+def _assignment_suggestions(child, assignments, topic_by_slug, limit=6):
+    """Suggest what to assign next, from what the parent already assigned and how the
+    child is doing: follow-ups of finished homework, weak skills, and untouched skills
+    of the child's grade."""
+    assigned = {a.topic_slug for a in assignments}
+    acc = child.get('topic_acc') or {}
+    out, seen = [], set()
+
+    def add(slug, reason_fr, reason_en, icon):
+        if slug in seen or slug in assigned or slug not in topic_by_slug:
+            return
+        seen.add(slug)
+        t = topic_by_slug[slug]
+        out.append({'slug': slug, 'name_fr': t['name_fr'], 'name_en': t['name_en'],
+                    'grade': t['grade'], 'reason_fr': reason_fr, 'reason_en': reason_en, 'icon': icon})
+
+    smap = skill_map()
+    for a in assignments:
+        if a.completed_at:
+            info = smap.get(a.topic_slug, {})
+            done_name = topic_by_slug.get(a.topic_slug, {})
+            for key, fr, en in (('next', 'Suite de', 'Follows'), ('mastery_next', 'Après maîtrise de', 'After mastering')):
+                slug = info.get(key)
+                if slug:
+                    add(slug, f"{fr} « {done_name.get('name_fr', a.topic_slug)} »",
+                        f"{en} '{done_name.get('name_en', a.topic_slug)}'", '➡️')
+    for slug, pct in sorted(acc.items(), key=lambda kv: kv[1]):
+        if pct < 70:
+            add(slug, f'À renforcer ({pct} % de réussite)', f'Needs practice ({pct}% accuracy)', '💪')
+    for slug, pct in sorted(acc.items(), key=lambda kv: -kv[1]):
+        if pct >= 85:
+            nxt = smap.get(slug, {}).get('next')
+            if nxt:
+                name = topic_by_slug.get(slug, {})
+                add(nxt, f"Prêt après « {name.get('name_fr', slug)} » ({pct} %)",
+                    f"Ready after '{name.get('name_en', slug)}' ({pct}%)", '🚀')
+    if child.get('grade'):
+        for t in topic_by_slug.values():
+            if t['grade'] == child['grade'] and t['slug'] not in acc:
+                add(t['slug'], f"{child['grade']}e année, jamais pratiqué", f"Grade {child['grade']}, not tried yet", '🌱')
+    return out[:limit]
+
+
 @login_required
 def parent_dashboard_view(request):
     from datetime import date, timedelta
@@ -1125,21 +1193,36 @@ def parent_dashboard_view(request):
 
         # Topics practiced this week
         topics_week = list(
-            week_interactions.values('topic').distinct().values_list('topic', flat=True)
+            week_interactions.order_by().values('topic').distinct().values_list('topic', flat=True)
         )
         topic_labels = [_topic_label(t, lang) for t in topics_week[:5]]
 
-        # 7-day daily bars
-        days_7 = [today - timedelta(days=i) for i in range(6, -1, -1)]
-        day_qs = (interactions.filter(created_at__date__gte=days_7[0])
+        # Daily activity: 7-day bars + a 14-day journal (questions, accuracy, minutes, skills)
+        days_14 = [today - timedelta(days=i) for i in range(13, -1, -1)]
+        day_qs = (interactions.filter(created_at__date__gte=days_14[0])
                   .values('created_at__date')
-                  .annotate(total=Count('id'), correct=Count('id', filter=Q(is_correct=True))))
+                  .annotate(total=Count('id'), correct=Count('id', filter=Q(is_correct=True)),
+                            stars=Sum('points_earned'), seconds=Sum('time_taken_seconds')))
         by_date = {r['created_at__date']: r for r in day_qs}
-        daily_bars = []
-        for d in days_7:
-            row = by_date.get(d, {'total': 0, 'correct': 0})
+        topics_by_date = {}
+        for r in (interactions.filter(created_at__date__gte=days_14[0])
+                  .values('created_at__date', 'topic').annotate(n=Count('id')).order_by('-n')):
+            topics_by_date.setdefault(r['created_at__date'], []).append(_topic_label(r['topic'], lang))
+        daily_bars, daily_log = [], []
+        for d in days_14:
+            row = by_date.get(d, {'total': 0, 'correct': 0, 'stars': 0, 'seconds': 0})
             t = row['total']
-            daily_bars.append({'date': d, 'total': t, 'pct': round(row['correct']/t*100) if t else 0})
+            entry = {'date': d, 'total': t, 'correct': row['correct'],
+                     'pct': round(row['correct']/t*100) if t else 0,
+                     'stars': row['stars'] or 0,
+                     'minutes': round((row['seconds'] or 0) / 60),
+                     'topics': topics_by_date.get(d, [])[:4]}
+            if d >= days_14[7]:
+                daily_bars.append(entry)
+            if t:
+                daily_log.append(entry)
+        daily_log.reverse()
+        week_minutes = round((week_interactions.aggregate(s=Sum('time_taken_seconds'))['s'] or 0) / 60)
 
         # Per-topic accuracy for this child
         topic_acc = {}
@@ -1191,8 +1274,11 @@ def parent_dashboard_view(request):
             'active_days':    active_days,
             'topics_week':    topic_labels,
             'daily_bars':     daily_bars,
+            'daily_log':      daily_log,
+            'week_minutes':   week_minutes,
             'comparison':     comparison[:5],
             'all_time_total': interactions.count(),
+            'topic_acc':      topic_acc,
         })
 
     # Handle child linking
@@ -1211,7 +1297,7 @@ def parent_dashboard_view(request):
             link_error = "No student found with that username."
         return redirect(f'/parent/?lang={lang}')
 
-    # Per-child assignments for parent dashboard display
+    # Per-child assignments, skill picker (child's grade first) and suggestions
     all_topics = [
         {'slug': t['slug'], 'name_en': t['name_en'], 'name_fr': t['name_fr'], 'icon': g['icon'],
          'grade': g.get('grade'), 'group_en': g['name_en'], 'group_fr': g['name_fr']}
@@ -1219,12 +1305,17 @@ def parent_dashboard_view(request):
     ]
     topic_by_slug = {t['slug']: t for t in all_topics}
     child_assignments = {}
-    for child_user in parent.children.all():
+    for child in children_data:
         rows = []
-        for a in ParentAssignment.objects.filter(parent=parent, student=child_user).order_by('-assigned_at'):
+        for a in ParentAssignment.objects.filter(parent=parent, student_id=child['user_id']).order_by('-assigned_at'):
             a.topic = topic_by_slug.get(a.topic_slug)
             rows.append(a)
-        child_assignments[child_user.username] = rows
+        rows.sort(key=lambda a: (a.completed_at is not None, -a.assigned_at.timestamp()))
+        child_assignments[child['username']] = rows
+        child['assign_groups'] = _assign_groups_for_grade(child['grade'])
+        child['suggestions'] = _assignment_suggestions(child, rows, topic_by_slug)
+        child['open_count'] = sum(1 for a in rows if not a.completed_at)
+        child['done_count'] = len(rows) - child['open_count']
 
     return render(request, 'quiz/parent_dashboard.html', {
         'lang':             lang,
@@ -1238,6 +1329,21 @@ def parent_dashboard_view(request):
     })
 
 
+def _assign_topics(parent, child, slugs):
+    """Assign each slug to the child. An open assignment is left as is; a completed
+    one gets a fresh row so its history (dates, time spent) is preserved."""
+    created = []
+    valid = topic_meta()
+    for slug in slugs:
+        if slug not in valid:
+            continue
+        if ParentAssignment.objects.filter(parent=parent, student=child, topic_slug=slug,
+                                           completed_at__isnull=True).exists():
+            continue
+        created.append(ParentAssignment.objects.create(parent=parent, student=child, topic_slug=slug))
+    return created
+
+
 @require_POST
 @login_required
 def assign_topic_view(request):
@@ -1246,38 +1352,40 @@ def assign_topic_view(request):
         parent = request.user.parent_profile
     except Exception:
         return redirect('quiz:index')
-    topic_slug = request.POST.get('topic_slug', '').strip()
-    child_id   = request.POST.get('child_id', '')
-    assigned   = None
-    if topic_slug and child_id:
-        try:
-            child = User.objects.get(pk=child_id)
-            if child in parent.children.all():
-                assigned, created = ParentAssignment.objects.get_or_create(
-                    parent=parent, student=child, topic_slug=topic_slug
-                )
-                if not created:
-                    # Assigned again → fresh homework: clear completion, move to the top.
-                    assigned.completed_at = None
-                    assigned.assigned_at = timezone.now()
-                    assigned.save(update_fields=['completed_at', 'assigned_at'])
-        except User.DoesNotExist:
-            pass
+    slugs = [x.strip() for x in request.POST.getlist('topic_slugs') if x.strip()]
+    single = request.POST.get('topic_slug', '').strip()
+    if single:
+        slugs.append(single)
+    child_id = request.POST.get('child_id', '')
+    child = parent.children.filter(pk=child_id).first() if child_id else None
+    created = _assign_topics(parent, child, slugs) if child and slugs else []
+    ok = child is not None and bool(slugs) and all(
+        ParentAssignment.objects.filter(parent=parent, student=child, topic_slug=x, completed_at__isnull=True).exists()
+        for x in slugs if x in topic_meta())
     if request.headers.get('HX-Request'):
         # Inline confirmation (used by the AI search results page).
         from django.http import HttpResponse
-        if assigned:
-            label = (f'✓ Assigné à {assigned.student.username}' if lang == 'fr'
-                     else f'✓ Assigned to {assigned.student.username}')
+        if ok:
+            label = (f'✓ Assigné à {child.username}' if lang == 'fr'
+                     else f'✓ Assigned to {child.username}')
             cls = 'bg-lime-light text-lime-dark border border-lime/50'
         else:
-            label = 'Impossible d\'assigner' if lang == 'fr' else 'Could not assign'
+            label = "Impossible d'assigner" if lang == 'fr' else 'Could not assign'
             cls = 'bg-coral-light text-coral-dark border border-coral/30'
         return HttpResponse(
             f'<div class="w-full rounded-xl px-3 py-2.5 text-center text-xs font-black min-h-[40px] '
             f'flex items-center justify-center {cls}">{label}</div>'
         )
-    return redirect(f'/parent/?lang={lang}')
+    if child and slugs:
+        n = len(created)
+        fr = lang == 'fr'
+        if n:
+            messages.success(request, (f"{n} compétence{'s' if n > 1 else ''} assignée{'s' if n > 1 else ''} à {child.username}." if fr
+                                       else f"{n} skill{'s' if n > 1 else ''} assigned to {child.username}."))
+        else:
+            messages.info(request, (f"{child.username} a déjà ces devoirs en cours." if fr
+                                    else f"{child.username} already has this homework in progress."))
+    return redirect(f'/parent/?lang={lang}#child-{child.pk if child else ""}')
 
 
 @require_POST
@@ -1389,7 +1497,7 @@ def complete_assignment_view(request):
     assignment_id = request.POST.get('assignment_id', '')
     if assignment_id:
         ParentAssignment.objects.filter(
-            pk=assignment_id, student=request.user
+            pk=assignment_id, student=request.user, completed_at__isnull=True,
         ).update(completed_at=timezone.now())
     return redirect(f'/?lang={lang}')
 

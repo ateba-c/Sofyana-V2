@@ -94,7 +94,16 @@
             {% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == a.topic_slug %}{% if g.grade %}<span class="rounded-full bg-amber-light px-2 py-0.5 text-amber-800">{% if lang == 'fr' %}{{ g.grade }}e année{% else %}Grade {{ g.grade }}{% endif %}</span>{% endif %}{% endif %}{% endfor %}{% endfor %}
             {% if a.note %}{{ a.note }}{% endif %}
           </p>
-          {% if a.completed_at %}<p class="text-xs font-bold text-lime-dark mt-0.5">{% if lang == 'fr' %}Terminé !{% else %}Completed!{% endif %}</p>{% endif %}
+          <p class="text-[11px] font-bold text-[var(--text-soft)] mt-0.5">
+            {% if lang == 'fr' %}Assigné le {{ a.assigned_at|date:"j M" }}{% else %}Assigned {{ a.assigned_at|date:"M j" }}{% endif %}
+            {% if a.completed_at %} · <span class="text-lime-dark">{% if lang == 'fr' %}Terminé le {{ a.completed_at|date:"j M" }} ✓{% else %}Done {{ a.completed_at|date:"M j" }} ✓{% endif %}</span>
+            {% elif a.started_at %} · {% if lang == 'fr' %}en cours{% else %}in progress{% endif %}
+            {% else %} · {% if lang == 'fr' %}pas encore commencé{% else %}not started yet{% endif %}{% endif %}
+          </p>
+          <div class="mt-1.5 flex items-center gap-2 max-w-xs">
+            <div class="flex-1 h-2 rounded-full bg-slate-100"><div class="h-full rounded-full {% if a.completed_at %}bg-lime{% else %}bg-gradient-to-r from-brand to-pink{% endif %}" style="width:{{ a.progress_pct }}%"></div></div>
+            <span class="text-[10px] font-extrabold text-[var(--text-soft)] shrink-0">{% if a.completed_at %}100%{% else %}{{ a.questions_done }}/{{ a.goal }}{% endif %}</span>
+          </div>
         </div>
         <div class="flex shrink-0 gap-2">
           {% if not a.completed_at %}

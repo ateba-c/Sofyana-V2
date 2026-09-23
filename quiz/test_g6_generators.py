@@ -25,8 +25,8 @@ class Grade6RegistryTests(SimpleTestCase):
                 if target:
                     self.assertIn(target, GENERATORS, f'{slug}.{key} → {target}')
 
-    def test_grade6_has_five_domains(self):
-        self.assertEqual(sum(1 for g in TOPIC_GROUPS if g.get('grade') == 6), 5)
+    def test_grade6_has_six_domains(self):
+        self.assertEqual(sum(1 for g in TOPIC_GROUPS if g.get('grade') == 6), 6)
 
 
 class Grade6GeneratorTests(SimpleTestCase):

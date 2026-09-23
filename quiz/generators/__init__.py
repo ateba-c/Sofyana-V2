@@ -73,6 +73,7 @@ from .g4_geometry import (
 from .g4_time import (
     g4_clock_24h_gen, g4_time_units_gen, g4_elapsed_time_gen, g4_end_time_gen,
 )
+from .clock import g3_clock_later_gen, g4_clock_back_gen, g5_clock_schedule_gen, g6_clock_planning_gen
 
 # ── Grade 5 ───────────────────────────────────────────────────────────────────
 from .g5_arithmetic import (
@@ -210,6 +211,7 @@ GENERATORS = {
 
     # Mesure — Conversions de temps (Bloc C1)
     'time-convert':        time_convert_gen,
+    'g3-clock-later':      g3_clock_later_gen,
 
     # Mesure — Choix d'unité (masse / volume / longueur) (Bloc C2)
     'unit-by-quantity':    unit_by_quantity_gen,
@@ -249,6 +251,7 @@ GENERATORS = {
     'g4-time-units':        g4_time_units_gen,
     'g4-elapsed-time':      g4_elapsed_time_gen,
     'g4-end-time':          g4_end_time_gen,
+    'g4-clock-back':        g4_clock_back_gen,
 
     # ══════════════════ Grade 5 ════════════════════════════════════════════════
 
@@ -263,8 +266,10 @@ GENERATORS = {
     'g5-capacity-convert': g5_capacity_convert_gen,
     'g5-mass-convert':    g5_mass_convert_gen,
     'g5-elapsed-time':    g5_elapsed_time_gen,
+    'g5-clock-schedule':  g5_clock_schedule_gen,
     'g5-temperature':     g5_temperature_gen,
     'g5-thermometer':     g5_thermometer_gen,
+    'g6-clock-planning':  g6_clock_planning_gen,
 
     # Numeration
     'g5-large-integer':   g5_large_integer_gen,
@@ -413,6 +418,7 @@ SKILL_MAP = {
 
     # ── Grade 3: Mesure étendue ───────────────────────────────────────────────
     'time-convert':        {'prereq': 'read-clock',      'next': 'measure-unit',        'mastery_next': 'unit-by-quantity',    'downgrade': 'read-clock',       'level_sequence': ['easy', 'medium', 'hard']},
+    'g3-clock-later':      {'prereq': 'read-clock',      'next': 'time-convert',        'mastery_next': 'g4-clock-back',       'downgrade': 'read-clock',       'level_sequence': ['easy', 'medium', 'hard']},
     'unit-by-quantity':    {'prereq': 'measure-unit',    'next': 'time-convert',        'mastery_next': 'convert-length',      'downgrade': 'measure-unit',     'level_sequence': ['easy', 'medium', 'hard']},
 
     # ── Grade 3: Fraction d'une collection ───────────────────────────────────
@@ -449,7 +455,8 @@ SKILL_MAP = {
     'g4-clock-24h': {'prereq': None, 'next': 'g4-time-units', 'mastery_next': 'g4-elapsed-time', 'downgrade': 'read-clock', 'level_sequence': ['easy', 'medium', 'hard']},
     'g4-time-units': {'prereq': 'g4-clock-24h', 'next': 'g4-elapsed-time', 'mastery_next': 'g4-end-time', 'downgrade': 'g4-clock-24h', 'level_sequence': ['easy', 'medium', 'hard']},
     'g4-elapsed-time': {'prereq': 'g4-time-units', 'next': 'g4-end-time', 'mastery_next': 'g5-elapsed-time', 'downgrade': 'g4-time-units', 'level_sequence': ['easy', 'medium', 'hard']},
-    'g4-end-time': {'prereq': 'g4-elapsed-time', 'next': 'g4-clock-24h', 'mastery_next': 'g5-elapsed-time', 'downgrade': 'g4-elapsed-time', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-end-time': {'prereq': 'g4-elapsed-time', 'next': 'g4-clock-back', 'mastery_next': 'g5-elapsed-time', 'downgrade': 'g4-elapsed-time', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g4-clock-back': {'prereq': 'g4-end-time', 'next': 'g5-clock-schedule', 'mastery_next': 'g5-clock-schedule', 'downgrade': 'g3-clock-later', 'level_sequence': ['easy', 'medium', 'hard']},
 
     # ══════════════════ Grade 5 ═══════════════════════════════════════════════
 
@@ -463,7 +470,8 @@ SKILL_MAP = {
     'g5-volume':           {'prereq': None,                'next': 'g5-capacity-convert', 'mastery_next': 'g5-mass-convert',   'downgrade': None,                'level_sequence': ['easy', 'medium', 'hard']},
     'g5-capacity-convert': {'prereq': 'g5-volume',         'next': 'g5-mass-convert',     'mastery_next': 'g5-elapsed-time',   'downgrade': 'g5-volume',         'level_sequence': ['easy', 'medium', 'hard']},
     'g5-mass-convert':     {'prereq': 'g5-volume',         'next': 'g5-elapsed-time',     'mastery_next': 'g5-temperature',    'downgrade': 'g5-volume',         'level_sequence': ['easy', 'medium', 'hard']},
-    'g5-elapsed-time':     {'prereq': 'g5-mass-convert',   'next': 'g5-temperature',      'mastery_next': 'g5-thermometer',    'downgrade': 'g5-mass-convert',   'level_sequence': ['easy', 'medium', 'hard']},
+    'g5-elapsed-time':     {'prereq': 'g5-mass-convert',   'next': 'g5-clock-schedule',   'mastery_next': 'g5-temperature',    'downgrade': 'g5-mass-convert',   'level_sequence': ['easy', 'medium', 'hard']},
+    'g5-clock-schedule':   {'prereq': 'g5-elapsed-time',   'next': 'g5-temperature',      'mastery_next': 'g6-clock-planning', 'downgrade': 'g4-clock-back',     'level_sequence': ['easy', 'medium', 'hard']},
     'g5-temperature':      {'prereq': 'g5-elapsed-time',   'next': 'g5-thermometer',      'mastery_next': 'g5-large-integer',  'downgrade': 'g5-elapsed-time',   'level_sequence': ['easy', 'medium', 'hard']},
     'g5-thermometer':      {'prereq': 'g5-temperature',    'next': 'g5-large-integer',    'mastery_next': 'g5-decimal-write',  'downgrade': 'g5-temperature',    'level_sequence': ['easy', 'medium', 'hard']},
 
@@ -514,6 +522,7 @@ SKILL_MAP = {
     # ── Grade 6: Stratégies ───────────────────────────────────────────────────
     'g6-relevant-info': {'prereq': None, 'next': 'g6-comparative-phrase', 'mastery_next': 'g6-rate-problem', 'downgrade': 'word-problem', 'level_sequence': ['easy', 'medium', 'hard']},
     'g6-comparative-phrase': {'prereq': 'g6-relevant-info', 'next': 'g6-rate-problem', 'mastery_next': 'g6-multiply', 'downgrade': 'g6-relevant-info', 'level_sequence': ['easy', 'medium', 'hard']},
+    'g6-clock-planning': {'prereq': 'g5-clock-schedule', 'next': 'g6-relevant-info', 'mastery_next': 'g6-rate-problem', 'downgrade': 'g5-clock-schedule', 'level_sequence': ['easy', 'medium', 'hard']},
 }
 
 # ── 4th level "Résolution": qualifying skills get a longer level sequence ─────
@@ -627,6 +636,7 @@ TOPIC_GROUPS = [
         {'slug': 'unit-by-quantity',  'name_en': 'Unit by Quantity Type',    'name_fr': 'Unité selon la grandeur'},
         {'slug': 'read-clock',        'name_en': 'Read a Clock',             'name_fr': 'Lire l\'heure'},
         {'slug': 'time-convert',      'name_en': 'Convert Time Units',       'name_fr': 'Convertir des unités de temps'},
+        {'slug': 'g3-clock-later',    'name_en': 'Clock: In / Ago',          'name_fr': 'Horloge : dans… / il y a…'},
     ]},
     {'name_en': 'Grade 3 — Statistics & Probability', 'name_fr': '3e année — Statistiques & Probabilité', 'icon': '📊', 'grade': 3, 'topics': [
         {'slug': 'read-bar-chart',    'name_en': 'Read a Bar Chart',         'name_fr': 'Lire un diagramme à bandes'},
@@ -665,6 +675,7 @@ TOPIC_GROUPS = [
         {'slug': 'g4-time-units',   'name_en': 'Convert Time Units',         'name_fr': 'Convertir des unités de temps'},
         {'slug': 'g4-elapsed-time', 'name_en': 'Elapsed Time',               'name_fr': 'Durée écoulée'},
         {'slug': 'g4-end-time',     'name_en': 'Find the End Time',          'name_fr': 'Trouver l\'heure de fin'},
+        {'slug': 'g4-clock-back',   'name_en': 'Clock: Started … Ago',       'name_fr': 'Horloge : commencé il y a…'},
     ]},
 
     # ── Grade 5 groups ─────────────────────────────────────────────────────────
@@ -679,6 +690,7 @@ TOPIC_GROUPS = [
         {'slug': 'g5-capacity-convert', 'name_en': 'L ↔ mL',                'name_fr': 'L ↔ mL'},
         {'slug': 'g5-mass-convert',     'name_en': 'g ↔ kg',                 'name_fr': 'g ↔ kg'},
         {'slug': 'g5-elapsed-time',     'name_en': 'Elapsed Time',           'name_fr': 'Durée écoulée'},
+        {'slug': 'g5-clock-schedule',   'name_en': 'Clock: When Does It End?', 'name_fr': 'Horloge : à quelle heure finit-il ?'},
         {'slug': 'g5-temperature',      'name_en': 'Compare Temperatures',   'name_fr': 'Comparer des températures'},
         {'slug': 'g5-thermometer',      'name_en': 'Read a Thermometer',     'name_fr': 'Lire un thermomètre'},
     ]},
@@ -729,5 +741,8 @@ TOPIC_GROUPS = [
     {'name_en': 'Grade 6 — Problem Solving', 'name_fr': '6e année — Stratégies de résolution', 'icon': '🧠', 'grade': 6, 'topics': [
         {'slug': 'g6-relevant-info',      'name_en': 'Spot the Useless Information', 'name_fr': 'Repérer l\'information inutile'},
         {'slug': 'g6-comparative-phrase', 'name_en': 'Translate "more than / less than"', 'name_fr': 'Traduire « plus que / moins que »'},
+    ]},
+    {'name_en': 'Grade 6 — Time', 'name_fr': '6e année — Mesure du temps', 'icon': '🕓', 'grade': 6, 'topics': [
+        {'slug': 'g6-clock-planning', 'name_en': 'Clock: Plan the Schedule', 'name_fr': 'Horloge : planifier l\'horaire'},
     ]},
 ]
