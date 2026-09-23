@@ -18,8 +18,8 @@
 
     <svg viewBox="0 0 {{ shape.vw }} {{ shape.vh }}"
          xmlns="http://www.w3.org/2000/svg"
-         class="{% if shape.type == 'expression' %}w-full max-w-xs{% elif count == 1 %}w-auto{% elif count == 2 %}w-40{% else %}w-32{% endif %} h-auto"
-         style="overflow: visible; max-height: 88px; filter: drop-shadow(0 4px 10px {{ shape.stroke }}44);">
+         class="{% if shape.type == 'expression' %}w-full max-w-xs{% elif count == 1 %}w-60 max-w-full{% elif count == 2 %}w-40{% else %}w-32{% endif %} h-auto"
+         style="overflow: visible; max-height: {% if count == 1 and shape.type != 'expression' %}170px{% else %}88px{% endif %}; filter: drop-shadow(0 4px 10px {{ shape.stroke }}44);">
 
       <defs>
         <filter id="shape-glow-{{ forloop.counter }}" x="-20%" y="-20%" width="140%" height="140%">
