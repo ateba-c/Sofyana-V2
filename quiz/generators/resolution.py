@@ -61,13 +61,13 @@ N = sc.fmt_n
 # ─────────────────────────────────────────────────────────────────────────────
 
 def inventory(grade):
-    key, thing = sc.pick_thing('object' if grade == 6 else None)
+    key, thing = sc.pick_thing('object' if grade >= 5 else None)
     cat = thing[5]
     cont = sc.pick_container(cat)
     who_fr, who_en, g = sc.pick_role()
     who_fr, who_en = _cap(who_fr), _cap(who_en)
     verb_fr, verb_en, _ = sc.pick_verb(cat)
-    if grade == 4:
+    if grade <= 4:
         groups = [(random.randint(2, 9), 100), (random.randint(1, 9), 10)]
         loose = random.randint(0, 9)
     else:
@@ -118,7 +118,7 @@ def inventory(grade):
             'Total, puis la quantité donnée (contenants × quantité), puis soustrais.',
             'Total, then the amount given away (containers × amount), then subtract.')
     # need: how many more to reach a round target
-    target = (total // 1000 + 1) * 1000 if grade == 6 else (total // 100 + 1) * 100
+    target = (total // 1000 + 1) * 1000 if grade >= 5 else (total // 100 + 1) * 100
     need = target - total
     return _problem(
         f"{story_fr} {_cap(sc.pronoun_fr(g))} veut en avoir **{N(target)}**. Combien de {sc.noun(thing, 2, 'fr')} manque-t-il ?",
@@ -138,8 +138,8 @@ _BILLS = [100, 50, 20, 10, 5]
 
 
 def _stack(grade):
-    hi = 4 if grade == 4 else 9
-    bills = _BILLS[1:] if grade == 4 else _BILLS
+    hi = {3: 3, 4: 4}.get(grade, 9)
+    bills = [20, 10, 5] if grade == 3 else _BILLS[1:] if grade == 4 else _BILLS
     c = {b: random.randint(0, hi) for b in bills}
     if sum(c.values()) == 0:
         c[20] = 2
@@ -209,7 +209,7 @@ def money(grade):
             'money', [f'{change} $', str(change)])
     # save: weekly saving to reach an item
     item_fr, item_en = random.choice(_ITEMS)
-    weekly = random.choice([5, 10, 15, 20, 25]) if grade == 4 else random.choice([15, 20, 25, 30, 40, 45])
+    weekly = random.choice([5, 10, 15, 20, 25]) if grade <= 4 else random.choice([15, 20, 25, 30, 40, 45])
     weeks = random.randint(3, 12)
     price = ta + weekly * weeks
     return _problem(
@@ -229,8 +229,8 @@ def money(grade):
 def schedule(grade):
     who, g = sc.pick_actor()
     acts = random.sample(sc.ACTIVITIES, 3)
-    start = random.randint(7, 15) * 60 + random.choice([0, 15, 30, 45] if grade == 4 else range(0, 60, 5))
-    step = [15, 30, 45, 60] if grade == 4 else list(range(10, 125, 5))
+    start = random.randint(7, 15) * 60 + random.choice([0, 15, 30, 45] if grade <= 4 else range(0, 60, 5))
+    step = [15, 30, 45, 60] if grade <= 4 else list(range(10, 125, 5))
     durs = [random.choice(step) for _ in range(3)]
     breaks = [random.choice([0, 10, 15, 20]) for _ in range(2)]
     variant = random.choice(['end2', 'end3', 'total', 'wait'])
@@ -290,15 +290,17 @@ def schedule(grade):
 
 def measurements(grade):
     things_fr, things_en, unit, lo, hi = sc.pick_measured()
-    if grade == 6:
+    if grade >= 5:
         lo, hi = lo * 10, hi * 10
+    elif grade == 3:
+        lo, hi = max(1, lo // 10), max(20, hi // 10)
     names = random.sample([n for n, _ in sc.ACTORS], 3)
     base = random.randint(lo, hi)
     d1 = random.randint(1, max(2, base // 3))
     k = random.choice([2, 3])
     vals = {names[0]: base, names[1]: base + d1, names[2]: (base + d1) * k if grade == 6 else base - d1 if base > d1 else base + 2 * d1}
     thing_fr = things_fr.split(' ')[0]
-    if grade == 6:
+    if grade >= 5:
         rel3_fr = f"{names[2]} en a une **{k} fois** plus longue que celle {sc.de(names[1])}"
         rel3_en = f"{names[2]}'s is **{k} times** as long as {names[1]}'s"
         st3 = f'{N(vals[names[1]])} × {k} = {N(vals[names[2]])}'
@@ -339,8 +341,8 @@ def measurements(grade):
 def pattern(grade):
     who, g = sc.pick_actor()
     key, thing = sc.pick_thing('object')
-    start = random.randint(10, 90) if grade == 4 else random.randint(120, 900)
-    step = random.choice([2, 3, 4, 5, 10, 25]) if grade == 4 else random.choice([12, 15, 25, 35, 50, 75, 125])
+    start = random.randint(10, 90) if grade <= 4 else random.randint(120, 900)
+    step = random.choice([2, 3, 4, 5, 10, 25]) if grade <= 4 else random.choice([12, 15, 25, 35, 50, 75, 125])
     n = random.randint(4, 9)
     variant = random.choice(['after', 'weeks', 'gift'])
     total = start + step * n
@@ -546,5 +548,8 @@ def resolution_gen(slug):
     gen.__name__ = f'{slug}_resolution'
     return gen
 
+
+from .resolution_g35 import FAMILIES_G35  # noqa: E402  (grade 3 / 5 families reuse the helpers above)
+RESOLUTION_FAMILIES.update(FAMILIES_G35)
 
 RESOLUTION = {slug: resolution_gen(slug) for slug in RESOLUTION_FAMILIES}

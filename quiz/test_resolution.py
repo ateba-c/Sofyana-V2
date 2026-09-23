@@ -29,7 +29,10 @@ class ResolutionGeneratorTests(SimpleTestCase):
                     self.assertTrue(check_answer(a, q['correct_answers'], q['answer_type']), f'{slug}: {a} rejected')
                 self.assertFalse(check_answer('', q['correct_answers'], q['answer_type']))
                 q_en = localize_problem(gen('resolution'), 'en')
-                self.assertIsNone(FRENCH_WORDS.search(q_en['prompt_en'].replace('Saint-Marc', '')), q_en['prompt_en'])
+                text = q_en['prompt_en']
+                for name in ('Saint-Marc', 'Trois-Rivières', 'Val-d’Or', 'Val-des-Pins'):
+                    text = text.replace(name, '')
+                self.assertIsNone(FRENCH_WORDS.search(text), q_en['prompt_en'])
 
     def test_stories_vary(self):
         prompts = {RESOLUTION['g4-elapsed-time']()['prompt_fr'] for _ in range(30)}
