@@ -147,6 +147,12 @@ class ParentProfile(models.Model):
     children = models.ManyToManyField(User, related_name='parents', blank=True,
                    help_text='Student accounts this parent is linked to')
     created_at = models.DateTimeField(auto_now_add=True)
+    email_verified_at = models.DateTimeField(null=True, blank=True,
+                   help_text='When the parent clicked the confirmation link sent to user.email')
+
+    @property
+    def email_verified(self):
+        return self.email_verified_at is not None
 
     def __str__(self):
         return f'Parent: {self.user.username}'

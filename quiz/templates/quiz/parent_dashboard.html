@@ -50,6 +50,26 @@
   </div>
   {% endfor %}
 
+  {% if not parent_profile.email_verified %}
+  <div class="rounded-2xl bg-amber-light border border-amber/40 px-5 py-4 text-sm font-bold text-amber-800 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      {% if request.user.email %}
+        ✉️ {% if lang == 'fr' %}Confirmez votre adresse courriel : un lien a été envoyé à <strong>{{ request.user.email }}</strong>.{% else %}Please confirm your email: a link was sent to <strong>{{ request.user.email }}</strong>.{% endif %}
+      {% else %}
+        ✉️ {% if lang == 'fr' %}Ajoutez une adresse courriel pour sécuriser votre compte parent.{% else %}Add an email address to secure your parent account.{% endif %}
+      {% endif %}
+    </div>
+    <form method="post" action="{% url 'quiz:parent_email' %}?lang={{ lang }}" class="flex flex-wrap gap-2">
+      {% csrf_token %}
+      <input type="email" name="email" value="{{ request.user.email }}" placeholder="{% if lang == 'fr' %}votre@courriel.ca{% else %}you@example.com{% endif %}"
+             class="rounded-xl border border-amber/40 bg-white px-3 py-2 text-sm font-bold text-ink focus:outline-none focus:border-amber">
+      <button type="submit" class="rounded-xl bg-amber px-3 py-2 text-xs font-black text-white hover:bg-amber-dark transition">
+        {% if request.user.email %}{% if lang == 'fr' %}Renvoyer le lien{% else %}Resend link{% endif %}{% else %}{% if lang == 'fr' %}Envoyer le lien{% else %}Send link{% endif %}{% endif %}
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
   <!-- ── Add child modal ── -->
   <div x-show="addChildOpen" x-cloak
        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-sm"
@@ -497,6 +517,23 @@
     </div>
   </section>
   {% endif %}
+
+  <!-- Delete account -->
+  <section class="rounded-[2rem] border border-slate-200 bg-white/70 p-5 sm:p-6" x-data="{ open: false }">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-sm font-black text-ink">{% if lang == 'fr' %}Supprimer mon compte{% else %}Delete my account{% endif %}</h2>
+        <p class="text-xs font-bold text-[var(--text-soft)] mt-0.5">{% if lang == 'fr' %}Efface votre compte et les comptes des enfants liés uniquement à vous. Immédiat et définitif.{% else %}Erases your account and the children's accounts linked only to you. Immediate and permanent.{% endif %}</p>
+      </div>
+      <button @click="open = !open" class="rounded-xl border border-coral/40 bg-coral-light px-3 py-2 text-xs font-black text-coral hover:bg-coral hover:text-white transition">{% if lang == 'fr' %}Supprimer…{% else %}Delete…{% endif %}</button>
+    </div>
+    <form x-show="open" x-cloak method="post" action="{% url 'quiz:delete_account' %}?lang={{ lang }}" class="mt-4 flex flex-wrap items-center gap-2">
+      {% csrf_token %}
+      <input type="text" name="confirm" placeholder="DELETE" autocomplete="off" class="rounded-xl border border-coral/40 bg-white px-3 py-2 text-sm font-bold text-ink focus:outline-none focus:border-coral">
+      <button type="submit" class="rounded-xl bg-coral px-4 py-2 text-xs font-black text-white hover:bg-coral-dark transition">{% if lang == 'fr' %}Confirmer la suppression{% else %}Confirm deletion{% endif %}</button>
+      <span class="text-[11px] font-bold text-[var(--text-soft)]">{% if lang == 'fr' %}Écrivez DELETE pour confirmer.{% else %}Type DELETE to confirm.{% endif %}</span>
+    </form>
+  </section>
 
 </div>
 {% endblock %}

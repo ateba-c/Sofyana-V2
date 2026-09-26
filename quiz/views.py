@@ -1112,8 +1112,15 @@ def _feedback(question, correct, lang):
 
 class ParentRegisterForm(forms.Form):
     username  = forms.CharField(min_length=2, max_length=30)
+    email     = forms.EmailField()
     password1 = forms.CharField(widget=forms.PasswordInput, min_length=6)
     password2 = forms.CharField(widget=forms.PasswordInput, min_length=6)
+
+    def clean_email(self):
+        e = self.cleaned_data['email'].strip().lower()
+        if User.objects.filter(email__iexact=e, parent_profile__isnull=False).exists():
+            raise forms.ValidationError('A parent account already uses this email.')
+        return e
 
     def clean_username(self):
         u = self.cleaned_data['username']
@@ -1136,9 +1143,11 @@ def parent_register_view(request):
             user = User.objects.create_user(
                 username=form.cleaned_data['username'],
                 password=form.cleaned_data['password1'],
+                email=form.cleaned_data['email'],
             )
             ParentProfile.objects.create(user=user)
             auth_login(request, user)
+            _send_parent_verification(request, user, lang)
             from django.urls import reverse
             return redirect(f"{reverse('quiz:parent_dashboard')}?lang={lang}")
     else:
@@ -1200,6 +1209,122 @@ def _assignment_suggestions(child, assignments, topic_by_slug, limit=6):
             if t['grade'] == child['grade'] and t['slug'] not in acc:
                 add(t['slug'], f"{child['grade']}e année, jamais pratiqué", f"Grade {child['grade']}, not tried yet", '🌱')
     return out[:limit]
+
+
+# ── Parent email confirmation ────────────────────────────────────────────────
+
+VERIFY_SALT = 'sofyana.parent-email'
+VERIFY_MAX_AGE = 60 * 60 * 24 * 3   # the link works for 3 days
+
+
+def _verification_token(user):
+    from django.core import signing
+    return signing.dumps({'u': user.pk, 'e': user.email}, salt=VERIFY_SALT)
+
+
+def _send_parent_verification(request, user, lang):
+    """Email the confirmation link. Returns True when a message was handed to the backend."""
+    from django.conf import settings as dj
+    from django.core.mail import send_mail
+    from django.urls import reverse
+    if not user.email:
+        return False
+    link = f"{dj.SITE_URL}{reverse('quiz:parent_verify_email', args=[_verification_token(user)])}?lang={lang}"
+    fr = lang == 'fr'
+    subject = 'Confirmez votre compte parent Sofyana' if fr else 'Confirm your Sofyana parent account'
+    body = ((f"Bonjour {user.username},\n\nMerci d'avoir créé un compte parent sur Sofyana. "
+             f"Cliquez sur ce lien pour confirmer votre adresse courriel :\n\n{link}\n\n"
+             f"Le lien est valide 3 jours. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.\n\n"
+             f"L'équipe Sofyana")
+            if fr else
+            (f"Hello {user.username},\n\nThanks for creating a parent account on Sofyana. "
+             f"Click this link to confirm your email address:\n\n{link}\n\n"
+             f"The link works for 3 days. If you did not request this, just ignore this message.\n\n"
+             f"The Sofyana team"))
+    try:
+        send_mail(subject, body, dj.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+        return True
+    except Exception:
+        return False
+
+
+def parent_verify_email_view(request, token):
+    from django.core import signing
+    lang = resolve_lang(request)
+    fr = lang == 'fr'
+    try:
+        data = signing.loads(token, salt=VERIFY_SALT, max_age=VERIFY_MAX_AGE)
+        user = User.objects.get(pk=data['u'], email=data['e'])
+        profile = user.parent_profile
+    except (signing.BadSignature, User.DoesNotExist, ParentProfile.DoesNotExist, KeyError):
+        messages.error(request, ('Ce lien de confirmation est invalide ou expiré. Demandez-en un nouveau depuis votre tableau de bord.' if fr
+                                 else 'This confirmation link is invalid or has expired. Request a new one from your dashboard.'))
+        return redirect(f'/login/?lang={lang}')
+    if not profile.email_verified_at:
+        profile.email_verified_at = timezone.now()
+        profile.save(update_fields=['email_verified_at'])
+    messages.success(request, ('Adresse courriel confirmée. Merci !' if fr else 'Email address confirmed. Thank you!'))
+    if not request.user.is_authenticated:
+        return redirect(f'/login/?lang={lang}&next=/parent/')
+    return redirect(f'/parent/?lang={lang}')
+
+
+@require_POST
+@login_required
+def parent_email_view(request):
+    """Set / change the parent's email and (re)send the confirmation link."""
+    lang = resolve_lang(request)
+    fr = lang == 'fr'
+    try:
+        parent = request.user.parent_profile
+    except Exception:
+        return redirect('quiz:index')
+    email = request.POST.get('email', '').strip().lower()
+    if email and email != (request.user.email or '').lower():
+        try:
+            forms.EmailField().clean(email)
+        except forms.ValidationError:
+            messages.error(request, 'Adresse courriel invalide.' if fr else 'Invalid email address.')
+            return redirect(f'/parent/?lang={lang}')
+        request.user.email = email
+        request.user.save(update_fields=['email'])
+        parent.email_verified_at = None
+        parent.save(update_fields=['email_verified_at'])
+    if _send_parent_verification(request, request.user, lang):
+        messages.success(request, (f'Courriel de confirmation envoyé à {request.user.email}.' if fr
+                                   else f'Confirmation email sent to {request.user.email}.'))
+    else:
+        messages.error(request, ("Impossible d'envoyer le courriel pour le moment." if fr else 'Could not send the email right now.'))
+    return redirect(f'/parent/?lang={lang}')
+
+
+# ── Account deletion (data minimisation: one click, everything goes) ─────────
+
+@require_POST
+@login_required
+def delete_account_view(request):
+    lang = resolve_lang(request)
+    fr = lang == 'fr'
+    if request.POST.get('confirm') != 'DELETE':
+        messages.error(request, ('Écrivez DELETE pour confirmer la suppression.' if fr else 'Type DELETE to confirm.'))
+        return redirect(f"{'/parent/' if hasattr(request.user, 'parent_profile') else '/profile/'}?lang={lang}")
+    user = request.user
+    parent = getattr(user, 'parent_profile', None)
+    if parent is not None:
+        # Children linked only to this parent go too (they were created by / for this parent).
+        for child in list(parent.children.all()):
+            if child.parents.count() == 1:
+                child.delete()
+    auth_logout(request)
+    user.delete()
+    return redirect(f'/?lang={lang}&deleted=1')
+
+
+def legal_view(request):
+    from django.conf import settings as dj
+    lang = resolve_lang(request)
+    base = 'quiz/base.html' if request.user.is_authenticated else 'quiz/base_landing.html'
+    return render(request, 'quiz/legal.html', {'lang': lang, 'base_template': base, 'contact_email': dj.CONTACT_EMAIL})
 
 
 @login_required

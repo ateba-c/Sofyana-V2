@@ -4,6 +4,9 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}Sofyana{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/quiz/img/favicon.svg">
+  <link rel="apple-touch-icon" href="/static/quiz/img/favicon.svg">
+  <meta name="theme-color" content="#F97316">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -356,6 +359,9 @@
 
       <main class="main-content min-w-0 px-3 py-3 sm:px-5 sm:py-4 lg:px-6 lg:py-4">
         {% block content %}{% endblock %}
+        <footer class="mt-10 pb-6 text-center text-[11px] font-bold text-slate-400">
+          © 2026 Sofyana · <a href="{% url 'quiz:legal' %}?lang={{ cur_lang }}" class="underline hover:text-brand">{% if cur_lang == 'fr' %}Confidentialité et conditions{% else %}Privacy and terms{% endif %}</a>
+        </footer>
       </main>
     </div>
   </div>

@@ -55,6 +55,20 @@
           </div>
           <div>
             <label class="block text-xs font-extrabold text-[var(--text-soft)] uppercase tracking-wide mb-1.5">
+              {% if lang == 'fr' %}Courriel{% else %}Email{% endif %}
+            </label>
+            <input type="email" name="email"
+                   value="{{ form.email.value|default:'' }}"
+                   autocomplete="email" required
+                   class="w-full bg-white border-2 border-teal-light rounded-xl px-4 py-3 text-ink placeholder-slate-400 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 text-sm font-bold transition"
+                   placeholder="{% if lang == 'fr' %}Pour confirmer votre compte{% else %}To confirm your account{% endif %}">
+            {% if form.email.errors %}
+              <p class="text-pink text-xs mt-1 font-bold">{{ form.email.errors.0 }}</p>
+            {% endif %}
+            <p class="text-[11px] font-bold text-[var(--text-soft)] mt-1">{% if lang == 'fr' %}Utilisé seulement pour confirmer votre compte. Jamais de publicité.{% else %}Used only to confirm your account. Never for ads.{% endif %}</p>
+          </div>
+          <div>
+            <label class="block text-xs font-extrabold text-[var(--text-soft)] uppercase tracking-wide mb-1.5">
               {% if lang == 'fr' %}Mot de passe{% else %}Password{% endif %}
             </label>
             <input type="password" name="password1"
@@ -83,6 +97,9 @@
                 class="mt-6 w-full bg-gradient-to-r from-teal to-lime text-white font-black py-4 rounded-xl transition hover:opacity-90 text-sm shadow-card">
           {% if lang == 'fr' %}Créer mon compte parent{% else %}Create parent account{% endif %}
         </button>
+        <p class="text-center text-[11px] font-bold text-[var(--text-soft)] mt-3">
+          {% if lang == 'fr' %}En créant un compte, vous confirmez être le parent ou tuteur des enfants que vous liez et acceptez nos <a href="{% url 'quiz:legal' %}?lang={{ lang }}" class="underline">conditions et politique de confidentialité</a>.{% else %}By creating an account you confirm you are the parent or guardian of the children you link, and accept our <a href="{% url 'quiz:legal' %}?lang={{ lang }}" class="underline">terms and privacy policy</a>.{% endif %}
+        </p>
       </form>
 
       <p class="text-center text-[var(--text-soft)] text-xs mt-5 font-bold">

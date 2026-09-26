@@ -97,4 +97,21 @@
     </form>
   </section>
 </div>
+  <!-- Delete account -->
+  <section class="rounded-[2rem] border border-slate-200 bg-white/70 p-5" x-data="{ open: false }">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-sm font-black text-ink">{% if lang == 'fr' %}Supprimer mon compte{% else %}Delete my account{% endif %}</h2>
+        <p class="text-xs font-bold text-slate-600 mt-0.5">{% if lang == 'fr' %}Tout est effacé tout de suite : étoiles, progrès, avatars.{% else %}Everything is erased right away: stars, progress, avatars.{% endif %}</p>
+      </div>
+      <button @click="open = !open" class="rounded-xl border border-coral/40 bg-coral-light px-3 py-2 text-xs font-black text-coral hover:bg-coral hover:text-white transition">{% if lang == 'fr' %}Supprimer…{% else %}Delete…{% endif %}</button>
+    </div>
+    <form x-show="open" x-cloak method="post" action="{% url 'quiz:delete_account' %}?lang={{ lang }}" class="mt-4 flex flex-wrap items-center gap-2">
+      {% csrf_token %}
+      <input type="text" name="confirm" placeholder="DELETE" autocomplete="off" class="rounded-xl border border-coral/40 bg-white px-3 py-2 text-sm font-bold text-ink focus:outline-none focus:border-coral">
+      <button type="submit" class="rounded-xl bg-coral px-4 py-2 text-xs font-black text-white hover:bg-coral-dark transition">{% if lang == 'fr' %}Confirmer{% else %}Confirm{% endif %}</button>
+      <span class="text-[11px] font-bold text-slate-600">{% if lang == 'fr' %}Écris DELETE pour confirmer.{% else %}Type DELETE to confirm.{% endif %}</span>
+    </form>
+  </section>
+
 {% endblock %}

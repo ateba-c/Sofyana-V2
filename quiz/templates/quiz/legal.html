@@ -1,0 +1,56 @@
+{% extends base_template %}
+{% block title %}{% if lang == 'fr' %}Confidentialité et conditions{% else %}Privacy and terms{% endif %} — Sofyana{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-6">
+  <section class="card-solid rounded-[2rem] p-6 sm:p-8">
+    <p class="text-xs font-extrabold uppercase tracking-[0.24em] text-teal">{% if lang == 'fr' %}Mis à jour le 26 septembre 2026{% else %}Updated September 26, 2026{% endif %}</p>
+    <h1 class="mt-2 font-display text-3xl font-extrabold text-ink">{% if lang == 'fr' %}Confidentialité et conditions d'utilisation{% else %}Privacy and terms of use{% endif %}</h1>
+    <p class="mt-3 text-sm font-bold text-[var(--text-soft)]">
+      {% if lang == 'fr' %}Sofyana est fait pour des enfants. Nous collectons le strict minimum, nous ne vendons rien à personne et il n'y a aucune publicité.{% else %}Sofyana is built for children. We collect the bare minimum, we sell nothing to anyone, and there are no ads.{% endif %}
+    </p>
+  </section>
+
+  <section class="card-solid rounded-[2rem] p-6 sm:p-8 space-y-5 text-sm font-bold text-ink leading-relaxed">
+    <div>
+      <h2 class="font-display text-xl font-extrabold">{% if lang == 'fr' %}Ce que nous gardons{% else %}What we keep{% endif %}</h2>
+      <ul class="mt-2 list-disc pl-5 space-y-1 text-[var(--text-soft)]">
+        <li>{% if lang == 'fr' %}<strong class="text-ink">Compte élève :</strong> un nom d'utilisateur (un prénom ou un surnom suffit), un mot de passe chiffré, l'année scolaire et l'avatar choisi.{% else %}<strong class="text-ink">Student account:</strong> a username (a first name or nickname is enough), an encrypted password, the school grade and the chosen avatar.{% endif %}</li>
+        <li>{% if lang == 'fr' %}<strong class="text-ink">Compte parent :</strong> un nom d'utilisateur, un mot de passe chiffré et une adresse courriel, utilisée seulement pour confirmer le compte et vous joindre au sujet de votre compte.{% else %}<strong class="text-ink">Parent account:</strong> a username, an encrypted password and an email address, used only to confirm the account and to reach you about your account.{% endif %}</li>
+        <li>{% if lang == 'fr' %}<strong class="text-ink">Progression :</strong> les exercices faits, si la réponse était bonne, le temps passé, les étoiles et les devoirs assignés par le parent. C'est ce qui fait fonctionner le tableau de bord.{% else %}<strong class="text-ink">Progress:</strong> the exercises done, whether the answer was right, time spent, stars and the homework a parent assigned. This is what powers the dashboard.{% endif %}</li>
+        <li>{% if lang == 'fr' %}<strong class="text-ink">Recherches :</strong> le texte tapé dans « Trouver un exercice », conservé 90 jours pour améliorer le contenu, puis supprimé. Les photos ne sont jamais enregistrées.{% else %}<strong class="text-ink">Searches:</strong> the text typed in "Find an exercise", kept 90 days to improve the content, then deleted. Photos are never stored.{% endif %}</li>
+      </ul>
+    </div>
+    <div>
+      <h2 class="font-display text-xl font-extrabold">{% if lang == 'fr' %}Ce que nous ne faisons pas{% else %}What we do not do{% endif %}</h2>
+      <ul class="mt-2 list-disc pl-5 space-y-1 text-[var(--text-soft)]">
+        <li>{% if lang == 'fr' %}Aucun nom complet, date de naissance, adresse, école ou photo de profil n'est demandé.{% else %}No full name, birth date, address, school or profile photo is asked for.{% endif %}</li>
+        <li>{% if lang == 'fr' %}Aucun traceur publicitaire, aucun outil d'analyse tiers, aucun témoin (cookie) autre que celui de votre session.{% else %}No ad trackers, no third-party analytics, no cookies other than your login session.{% endif %}</li>
+        <li>{% if lang == 'fr' %}Nous ne vendons ni ne partageons les données avec qui que ce soit à des fins commerciales.{% else %}We do not sell or share data with anyone for commercial purposes.{% endif %}</li>
+      </ul>
+    </div>
+    <div>
+      <h2 class="font-display text-xl font-extrabold">{% if lang == 'fr' %}Qui voit quoi{% else %}Who sees what{% endif %}</h2>
+      <ul class="mt-2 list-disc pl-5 space-y-1 text-[var(--text-soft)]">
+        <li>{% if lang == 'fr' %}Les données sont hébergées au Canada (Toronto) et chiffrées en transit.{% else %}Data is hosted in Canada (Toronto) and encrypted in transit.{% endif %}</li>
+        <li>{% if lang == 'fr' %}« Trouver un exercice » envoie le texte ou la photo à un service d'intelligence artificielle externe pour reconnaître la compétence, puis la réponse est affichée. N'incluez pas de nom, de visage ni d'information personnelle dans une photo.{% else %}"Find an exercise" sends the text or photo to an external AI service to recognise the skill, then shows the result. Do not include names, faces or personal information in a photo.{% endif %}</li>
+        <li>{% if lang == 'fr' %}Un parent voit la progression des enfants liés à son compte, et rien d'autre.{% else %}A parent sees the progress of the children linked to their account, and nothing else.{% endif %}</li>
+      </ul>
+    </div>
+    <div>
+      <h2 class="font-display text-xl font-extrabold">{% if lang == 'fr' %}Vos droits{% else %}Your rights{% endif %}</h2>
+      <p class="mt-2 text-[var(--text-soft)]">
+        {% if lang == 'fr' %}Vous pouvez supprimer un compte à tout moment depuis la page Profil (élève) ou le tableau de bord (parent, y compris les comptes des enfants liés). Tout est effacé immédiatement. Pour toute question ou pour demander une copie de vos données, écrivez à <a class="text-teal underline" href="mailto:{{ contact_email }}">{{ contact_email }}</a>.{% else %}You can delete an account at any time from the Profile page (student) or the dashboard (parent, including linked children's accounts). Everything is erased immediately. For any question, or to request a copy of your data, write to <a class="text-teal underline" href="mailto:{{ contact_email }}">{{ contact_email }}</a>.{% endif %}
+      </p>
+    </div>
+  </section>
+
+  <section class="card-solid rounded-[2rem] p-6 sm:p-8 space-y-3 text-sm font-bold text-[var(--text-soft)] leading-relaxed">
+    <h2 class="font-display text-xl font-extrabold text-ink">{% if lang == 'fr' %}Conditions d'utilisation{% else %}Terms of use{% endif %}</h2>
+    <p>{% if lang == 'fr' %}Sofyana est un outil d'entraînement en mathématiques. Il complète l'école, il ne la remplace pas, et il ne garantit aucun résultat scolaire.{% else %}Sofyana is a maths practice tool. It complements school, does not replace it, and guarantees no academic result.{% endif %}</p>
+    <p>{% if lang == 'fr' %}Un compte enfant est créé par un parent ou tuteur, ou avec sa permission. En créant ou en liant un compte enfant, vous confirmez être son parent ou tuteur.{% else %}A child account is created by a parent or guardian, or with their permission. By creating or linking a child account, you confirm you are that child's parent or guardian.{% endif %}</p>
+    <p>{% if lang == 'fr' %}Les exercices, les explications et le code de Sofyana nous appartiennent. Vous pouvez les utiliser pour votre famille ; toute reproduction commerciale est interdite.{% else %}Sofyana's exercises, explanations and code belong to us. You may use them for your family; commercial reproduction is not allowed.{% endif %}</p>
+    <p>{% if lang == 'fr' %}Le service est fourni « tel quel » pendant sa phase de lancement. Nous pouvons le modifier ou l'interrompre ; nous vous préviendrons par courriel (parents) avant toute fermeture.{% else %}The service is provided "as is" during its launch phase. We may change or discontinue it; parents will be notified by email before any shutdown.{% endif %}</p>
+  </section>
+</div>
+{% endblock %}

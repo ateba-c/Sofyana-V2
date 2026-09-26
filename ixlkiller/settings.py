@@ -54,6 +54,35 @@ LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.deepseek.com/anthropi
 LLM_MODEL    = os.environ.get('LLM_MODEL', 'deepseek-flash')
 LLM_TIMEOUT  = float(os.environ.get('LLM_TIMEOUT', '60'))
 
+# ── Email (parent account confirmation) ──────────────────────────────────────
+# Set EMAIL_HOST (+ EMAIL_HOST_USER / EMAIL_HOST_PASSWORD) in the environment to
+# send real mail; without it, messages are printed to the console (dev) and the
+# app keeps working with unverified parent accounts.
+EMAIL_HOST          = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT          = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS       = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_BACKEND       = ('django.core.mail.backends.smtp.EmailBackend' if EMAIL_HOST
+                       else 'django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', 'Sofyana <no-reply@sofyana.app>')
+CONTACT_EMAIL       = os.environ.get('CONTACT_EMAIL', 'bonjour@sofyana.app')
+SITE_URL            = os.environ.get('SITE_URL', 'https://sofyana.app')
+
+# ── Production hardening (only when DEBUG is off) ────────────────────────────
+if not DEBUG:
+    SESSION_COOKIE_SECURE   = True
+    CSRF_COOKIE_SECURE      = True
+    SESSION_COOKIE_HTTPONLY = True
+    SECURE_SSL_REDIRECT     = False        # nginx already redirects http → https
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_HSTS_SECONDS     = 60 * 60 * 24 * 30
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_REFERRER_POLICY  = 'strict-origin-when-cross-origin'
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS         = 'DENY'
+    SESSION_COOKIE_AGE      = 60 * 60 * 24 * 30   # 30 days
+
 
 # Application definition
 
