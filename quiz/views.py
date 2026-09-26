@@ -184,6 +184,7 @@ def logout_view(request):
 
 
 MAX_QUESTION_SECONDS = 300
+RESOLUTION_UNLOCK_AT = 5   # correct answers at Hard that open the problem-solving level
 
 
 def _topic_label(topic_slug, lang='en'):
@@ -501,17 +502,20 @@ def practice_page(request, topic):
     level_seq = skill_map().get(topic, {}).get('level_sequence') or ['easy', 'medium', 'hard']
     if level not in level_seq:
         level = 'medium' if 'medium' in level_seq else level_seq[0]
+    # A new practice session: the streak / done / score badges start from zero.
+    request.session.pop(f'ps_{topic}', None)
     # The 4th level (problem solving) opens after 5 correct answers at the hard level.
     resolution_unlocked = True
     locked_notice = ''
     if 'resolution' in level_seq:
         hard_correct = ProblemInteraction.objects.filter(user=request.user, topic=topic, level='hard', is_correct=True).count()
-        resolution_unlocked = hard_correct >= 5
+        resolution_unlocked = hard_correct >= RESOLUTION_UNLOCK_AT
         if level == 'resolution' and not resolution_unlocked:
             level = 'hard'
-            locked_notice = (f"Réussis {5 - hard_correct} question{'s' if 5 - hard_correct > 1 else ''} de plus au niveau Difficile pour débloquer la Résolution."
+            left = RESOLUTION_UNLOCK_AT - hard_correct
+            locked_notice = (f"Réussis {left} question{'s' if left > 1 else ''} de plus au niveau Difficile pour débloquer la Résolution (des problèmes écrits à interpréter)."
                              if lang == 'fr' else
-                             f"Get {5 - hard_correct} more correct at Hard to unlock Problem solving.")
+                             f"Get {left} more correct at Hard to unlock Problem solving (word problems to interpret).")
     topic_info = None
     for g in topic_groups():
         for t in g['topics']:
@@ -625,15 +629,17 @@ def practice_check(request, topic):
     # ── Extended session stats ────────────────────────────────────────────────
     key   = f'ps_{topic}'
     stats = request.session.get(key, {
-        'streak': 0, 'total': 0, 'wrong_streak': 0,
+        'streak': 0, 'total': 0, 'correct': 0, 'wrong_streak': 0,
         'level_correct': 0, 'level_total': 0,
     })
     # Migrate old sessions that only had streak/total
     stats.setdefault('wrong_streak', 0)
+    stats.setdefault('correct', 0)
     stats.setdefault('level_correct', 0)
     stats.setdefault('level_total', 0)
 
     if correct:
+        stats['correct']       += 1
         stats['streak']        += 1
         stats['wrong_streak']   = 0
         stats['level_correct'] += 1
@@ -713,6 +719,10 @@ def practice_check(request, topic):
     )
     for pa in ParentAssignment.objects.filter(student=request.user, topic_slug=topic, completed_at__isnull=True):
         pa.record_answer(correct, time_taken)
+    resolution_just_unlocked = False
+    if correct and level == 'hard' and 'resolution' in (skill_map().get(topic, {}).get('level_sequence') or []):
+        hard_correct = ProblemInteraction.objects.filter(user=request.user, topic=topic, level='hard', is_correct=True).count()
+        resolution_just_unlocked = hard_correct == RESOLUTION_UNLOCK_AT
     from django.db.models import F
     if correct:
         stars_earned = stars_value
@@ -772,6 +782,8 @@ def practice_check(request, topic):
         'correct':               correct,
         'streak':                stats['streak'],
         'total':                 stats['total'],
+        'correct_count':         stats['correct'],
+        'resolution_just_unlocked': resolution_just_unlocked,
         'wrong_streak':          stats['wrong_streak'],
         'stars_earned':          stars_earned,
         'total_stars':           total_stars_now,

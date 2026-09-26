@@ -6,6 +6,7 @@
      data-correct="{{ correct|lower }}"
      data-streak="{{ streak }}"
      data-total="{{ total }}"
+     data-correct-count="{{ correct_count }}"
      data-stars-earned="{{ stars_earned }}"
      {% if not suggested_action %}
      hx-get="{% url 'quiz:practice_next' topic %}?lang={{ lang }}&level={{ level }}"
@@ -13,6 +14,18 @@
      hx-target="#practice-area"
      hx-swap="outerHTML"
      {% endif %}>
+
+  {% if resolution_just_unlocked %}
+  <div class="rounded-2xl border-2 border-amber bg-amber-light px-4 py-3 flex flex-wrap items-center justify-between gap-3 animate-pop">
+    <div class="text-sm font-black text-amber-800">
+      🧩 {% if lang == 'fr' %}Bravo ! Tu as débloqué le niveau <strong>Résolution</strong> : des problèmes écrits à interpréter.{% else %}Well done! You unlocked the <strong>Problem solving</strong> level: word problems to interpret.{% endif %}
+    </div>
+    <a href="{% url 'quiz:practice_page' topic %}?lang={{ lang }}&level=resolution"
+       class="rounded-xl bg-amber px-4 py-2 text-xs font-black text-white hover:bg-amber-dark transition">
+      {% if lang == 'fr' %}Essayer maintenant →{% else %}Try it now →{% endif %}
+    </a>
+  </div>
+  {% endif %}
 
   <!-- Question card (answered/frozen state) -->
   <div class="card-glass rounded-2xl p-3 sm:p-4">

@@ -219,7 +219,7 @@ function practiceUI() {
     onStat(d) {
       this.streak = d.streak;
       this.total = d.total;
-      if (d.correct) this.correct_count++;
+      this.correct_count = d.correct_count;
       if (this.streak > this.best) this.best = this.streak;
       this.session_stars += d.stars_earned || 0;
     }
@@ -233,6 +233,7 @@ document.addEventListener('htmx:afterSettle', () => {
     correct: area.dataset.correct === 'true',
     streak: parseInt(area.dataset.streak || 0, 10),
     total: parseInt(area.dataset.total || 0, 10),
+    correct_count: parseInt(area.dataset.correctCount || 0, 10),
     stars_earned: parseInt(area.dataset.starsEarned || 0, 10),
   }}));
 });
