@@ -747,3 +747,7 @@ TOPIC_GROUPS = [
         {'slug': 'g6-clock-planning', 'name_en': 'Clock: Plan the Schedule', 'name_fr': 'Horloge : planifier l\'horaire'},
     ]},
 ]
+
+# ── Curriculum upgrade (2026-10): new skills + rewrites, see registry_plus.py ──
+from .registry_plus import merge as _merge_plus
+_merge_plus(GENERATORS, SKILL_MAP, TOPIC_GROUPS)

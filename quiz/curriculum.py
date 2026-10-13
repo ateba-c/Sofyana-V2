@@ -136,6 +136,17 @@ CURRICULUM_REFS = {
     'g6-digit-value': [12, 24],
     'g6-place-value-change': [12],
     'g6-money-compare': [14, 126],
+    # ── WP2 fractions (curriculum upgrade) ──
+    'g3-fraction-words': [31, 39, 40],
+    'g3-numerator-denominator': [30, 40],
+    'g4-fraction-benchmark': [32],
+    'g4-equivalent-fractions': [33, 113],
+    'g5-fraction-meanings': [29],
+    'g5-order-same-numerator': [37],
+    'g6-order-related-denominators': [36],
+    'g6-simplify-fraction': [114, 117],
+    'g6-fraction-add-related': [115],
+    'g6-whole-times-fraction': [82, 116],
     # Not in the audit on purpose: fraction-multiply / fraction-divide (beyond primary),
     # Roman numerals (enrichment), g6-relevant-info (cross-cutting problem solving).
 }

@@ -1,3 +1,4 @@
+# Usage: python docs/curriculum/coverage_map.py docs/curriculum/AUDIT_REFERENCE.md <out.md>
 # Builds the per-entry coverage table from the audit matrix + a hand-made status map.
 # C = covered, P = partial, M = missing, X = off-screen (physical manipulation / calculator), D = decision needed
 import sys, io, collections, re
@@ -263,6 +264,10 @@ S = {
 236: ('P', 'probability-vocab', 'WP10'),
 }
 
+sys.path.insert(0, __import__('os').path.dirname(__import__('os').path.abspath(__file__)))
+from coverage_upgrades import UPGRADES  # noqa: E402
+S.update(UPGRADES)
+
 rows = []
 for l in open(AUDIT, encoding='utf-8'):
     if not l.startswith('| QC-'):
@@ -315,3 +320,4 @@ for n, dom, t, g in rows:
     tbl.append(f'| QC-{n:03d} | {t} | `{g}` | {LBL[st]} | {sk} | {note} |')
 open(sys.argv[2], 'w', encoding='utf-8').write(summary + '\n\n<!--TABLE-->\n' + '\n'.join(tbl) + '\n')
 print(summary)
+

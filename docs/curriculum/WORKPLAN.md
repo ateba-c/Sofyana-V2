@@ -22,7 +22,7 @@ Session log (append one line per working session):
 
 | Date | Session summary | Last commit |
 |---|---|---|
-| 2026-10-13 | Branch + workplan created; Phase A started | — |
+| 2026-10-13 | Branch + workplan; Phase A done; WP2 fractions done (score 57 → 72 covered) | see git log |
 
 ---
 
@@ -44,6 +44,9 @@ Session log (append one line per working session):
 - Primary rules: no √, no negatives (until D2), audit number limits, fractions with related denominators in grade paths.
 - Tests: 40 runs × 3 levels through the shared `_check`, plus a correctness test per skill where the answer can be recomputed.
 - Seed: each batch adds a migration `00NN_seed_<batch>.py` calling `quiz.migrations.0020_curriculum_refs.seed_all` (seeds new skills + fills `curriculum_ref`).
+- Wiring: new skills go in `quiz/generators/registry_plus.py` (PLUS_GENERATORS / PLUS_SKILL_MAP / PLUS_GROUPS); shared builders in `generators/kit.py` (mc/typed/ordering/match) and pictures in `quiz/illustrations.py`.
+- Tests: add the module's correctness tests to `quiz/test_curriculum_plus.py` (the structural loop already covers every PLUS skill).
+- Coverage: when a skill lands, add its QC entries to `docs/curriculum/coverage_upgrades.py`; `python docs/curriculum/coverage_map.py docs/curriculum/AUDIT_REFERENCE.md out.md` prints the live score.
 - Coverage source of truth: `docs/curriculum/coverage_map.py` (status per QC entry) — update statuses when a skill lands; regenerate Appendix A with it in F4.
 - New pictures use the generic `canvas` shape (`quiz/illustrations.py`) unless an existing renderer fits.
 
@@ -62,17 +65,17 @@ Session log (append one line per working session):
 ## Phase B — Core grades 3–6 numbers (WP2, WP3, WP4)  ← current phase
 
 WP2 Fractions
-- [ ] B2.1 `g3-fraction-words` (031, 040)
-- [ ] B2.2 `g3-numerator-denominator` (030)
-- [ ] B2.3 `g4-fraction-benchmark` (032)
-- [ ] B2.4 `g4-equivalent-fractions` (033, 113)
-- [ ] B2.5 `g5-fraction-meanings` (029)
-- [ ] B2.6 `g5-order-same-numerator` (037)
-- [ ] B2.7 `g6-order-related-denominators` (036)
-- [ ] B2.8 `g6-simplify-fraction` (114, 117)
-- [ ] B2.9 `g6-fraction-add-related` (115)
-- [ ] B2.10 `g6-whole-times-fraction` (116, 082)
-- [ ] B2.11 `fraction-shape` upgrade: circles + collections (027)
+- [x] B2.1 `g3-fraction-words` (031, 040)
+- [x] B2.2 `g3-numerator-denominator` (030)
+- [x] B2.3 `g4-fraction-benchmark` (032)
+- [x] B2.4 `g4-equivalent-fractions` (033, 113)
+- [x] B2.5 `g5-fraction-meanings` (029)
+- [x] B2.6 `g5-order-same-numerator` (037)
+- [x] B2.7 `g6-order-related-denominators` (036)
+- [x] B2.8 `g6-simplify-fraction` (114, 117)
+- [x] B2.9 `g6-fraction-add-related` (115)
+- [x] B2.10 `g6-whole-times-fraction` (116, 082)
+- [x] B2.11 `fraction-shape` upgrade: circles + collections (027)
 
 WP3 Decimals & percentages
 - [ ] B3.1 `g4-decimal-grid` (041, 042)

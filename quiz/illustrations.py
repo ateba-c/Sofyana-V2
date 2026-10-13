@@ -77,3 +77,64 @@ class Canvas:
         if self.css_w:
             d['css_w'] = self.css_w
         return d
+
+
+# ── fractions ─────────────────────────────────────────────────────────────────
+
+def fraction_bars(rows, w=300, row_h=34, gap=14, color=BLUE, labels=None):
+    """
+    One or more stacked bars of the same length. rows = [(coloured, parts), …].
+    ``labels`` (optional) = text drawn left of each bar. No fraction is printed.
+    """
+    left = 46 if labels else 10
+    bar_w = w - left - 10
+    h = len(rows) * row_h + (len(rows) - 1) * gap + 16
+    c = Canvas(w, h, max_h=min(60 * len(rows) + 20, 200), css_w='max-w-md')
+    for r, (n, d) in enumerate(rows):
+        y = 8 + r * (row_h + gap)
+        part = bar_w / d
+        for i in range(d):
+            c.rect(left + i * part, y, part, row_h, fill=TINTS[color] if i >= n else color, stroke=INK, sw=1.5)
+        if labels:
+            c.text(left - 8, y + row_h / 2 + 5, labels[r], size=14, anchor='end', bold=True)
+    return c.shape()
+
+
+def fraction_circle(n, d, r=60, color=GREEN):
+    c = Canvas(2 * r + 20, 2 * r + 20, max_h=150)
+    cx = cy = r + 10
+    if d == 1:
+        c.circle(cx, cy, r, fill=color if n else TINTS[color], stroke=INK, sw=2)
+        return c.shape()
+    for i in range(d):
+        a0 = math.pi / 2 - i * 2 * math.pi / d
+        a1 = a0 - 2 * math.pi / d
+        x0, y0 = cx + r * math.cos(a0), cy - r * math.sin(a0)
+        x1, y1 = cx + r * math.cos(a1), cy - r * math.sin(a1)
+        large = 1 if d == 1 else 0
+        c.path(f'M {cx},{cy} L {_r(x0)},{_r(y0)} A {r},{r} 0 {large},1 {_r(x1)},{_r(y1)} Z',
+               fill=color if i < n else TINTS[color], stroke=INK, sw=1.5)
+    return c.shape()
+
+
+def collection(total, coloured, per_row=None, color=AMBER, icon='circle'):
+    """A set of objects (circles or stars), ``coloured`` of them filled."""
+    per_row = per_row or (total if total <= 6 else math.ceil(total / 2) if total <= 12 else math.ceil(total / 3))
+    rows = math.ceil(total / per_row)
+    cell = 34
+    w, h = per_row * cell + 12, rows * cell + 12
+    c = Canvas(w, h, max_h=min(40 * rows + 20, 160), css_w='max-w-xs')
+    for i in range(total):
+        x = 6 + (i % per_row) * cell + cell / 2
+        y = 6 + (i // per_row) * cell + cell / 2
+        fill = color if i < coloured else '#FFFFFF'
+        if icon == 'star':
+            pts = []
+            for k in range(10):
+                rr = 14 if k % 2 == 0 else 6
+                a = math.pi / 2 + k * math.pi / 5
+                pts.append((x + rr * math.cos(a), y - rr * math.sin(a)))
+            c.poly(pts, fill=fill, stroke=INK, sw=1.5)
+        else:
+            c.circle(x, y, 13, fill=fill, stroke=INK, sw=1.8)
+    return c.shape()
