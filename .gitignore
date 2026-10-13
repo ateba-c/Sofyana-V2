@@ -41,3 +41,6 @@ SUMMARY.md
 
 # secrets
 .env
+
+# Curriculum upgrade tracker is versioned on purpose
+!docs/curriculum/*.md
