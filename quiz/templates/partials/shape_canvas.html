@@ -18,8 +18,8 @@
 
     <svg viewBox="0 0 {{ shape.vw }} {{ shape.vh }}"
          xmlns="http://www.w3.org/2000/svg"
-         class="{% if shape.type == 'expression' %}w-full max-w-xs{% elif count == 1 %}w-60 max-w-full{% elif count == 2 %}w-40{% else %}w-32{% endif %} h-auto"
-         style="overflow: visible; max-height: {% if count == 1 and shape.type != 'expression' %}170px{% else %}88px{% endif %}; filter: drop-shadow(0 4px 10px {{ shape.stroke }}44);">
+         class="{% if shape.type == 'expression' %}w-full max-w-xs{% elif shape.type == 'canvas' %}w-full {{ shape.css_w|default:'max-w-sm' }}{% elif count == 1 %}w-60 max-w-full{% elif count == 2 %}w-40{% else %}w-32{% endif %} h-auto"
+         style="overflow: visible; max-height: {% if shape.max_h %}{{ shape.max_h }}px{% elif count == 1 and shape.type != 'expression' %}170px{% else %}88px{% endif %}; filter: drop-shadow(0 4px 10px {{ shape.stroke }}44);">
 
       <defs>
         <filter id="shape-glow-{{ forloop.counter }}" x="-20%" y="-20%" width="140%" height="140%">
@@ -76,17 +76,20 @@
         {% elif mark.type == 'line' %}
         <line x1="{{ mark.x1 }}" y1="{{ mark.y1 }}"
               x2="{{ mark.x2 }}" y2="{{ mark.y2 }}"
-              stroke="{{ mark.color|default:shape.stroke }}" stroke-width="2.2" opacity="0.8"/>
+              stroke="{{ mark.color|default:shape.stroke }}" stroke-width="{{ mark.sw|default:'2.2' }}"
+              opacity="{{ mark.opacity|default:'0.8' }}" stroke-linecap="round"
+              {% if mark.dash %}stroke-dasharray="{{ mark.dash }}"{% endif %}/>
 
         {% elif mark.type == 'dot' %}
-        <circle cx="{{ mark.x }}" cy="{{ mark.y }}" r="4"
-                fill="{{ shape.stroke }}"/>
+        <circle cx="{{ mark.x }}" cy="{{ mark.y }}" r="{{ mark.r|default:'4' }}"
+                fill="{{ mark.fill|default:shape.stroke }}"/>
 
         {% elif mark.type == 'rect' %}
         <rect x="{{ mark.x }}" y="{{ mark.y }}"
               width="{{ mark.w }}" height="{{ mark.h }}"
               fill="{{ mark.fill|default:'none' }}"
-              stroke="{{ mark.stroke|default:'none' }}"/>
+              stroke="{{ mark.stroke|default:'none' }}"
+              stroke-width="{{ mark.sw|default:'1' }}" rx="{{ mark.rx|default:'0' }}"/>
 
         {% elif mark.type == 'circle' %}
         <circle cx="{{ mark.cx }}" cy="{{ mark.cy }}" r="{{ mark.r }}"

@@ -251,6 +251,18 @@ def render_shape(shape: dict, vw: float = 260, vh: float = 185,
     lbs = shape.get('labels', {})      # user-supplied label overrides
     avail_w, avail_h = vw - 2 * pad, vh - 2 * pad
 
+    # ── canvas: coordinates already computed by quiz/illustrations.py ─────────
+    if stype == 'canvas':
+        out.update(vw=shape.get('vw', vw), vh=shape.get('vh', vh),
+                   max_h=shape.get('max_h'), css_w=shape.get('css_w'),
+                   stroke=shape.get('stroke', '#475569'))
+        out['marks'] = list(shape.get('marks', []))
+        out['labels'] = [_label(l.get('text', ''), l['x'], l['y'], l.get('anchor', 'middle'),
+                                l.get('size', 13), l.get('bold', False), l.get('color', '#1E0A3C'),
+                                l.get('transform', ''))
+                         for l in shape.get('labels', [])]
+        return out
+
     # ── rectangle / square ──────────────────────────────────────────────────
     if stype in ('rectangle', 'square'):
         w_val = float(shape.get('width', shape.get('side', 6)))
@@ -1219,8 +1231,11 @@ def render_shapes(shape_data: list, count_override: int | None = None) -> list:
     is_thermometer = shape_data and shape_data[0].get('type') == 'thermometer'
     is_number_line = shape_data and shape_data[0].get('type') in ('number_line_svg', 'fraction_number_line')
     is_pie_chart   = shape_data and shape_data[0].get('type') == 'pie_chart_multi'
+    is_canvas      = shape_data and all(s.get('type') == 'canvas' for s in shape_data)
 
-    if is_thermometer:
+    if is_canvas:
+        vw, vh, pad = 300, 200, 0          # each canvas carries its own viewBox
+    elif is_thermometer:
         vw, vh, pad = 160, 260, 10
     elif is_number_line:
         vw, vh, pad = 340, 100, 14

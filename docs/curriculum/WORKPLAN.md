@@ -15,7 +15,8 @@ Status keys: `[ ]` todo · `[~]` in progress · `[x]` done (commit = task ID in 
 2. `python manage.py test quiz` — must be green before starting the next task.
 3. `git log --oneline -15` — every finished task is one commit whose message starts with its task ID (e.g. `B2.3:`). Cross-check with the boxes below; the commit log wins if they disagree.
 4. Continue with the first `[ ]` / `[~]` task in the **Current phase**. Update this file in the same commit as the work.
-5. After adding skills: new data migration re-running the seed (copy `0020_*`), `python manage.py migrate`, add the slugs to `quiz/curriculum.py` (QC refs), tests in `quiz/test_curriculum_*.py`.
+5. Eyeball new pictures: `python manage.py preview_skills <slugs…> --lang fr --png preview.png` (headless Chrome screenshot of sample problems; write outputs outside the repo).
+6. After adding skills: new data migration re-running the seed (copy `0020_*`), `python manage.py migrate`, add the slugs to `quiz/curriculum.py` (QC refs), tests in `quiz/test_curriculum_*.py`.
 
 Session log (append one line per working session):
 
@@ -42,21 +43,23 @@ Session log (append one line per working session):
 - Wired in `GENERATORS`, `SKILL_MAP`, `TOPIC_GROUPS` (`quiz/generators/__init__.py`); seed migration; `quiz/curriculum.py` QC refs.
 - Primary rules: no √, no negatives (until D2), audit number limits, fractions with related denominators in grade paths.
 - Tests: 40 runs × 3 levels through the shared `_check`, plus a correctness test per skill where the answer can be recomputed.
+- Seed: each batch adds a migration `00NN_seed_<batch>.py` calling `quiz.migrations.0020_curriculum_refs.seed_all` (seeds new skills + fills `curriculum_ref`).
+- Coverage source of truth: `docs/curriculum/coverage_map.py` (status per QC entry) — update statuses when a skill lands; regenerate Appendix A with it in F4.
 - New pictures use the generic `canvas` shape (`quiz/illustrations.py`) unless an existing renderer fits.
 
 ---
 
-## Phase A — Pre-launch hygiene (WP0)  ← current phase
+## Phase A — Pre-launch hygiene (WP0)
 
 - [x] A1 Typed answers at medium/hard for `add`, `subtract`, `multiply`, `divide`, `decimal-*`, `fraction-*` (D4)
 - [x] A2 English number words in EN sessions: `write-number`, `read-decimal` (+ verify `read-number`, `g5-large-integer`)
 - [x] A3 Scope caps: `read-decimal` ≤ thousandths; `decimal-multiply` product ≤ hundredths
 - [x] A4 Wording fixes: plurals/articles (`fraction-collection`, `g5-probability-frac`), quantity-aware comparatives in `resolution.measurements`, `g5-data-table` duplicate table text, probability-0 answer
 - [x] A5 "1re année" label for grade 1 in every grade picker
-- [ ] A6 `quiz/curriculum.py` (slug → QC refs) + migration filling `Skill.curriculum_ref`
-- [ ] A7 Generic `canvas` illustration type (`render_shape` + template) — infrastructure for B–E
+- [x] A6 `quiz/curriculum.py` (slug → QC refs) + migration filling `Skill.curriculum_ref`
+- [x] A7 Generic `canvas` illustration type (`render_shape` + template) — infrastructure for B–E
 
-## Phase B — Core grades 3–6 numbers (WP2, WP3, WP4)
+## Phase B — Core grades 3–6 numbers (WP2, WP3, WP4)  ← current phase
 
 WP2 Fractions
 - [ ] B2.1 `g3-fraction-words` (031, 040)

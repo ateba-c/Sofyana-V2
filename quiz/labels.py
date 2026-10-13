@@ -170,6 +170,12 @@ def localize_problem(q, lang):
                 shape[key] = [translate_label(x, lang) for x in shape[key]]
         if shape.get('title'):
             shape['title'] = translate_label(shape['title'], lang)
+        # canvas labels may carry their own English text
+        for lbl in shape.get('labels') or []:
+            if isinstance(lbl, dict) and 'text_en' in lbl:
+                if lang == 'en':
+                    lbl['text'] = lbl['text_en']
+                del lbl['text_en']
     if q.get('q_type') == 'mix_match' and q.get('pairs'):
         q['correct_answers'] = [p['right'] for p in q['pairs']]
     elif q.get('q_type') in ('ordering', 'sorting') and q.get('items'):
