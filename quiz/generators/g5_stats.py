@@ -188,7 +188,7 @@ def g5_probability_frac_gen(level='easy'):
                              f"Quelle est la probabilité de piger une bille {color_fr} ?"),
         'prompt_en':        (f"A bag has {total} marbles: {favorable} {color_en} "
                              f"and {total - favorable} of other colours. "
-                             f"What is the probability of drawing a {color_en} marble?"),
+                             f"What is the probability of drawing {'an' if color_en[0] in 'aeiou' else 'a'} {color_en} marble?"),
         'hint_fr':          'Probabilité = nombre de cas favorables / nombre total de cas.',
         'hint_en':          'Probability = number of favourable outcomes / total number of outcomes.',
         'show_illustration': False,
@@ -325,7 +325,10 @@ def g5_data_table_gen(level='easy'):
     cats, ctx_fr, ctx_en = random.choice(_TABLE_CONTEXTS)
     n_cats  = len(cats) if level == 'hard' else random.randint(3, len(cats))
     cats    = cats[:n_cats]
-    values  = [random.randint(2, 15) for _ in cats]
+    while True:                 # a tie on the max/min would make a "wrong" choice correct too
+        values = [random.randint(2, 15) for _ in cats]
+        if values.count(max(values)) == 1 and values.count(min(values)) == 1:
+            break
 
     q_type  = random.choice(['largest', 'smallest', 'total', 'difference'])
 
@@ -354,10 +357,8 @@ def g5_data_table_gen(level='easy'):
     elif q_type == 'total':
         total   = sum(values)
         correct = str(total)
-        prompt_fr = (f"Tableau des {ctx_fr} : {', '.join(f'{c}: {v}' for c,v in zip(cats,values))}. "
-                     f"Combien d'élèves au total ont répondu ?")
-        prompt_en = (f"Table of {ctx_en}: {', '.join(f'{_L(c, "en")}: {v}' for c,v in zip(cats,values))}. "
-                     f"How many students answered in total?")
+        prompt_fr = f"Combien d'élèves au total ont répondu ?"
+        prompt_en = "How many students answered in total?"
         tagged_candidates = [
             (str(total - values[-1]), 'forgot_last',
              'Add ALL categories.',
@@ -378,10 +379,8 @@ def g5_data_table_gen(level='easy'):
         correct = str(diff)
         max_cat = cats[values.index(max_v)]
         min_cat = cats[values.index(min_v)]
-        prompt_fr = (f"Tableau des {ctx_fr} : {', '.join(f'{c}: {v}' for c,v in zip(cats,values))}. "
-                     f"Combien de plus {max_cat} a-t-il par rapport à {min_cat} ?")
-        prompt_en = (f"Table of {ctx_en}: {', '.join(f'{_L(c, "en")}: {v}' for c,v in zip(cats,values))}. "
-                     f"How many more does {_L(max_cat, 'en')} have compared to {_L(min_cat, 'en')}?")
+        prompt_fr = f"Combien de plus {max_cat} a-t-il par rapport à {min_cat} ?"
+        prompt_en = f"How many more does {_L(max_cat, 'en')} have compared to {_L(min_cat, 'en')}?"
         tagged_candidates = [
             (str(max_v),     'max_not_diff',   'Subtract the two values.', 'Soustrait les deux valeurs.'),
             (str(min_v),     'min_not_diff',   'Subtract the two values.', 'Soustrait les deux valeurs.'),
@@ -391,8 +390,8 @@ def g5_data_table_gen(level='easy'):
 
     table_str = ' | '.join(f"{c}: {v}" for c, v in zip(cats, values))
     table_str_en = ' | '.join(f"{_L(c, 'en')}: {v}" for c, v in zip(cats, values))
-    full_prompt_fr = f"Tableau : {table_str}. {prompt_fr}"
-    full_prompt_en = f"Table: {table_str_en}. {prompt_en}"
+    full_prompt_fr = f"Tableau des {ctx_fr} : {table_str}. {prompt_fr}"
+    full_prompt_en = f"Table of {ctx_en}: {table_str_en}. {prompt_en}"
 
     if q_type in ('largest', 'smallest'):
         full_prompt_fr = prompt_fr + f" (Tableau : {table_str})"

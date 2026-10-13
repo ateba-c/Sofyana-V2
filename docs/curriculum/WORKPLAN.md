@@ -51,8 +51,8 @@ Session log (append one line per working session):
 - [x] A1 Typed answers at medium/hard for `add`, `subtract`, `multiply`, `divide`, `decimal-*`, `fraction-*` (D4)
 - [x] A2 English number words in EN sessions: `write-number`, `read-decimal` (+ verify `read-number`, `g5-large-integer`)
 - [x] A3 Scope caps: `read-decimal` ≤ thousandths; `decimal-multiply` product ≤ hundredths
-- [ ] A4 Wording fixes: plurals/articles (`fraction-collection`, `g5-probability-frac`), quantity-aware comparatives in `resolution.measurements`, `g5-data-table` duplicate table text, probability-0 answer
-- [ ] A5 "1re année" label for grade 1 in every grade picker
+- [x] A4 Wording fixes: plurals/articles (`fraction-collection`, `g5-probability-frac`), quantity-aware comparatives in `resolution.measurements`, `g5-data-table` duplicate table text, probability-0 answer
+- [x] A5 "1re année" label for grade 1 in every grade picker
 - [ ] A6 `quiz/curriculum.py` (slug → QC refs) + migration filling `Skill.curriculum_ref`
 - [ ] A7 Generic `canvas` illustration type (`render_shape` + template) — infrastructure for B–E
 

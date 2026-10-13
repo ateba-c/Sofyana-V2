@@ -1,3 +1,4 @@
+{% load quiz_extras %}
 {% with cur_lang=lang|default:'en' %}<!DOCTYPE html>
 <html lang="{{ cur_lang }}" x-data="{ lang: '{{ cur_lang }}', menuOpen: false }">
 <head>
@@ -210,7 +211,7 @@
             <div class="flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-gradient-to-br from-brand-light to-amber-light text-3xl">{{ student.avatar_emoji }}</div>
             <div class="min-w-0">
               <div class="truncate text-lg font-black text-ink">{{ user.username }}</div>
-              <div class="text-xs font-bold text-brand">{% if student and student.grade %}🎓 {% if cur_lang == 'fr' %}{{ student.grade }}e année{% else %}Grade {{ student.grade }}{% endif %}{% elif cur_lang == 'fr' %}Prêt(e) pour l'aventure !{% else %}Ready to explore!{% endif %}</div>
+              <div class="text-xs font-bold text-brand">{% if student and student.grade %}🎓 {% if cur_lang == 'fr' %}{{ student.grade|ordinal_fr }} année{% else %}Grade {{ student.grade }}{% endif %}{% elif cur_lang == 'fr' %}Prêt(e) pour l'aventure !{% else %}Ready to explore!{% endif %}</div>
             </div>
           </div>
           <div class="mt-4 grid grid-cols-2 gap-2">
@@ -407,7 +408,7 @@
       const lang = '{{ cur_lang }}';
       const myGrade = {{ student.grade|default:'null' }};
       const gradeLabel = (g) => g === null ? (lang === 'fr' ? 'Général' : 'General')
-        : (lang === 'fr' ? g + 'e année' : 'Grade ' + g) + (g === myGrade ? (lang === 'fr' ? ' ★ mon année' : ' ★ my grade') : '');
+        : (lang === 'fr' ? (g == 1 ? '1re' : g + 'e') + ' année' : 'Grade ' + g) + (g === myGrade ? (lang === 'fr' ? ' ★ mon année' : ' ★ my grade') : '');
       return {
         q: '', open: false,
         get groups() {

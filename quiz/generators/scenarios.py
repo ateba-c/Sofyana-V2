@@ -124,14 +124,14 @@ ACTIVITIES = [
 
 # Measured objects for ordering / comparing lengths, masses, capacities.
 # (fr_plural, en_plural, unit, low, high)
-MEASURED = [
-    ('rubans', 'ribbons', 'mm', 500, 9999),
+MEASURED = [   # feminine French nouns only: the stories say « celle de… »
+    ('ficelles', 'strings', 'mm', 500, 9999),
     ('cordes', 'ropes', 'cm', 100, 9999),
     ('routes', 'roads', 'km', 10, 999),
-    ('sacs de farine', 'bags of flour', 'g', 500, 9999),
+    ('boîtes de farine', 'boxes of flour', 'g', 500, 9999),   # feminine: stories say « celle de… »
     ('bouteilles', 'bottles', 'mL', 100, 2000),
     ('tours', 'towers', 'm', 20, 999),
-    ('sentiers', 'trails', 'm', 100, 9999),
+    ('pistes', 'trails', 'm', 100, 9999),
     ('valises', 'suitcases', 'kg', 5, 40),
     ('rivières', 'rivers', 'km', 50, 9999),
     ('planches', 'planks', 'cm', 30, 400),

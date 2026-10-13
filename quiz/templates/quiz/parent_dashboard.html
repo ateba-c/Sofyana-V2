@@ -1,4 +1,5 @@
 {% extends 'quiz/base.html' %}
+{% load quiz_extras %}
 {% block title %}{% if lang == 'fr' %}Tableau de bord Parent{% else %}Parent Dashboard{% endif %} — Sofyana{% endblock %}
 
 {% block content %}
@@ -108,7 +109,7 @@
           </label>
           <select name="child_grade" class="w-full bg-white border-2 border-teal-light rounded-xl px-4 py-3 text-sm font-bold text-ink focus:outline-none focus:border-teal">
             {% for g in available_grades %}
-            <option value="{{ g }}">{% if lang == 'fr' %}{{ g }}e année{% else %}Grade {{ g }}{% endif %}</option>
+            <option value="{{ g }}">{% if lang == 'fr' %}{{ g|ordinal_fr }} année{% else %}Grade {{ g }}{% endif %}</option>
             {% endfor %}
           </select>
           <button type="submit"
@@ -212,7 +213,7 @@
                         class="rounded-full bg-amber-light px-3 py-1 text-xs font-extrabold text-amber-800 border-0 focus:outline-none focus:ring-2 focus:ring-amber/40">
                   <option value="" {% if not child.grade %}selected{% endif %}>🎓 {% if lang == 'fr' %}Année ?{% else %}Grade ?{% endif %}</option>
                   {% for g in available_grades %}
-                  <option value="{{ g }}" {% if child.grade == g %}selected{% endif %}>🎓 {% if lang == 'fr' %}{{ g }}e année{% else %}Grade {{ g }}{% endif %}</option>
+                  <option value="{{ g }}" {% if child.grade == g %}selected{% endif %}>🎓 {% if lang == 'fr' %}{{ g|ordinal_fr }} année{% else %}Grade {{ g }}{% endif %}</option>
                   {% endfor %}
                 </select>
               </form>
@@ -407,7 +408,7 @@
                 <div x-data="{ open: {% if group.grade == child.grade or not child.grade and forloop.first %}true{% else %}false{% endif %} }">
                   <button type="button" @click="open = !open" class="w-full flex items-center justify-between px-3 py-2 text-left {% if group.grade == child.grade %}bg-amber-light/40{% else %}bg-soft/60{% endif %}">
                     <span class="text-xs font-black text-ink">{{ group.icon }} {% if lang == 'fr' %}{{ group.name_fr }}{% else %}{{ group.name_en }}{% endif %}
-                      {% if group.grade %}<span class="ml-1 rounded-full bg-amber-light px-2 py-0.5 text-[10px] text-amber-800">{% if lang == 'fr' %}{{ group.grade }}e année{% else %}Grade {{ group.grade }}{% endif %}</span>{% else %}<span class="ml-1 rounded-full bg-soft px-2 py-0.5 text-[10px]">{% if lang == 'fr' %}toutes les années{% else %}all grades{% endif %}</span>{% endif %}
+                      {% if group.grade %}<span class="ml-1 rounded-full bg-amber-light px-2 py-0.5 text-[10px] text-amber-800">{% if lang == 'fr' %}{{ group.grade|ordinal_fr }} année{% else %}Grade {{ group.grade }}{% endif %}</span>{% else %}<span class="ml-1 rounded-full bg-soft px-2 py-0.5 text-[10px]">{% if lang == 'fr' %}toutes les années{% else %}all grades{% endif %}</span>{% endif %}
                       {% if group.grade == child.grade %}<span class="ml-1 text-[10px] text-brand">★ {% if lang == 'fr' %}son année{% else %}their grade{% endif %}</span>{% endif %}
                     </span>
                     <span class="text-xs font-black text-brand" x-text="(open || q) ? '−' : '+'"></span>

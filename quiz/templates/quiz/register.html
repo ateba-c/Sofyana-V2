@@ -1,4 +1,5 @@
 {% extends 'quiz/base.html' %}
+{% load quiz_extras %}
 {% block title %}{% if lang == 'fr' %}Créer un compte{% else %}Create Account{% endif %} — Sofyana{% endblock %}
 
 {% block content %}
@@ -89,7 +90,7 @@
                   class="w-full bg-white border-2 border-brand-light rounded-xl px-4 py-3 text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm font-bold transition">
             <option value="">{% if lang == 'fr' %}Je ne sais pas / toutes les années{% else %}Not sure / all grades{% endif %}</option>
             {% for g in available_grades %}
-            <option value="{{ g }}" {% if form.grade.value|stringformat:'s' == g|stringformat:'s' %}selected{% endif %}>🎓 {% if lang == 'fr' %}{{ g }}e année{% else %}Grade {{ g }}{% endif %}</option>
+            <option value="{{ g }}" {% if form.grade.value|stringformat:'s' == g|stringformat:'s' %}selected{% endif %}>🎓 {% if lang == 'fr' %}{{ g|ordinal_fr }} année{% else %}Grade {{ g }}{% endif %}</option>
             {% endfor %}
           </select>
           <p class="text-[11px] font-bold text-[var(--text-soft)] mt-1">{% if lang == 'fr' %}Tes exercices s'afficheront en premier. Tu pourras changer d'année dans ton profil.{% else %}Your exercises will show up first. You can change it later in your profile.{% endif %}</p>

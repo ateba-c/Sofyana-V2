@@ -288,9 +288,25 @@ def schedule(grade):
 # Family 4 — measurements with relations: longest / shortest / order
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Wording by kind of quantity, so a suitcase is never "shorter" than another.
+_MEASURE_WORDS = {
+    'length':   dict(verb_fr='mesure', less_en='shorter', more_en='longer', top_fr='la plus longue', top_en='the longest one',
+                     low_fr='la plus courte', low_en='the shortest', tot_fr='la longueur totale', tot_en='the total length',
+                     times_fr='plus longue', times_en='as long as'),
+    'mass':     dict(verb_fr='pèse', less_en='lighter', more_en='heavier', top_fr='la plus lourde', top_en='the heaviest one',
+                     low_fr='la plus légère', low_en='the lightest', tot_fr='la masse totale', tot_en='the total mass',
+                     times_fr='plus lourde', times_en='as heavy as'),
+    'capacity': dict(verb_fr='contient', less_en='less', more_en='more', top_fr='celle qui contient le plus', top_en='the one that holds the most',
+                     low_fr='celle qui contient le moins', low_en='the one that holds the least', tot_fr='la quantité totale', tot_en='the total amount',
+                     times_fr='plus grande', times_en='as much as'),
+}
+_UNIT_KIND = {'g': 'mass', 'kg': 'mass', 'mL': 'capacity', 'L': 'capacity'}
+
+
 def measurements(grade):
     things_fr, things_en, unit, lo, hi = sc.pick_measured()
-    if grade >= 5:
+    w = _MEASURE_WORDS[_UNIT_KIND.get(unit, 'length')]
+    if grade >= 5 and unit != 'kg':          # a 400 kg suitcase is not a thing
         lo, hi = lo * 10, hi * 10
     elif grade == 3:
         lo, hi = max(1, lo // 10), max(20, hi // 10)
@@ -301,33 +317,33 @@ def measurements(grade):
     vals = {names[0]: base, names[1]: base + d1, names[2]: (base + d1) * k if grade == 6 else base - d1 if base > d1 else base + 2 * d1}
     thing_fr = things_fr.split(' ')[0]
     if grade >= 5:
-        rel3_fr = f"{names[2]} en a une **{k} fois** plus longue que celle {sc.de(names[1])}"
-        rel3_en = f"{names[2]}'s is **{k} times** as long as {names[1]}'s"
+        rel3_fr = f"{names[2]} en a une **{k} fois** {w['times_fr']} que celle {sc.de(names[1])}"
+        rel3_en = f"{names[2]}'s is **{k} times** {w['times_en']} {names[1]}'s"
         st3 = f'{N(vals[names[1]])} × {k} = {N(vals[names[2]])}'
     else:
-        rel3_fr = f"celle de {names[2]} mesure **{N(abs(vals[names[2]] - base))} {unit}** de {'moins' if vals[names[2]] < base else 'plus'} que celle {sc.de(names[0])}"
-        rel3_en = f"{names[2]}'s is **{N(abs(vals[names[2]] - base))} {unit}** {'shorter' if vals[names[2]] < base else 'longer'} than {names[0]}'s"
+        rel3_fr = f"celle {sc.de(names[2])} {w['verb_fr']} **{N(abs(vals[names[2]] - base))} {unit}** de {'moins' if vals[names[2]] < base else 'plus'} que celle {sc.de(names[0])}"
+        rel3_en = f"{names[2]}'s is **{N(abs(vals[names[2]] - base))} {unit}** {w['less_en'] if vals[names[2]] < base else w['more_en']} than {names[0]}'s"
         st3 = f'{N(base)} {"−" if vals[names[2]] < base else "+"} {N(abs(vals[names[2]] - base))} = {N(vals[names[2]])}'
-    story_fr = (f"Trois amis comparent leurs {things_fr}. Celle {sc.de(names[0])} mesure **{N(base)} {unit}**, "
-                f"celle {sc.de(names[1])} mesure **{N(d1)} {unit}** de plus, et {rel3_fr}.")
-    story_en = (f"Three friends compare their {things_en}. {names[0]}'s measures **{N(base)} {unit}**, "
+    story_fr = (f"Trois amis comparent leurs {things_fr}. Celle {sc.de(names[0])} {w['verb_fr']} **{N(base)} {unit}**, "
+                f"celle {sc.de(names[1])} {w['verb_fr']} **{N(d1)} {unit}** de plus, et {rel3_fr}.")
+    story_en = (f"Three friends compare their {things_en}. {names[0]}'s {'measures' if w is _MEASURE_WORDS['length'] else 'is'} **{N(base)} {unit}**, "
                 f"{names[1]}'s is **{N(d1)} {unit}** more, and {rel3_en}.")
     variant = random.choice(['longest', 'sum', 'gap'])
     steps_fr = [f'{names[1]} : {N(base)} + {N(d1)} = {N(vals[names[1]])}', f'{names[2]} : {st3}']
     steps_en = [f'{names[1]}: {N(base)} + {N(d1)} = {N(vals[names[1]])}', f'{names[2]}: {st3}']
     if variant == 'longest':
         big = max(vals.values())
-        return _problem(f"{story_fr} Quelle est la mesure de la plus longue ? (en {unit})", f"{story_en} What is the measure of the longest one? (in {unit})", big,
+        return _problem(f"{story_fr} Quelle est la mesure de {w['top_fr']} ? (en {unit})", f"{story_en} What is the measure of {w['top_en']}? (in {unit})", big,
                         steps_fr + [f'La plus longue : {N(big)} {unit}'], steps_en + [f'Longest: {N(big)} {unit}'],
                         'Calcule chaque mesure, puis compare.', 'Work out each measure, then compare.')
     if variant == 'sum':
         tot = sum(vals.values())
-        return _problem(f"{story_fr} Quelle est la longueur totale des trois ? (en {unit})", f"{story_en} What is the total length of all three? (in {unit})", tot,
+        return _problem(f"{story_fr} Quelle est {w['tot_fr']} des trois ? (en {unit})", f"{story_en} What is {w['tot_en']} of all three? (in {unit})", tot,
                         steps_fr + [' + '.join(N(v) for v in vals.values()) + f' = {N(tot)}', f'{N(tot)} {unit}'],
                         steps_en + [' + '.join(N(v) for v in vals.values()) + f' = {N(tot)}', f'{N(tot)} {unit}'],
                         'Calcule chaque mesure, puis additionne les trois.', 'Work out each measure, then add all three.')
     gap = max(vals.values()) - min(vals.values())
-    return _problem(f"{story_fr} Quel écart y a-t-il entre la plus longue et la plus courte ? (en {unit})", f"{story_en} What is the gap between the longest and the shortest? (in {unit})", gap,
+    return _problem(f"{story_fr} Quel écart y a-t-il entre {w['top_fr']} et {w['low_fr']} ? (en {unit})", f"{story_en} What is the gap between {w['top_en']} and {w['low_en']}? (in {unit})", gap,
                     steps_fr + [f'{N(max(vals.values()))} − {N(min(vals.values()))} = {N(gap)}', f'{N(gap)} {unit}'],
                     steps_en + [f'{N(max(vals.values()))} − {N(min(vals.values()))} = {N(gap)}', f'{N(gap)} {unit}'],
                     'Calcule chaque mesure, trouve la plus grande et la plus petite, puis soustrais.',

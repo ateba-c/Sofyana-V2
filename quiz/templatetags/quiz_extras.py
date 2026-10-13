@@ -51,3 +51,13 @@ def percent(value, max_val):
         return round(int(value) / int(max_val) * 100)
     except (ValueError, ZeroDivisionError):
         return 0
+
+
+@register.filter
+def ordinal_fr(n):
+    """French school-grade ordinal: 1 → « 1re », 2 → « 2e »…"""
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return n
+    return '1re' if n == 1 else f'{n}e'

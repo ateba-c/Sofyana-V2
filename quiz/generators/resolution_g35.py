@@ -386,17 +386,18 @@ def probability_bag(grade):
             [f'Total: {" + ".join(map(str, counts))} = {total}', f'Not {colors[i][1]}: {total} − {counts[i]} = {fav}', f'{fav}/{total} = {fr.numerator}/{fr.denominator}'],
             'Cas favorables (toutes les autres couleurs) sur le total.', 'Favourable cases (all the other colours) over the total.',
             'fraction', [f'{fr.numerator}/{fr.denominator}', f'{fav}/{total}'])
-    removed = random.randint(1, counts[i])
+    removed = random.randint(1, max(1, counts[i] - 1))   # usually some are left; 0 only when there was one
     new_total = total - removed
     fav = counts[i] - removed
     fr = Fraction(fav, new_total) if new_total else Fraction(0)
+    shown = '0' if fav == 0 else f'{fr.numerator}/{fr.denominator}'
     return _problem(
         f"Un sac contient {', '.join(f'**{n}** billes {c[0]}' for n, c in zip(counts, colors))}. {who} retire **{removed}** bille{'s' if removed > 1 else ''} {colors[i][0] if removed > 1 else colors[i][0][:-1]}, puis pige au hasard. Quelle est la probabilité de piger une bille {colors[i][0][:-1]} ? (fraction)",
         f"A bag holds {', '.join(f'**{n}** {c[1]} marbles' for n, c in zip(counts, colors))}. {who} removes **{removed}** {colors[i][1]} marble{'s' if removed > 1 else ''}, then picks at random. What is the probability of picking a {colors[i][1]} marble? (fraction)",
-        f'{fr.numerator}/{fr.denominator}', [f'Il reste {counts[i]} − {removed} = {fav} {colors[i][0]}', f'Total : {total} − {removed} = {new_total}', f'{fav}/{new_total} = {fr.numerator}/{fr.denominator}'],
+        shown, [f'Il reste {counts[i]} − {removed} = {fav} {colors[i][0]}', f'Total : {total} − {removed} = {new_total}', f'{fav}/{new_total} = {fr.numerator}/{fr.denominator}'],
         [f'{counts[i]} − {removed} = {fav} {colors[i][1]} left', f'Total: {total} − {removed} = {new_total}', f'{fav}/{new_total} = {fr.numerator}/{fr.denominator}'],
         'Mets à jour le nombre de billes de la couleur ET le total.', 'Update both the number of that colour AND the total.',
-        'fraction', [f'{fr.numerator}/{fr.denominator}', f'{fav}/{new_total}'])
+        'fraction', [shown, f'{fav}/{new_total}'])
 
 
 def temperature_change(grade):

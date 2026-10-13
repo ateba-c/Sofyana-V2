@@ -754,11 +754,14 @@ def fraction_collection_gen(level='easy'):
          'Compte bien.'),
     ]
 
-    prompt_fr = (f"Dans un groupe de {total} {cat_fr}, il y a {part_a} {item_a_fr} "
-                 f"et {part_b} {item_b_fr}. "
+    def _n(k, word):            # "1 tulip", "3 tulips" — every plural here ends in s / x
+        return f'{k} {word[:-1]}' if k == 1 else f'{k} {word}'
+
+    prompt_fr = (f"Dans un groupe de {total} {cat_fr}, il y a {_n(part_a, item_a_fr)} "
+                 f"et {_n(part_b, item_b_fr)}. "
                  f"Quelle fraction des {cat_fr} sont des {item_b_fr} ?")
-    prompt_en = (f"In a group of {total} {cat_en}, there are {part_a} {item_a_en} "
-                 f"and {part_b} {item_b_en}. "
+    prompt_en = (f"In a group of {total} {cat_en}, there {'is' if part_a == 1 else 'are'} {_n(part_a, item_a_en)} "
+                 f"and {_n(part_b, item_b_en)}. "
                  f"What fraction of the {cat_en} are {item_b_en}?")
 
     return {

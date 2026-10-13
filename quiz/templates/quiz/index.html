@@ -1,4 +1,5 @@
 {% extends 'quiz/base.html' %}
+{% load quiz_extras %}
 {% block title %}Sofyana — {% if lang == 'fr' %}Apprendre avec joie{% else %}Learn with Joy{% endif %}{% endblock %}
 
 {% block content %}
@@ -91,7 +92,7 @@
             {% endif %}
           </p>
           <p class="text-xs font-bold text-[var(--text-soft)] mt-0.5">
-            {% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == a.topic_slug %}{% if g.grade %}<span class="rounded-full bg-amber-light px-2 py-0.5 text-amber-800">{% if lang == 'fr' %}{{ g.grade }}e année{% else %}Grade {{ g.grade }}{% endif %}</span>{% endif %}{% endif %}{% endfor %}{% endfor %}
+            {% for g in all_topic_groups %}{% for t in g.topics %}{% if t.slug == a.topic_slug %}{% if g.grade %}<span class="rounded-full bg-amber-light px-2 py-0.5 text-amber-800">{% if lang == 'fr' %}{{ g.grade|ordinal_fr }} année{% else %}Grade {{ g.grade }}{% endif %}</span>{% endif %}{% endif %}{% endfor %}{% endfor %}
             {% if a.note %}{{ a.note }}{% endif %}
           </p>
           <p class="text-[11px] font-bold text-[var(--text-soft)] mt-0.5">
@@ -212,7 +213,7 @@
         <p class="text-xs font-extrabold uppercase tracking-[0.24em] text-brand">{% if lang == 'fr' %}Chemin des compétences{% else %}Skill path{% endif %}</p>
         <h2 class="mt-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">
           {% if grade_filter %}
-            {% if lang == 'fr' %}{{ grade_filter }}e année — compétences{% else %}Grade {{ grade_filter }} skills{% endif %}
+            {% if lang == 'fr' %}{{ grade_filter|ordinal_fr }} année — compétences{% else %}Grade {{ grade_filter }} skills{% endif %}
           {% else %}
             {% if lang == 'fr' %}Où veux-tu aller aujourd'hui ?{% else %}Where do you want to go today?{% endif %}
           {% endif %}
