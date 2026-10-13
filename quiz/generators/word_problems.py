@@ -17,6 +17,7 @@ Difficulty for numeric exercises:
 
 import random
 from .base import _tagged_shuffle_mc
+from .numeration import _to_en
 
 # ─── helper: decimal to French words ─────────────────────────────────────────
 
@@ -69,7 +70,7 @@ def _decimal_to_words(integer_part: int, decimal_str: str):
     places = len(decimal_str)
     dec_val = int(decimal_str)
     int_fr = _int_to_fr(integer_part)
-    int_en = str(integer_part)  # simplified for English
+    int_en = _to_en(integer_part) if integer_part else 'zero'
     dec_fr = _int_to_fr(dec_val)
     place_fr = _DEC_PLACE_NAMES_FR.get(places, f'{places} décimales')
     place_en = _DEC_PLACE_NAMES_EN.get(places, f'{places} decimal places')
@@ -78,7 +79,8 @@ def _decimal_to_words(integer_part: int, decimal_str: str):
         place_fr += 's'
         place_en += 's'
     words_fr = f'{int_fr} virgule {dec_fr}' if dec_val else f'{int_fr}'
-    words_en = f'{int_en} point {decimal_str}' if dec_val else f'{int_en}'
+    # School reading: "twenty-five and eighty-four hundredths"
+    words_en = f'{int_en} and {_to_en(dec_val)} {place_en}' if dec_val else f'{int_en}'
     return words_fr, words_en
 
 
@@ -468,7 +470,7 @@ def choose_operation_gen(level: str = 'medium') -> dict:
 def read_decimal_gen(level: str = 'medium') -> dict:
     """
     Typed — given French words for a decimal, write the digits.
-    Max 2 decimal places (money-safe), up to 4 for hard level.
+    Max 2 decimal places (money-safe), 3 (thousandths) for hard level.
     """
     if level == 'easy':
         int_part  = random.randint(0, 9)
@@ -482,7 +484,7 @@ def read_decimal_gen(level: str = 'medium') -> dict:
         dec_str    = str(dec_digit)
     else:
         int_part  = random.randint(0, 99)
-        dec_places = random.choice([3, 4])
+        dec_places = 3                     # primary stops at thousandths
         dec_digit  = random.randint(10 ** (dec_places - 1), 10 ** dec_places - 1)
         dec_str    = str(dec_digit)
 
@@ -494,7 +496,7 @@ def read_decimal_gen(level: str = 'medium') -> dict:
     return {
         'q_type': 'text_input',
         'prompt_fr': f'Écris en chiffres : **{words_fr}**',
-        'prompt_en': f'Write in digits: **{words_fr}**',
+        'prompt_en': f'Write in digits: **{words_en}**',
         'hint_fr': 'La virgule sépare la partie entière de la partie décimale.',
         'hint_en': 'The decimal point separates the whole part from the decimal part.',
         'shape_data': [],

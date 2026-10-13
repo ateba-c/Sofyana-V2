@@ -166,3 +166,26 @@ def _unique(*groups):
                 seen.add(s)
                 out.append(s)
     return out
+
+
+def typed_above_easy(gen, answer_type=None):
+    """
+    Wrap an MC generator so that medium/hard problems are answered by typing the
+    result (a computation must not be guessable among 5 choices). Easy stays MC.
+    """
+    def wrapped(level='medium'):
+        q = gen(level)
+        if level == 'easy' or q.get('q_type') != 'multiple_choice':
+            return q
+        correct = next((c for c in q.get('choices') or [] if c.get('correct')), None)
+        if correct is not None:
+            answers = [correct['label']] + [a for a in q.get('correct_answers') or [] if a != correct['label']]
+            q['correct_answers'] = answers
+        q['q_type'] = 'text_input'
+        q['choices'] = []
+        if answer_type:
+            q['answer_type'] = answer_type
+        return q
+    wrapped.__name__ = getattr(gen, '__name__', 'typed_gen')
+    wrapped.__doc__ = gen.__doc__
+    return wrapped

@@ -3,7 +3,7 @@
 Source plan: [`PLAN.md`](PLAN.md) (copy of `CURRICULUM_UPGRADE_PLAN.md`, review of 2026-10-13).
 Branch: **`curriculum-upgrade`** (local; not pushed, not deployed until the owner says so).
 
-Status keys: `[ ]` todo · `[~]` in progress · `[x]` done (commit hash) · `[!]` blocked (reason)
+Status keys: `[ ]` todo · `[~]` in progress · `[x]` done (commit = task ID in `git log`) · `[!]` blocked (reason)
 
 ---
 
@@ -48,9 +48,9 @@ Session log (append one line per working session):
 
 ## Phase A — Pre-launch hygiene (WP0)  ← current phase
 
-- [ ] A1 Typed answers at medium/hard for `add`, `subtract`, `multiply`, `divide`, `decimal-*`, `fraction-*` (D4)
-- [ ] A2 English number words in EN sessions: `write-number`, `read-decimal` (+ verify `read-number`, `g5-large-integer`)
-- [ ] A3 Scope caps: `read-decimal` ≤ thousandths; `decimal-multiply` product ≤ hundredths
+- [x] A1 Typed answers at medium/hard for `add`, `subtract`, `multiply`, `divide`, `decimal-*`, `fraction-*` (D4)
+- [x] A2 English number words in EN sessions: `write-number`, `read-decimal` (+ verify `read-number`, `g5-large-integer`)
+- [x] A3 Scope caps: `read-decimal` ≤ thousandths; `decimal-multiply` product ≤ hundredths
 - [ ] A4 Wording fixes: plurals/articles (`fraction-collection`, `g5-probability-frac`), quantity-aware comparatives in `resolution.measurements`, `g5-data-table` duplicate table text, probability-0 answer
 - [ ] A5 "1re année" label for grade 1 in every grade picker
 - [ ] A6 `quiz/curriculum.py` (slug → QC refs) + migration filling `Skill.curriculum_ref`

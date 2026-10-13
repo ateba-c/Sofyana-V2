@@ -16,6 +16,7 @@ from .geometry import (
     name_polygon_gen, count_sides_gen,
 )
 from .number_properties import squares_gen, primes_gen, even_odd_gen
+from .base import typed_above_easy
 
 # ── Grade 3 — Numération ──────────────────────────────────────────────────────
 from .numeration import (
@@ -112,20 +113,20 @@ from .resolution import RESOLUTION, RESOLUTION_FAMILIES
 
 GENERATORS = {
     # ── Integer Arithmetic
-    'add':                add_gen,
-    'subtract':           subtract_gen,
-    'multiply':           multiply_gen,
-    'divide':             divide_gen,
+    'add':                typed_above_easy(add_gen, 'integer'),
+    'subtract':           typed_above_easy(subtract_gen, 'integer'),
+    'multiply':           typed_above_easy(multiply_gen, 'integer'),
+    'divide':             typed_above_easy(divide_gen, 'integer'),
     # ── Decimal Arithmetic
-    'decimal-add':        decimal_add_gen,
-    'decimal-subtract':   decimal_subtract_gen,
-    'decimal-multiply':   decimal_multiply_gen,
-    'decimal-divide':     decimal_divide_gen,
+    'decimal-add':        typed_above_easy(decimal_add_gen, 'decimal'),
+    'decimal-subtract':   typed_above_easy(decimal_subtract_gen, 'decimal'),
+    'decimal-multiply':   typed_above_easy(decimal_multiply_gen, 'decimal'),
+    'decimal-divide':     typed_above_easy(decimal_divide_gen, 'decimal'),
     # ── Fraction Arithmetic
-    'fraction-add':       fraction_add_gen,
-    'fraction-subtract':  fraction_subtract_gen,
-    'fraction-multiply':  fraction_multiply_gen,
-    'fraction-divide':    fraction_divide_gen,
+    'fraction-add':       typed_above_easy(fraction_add_gen, 'fraction'),
+    'fraction-subtract':  typed_above_easy(fraction_subtract_gen, 'fraction'),
+    'fraction-multiply':  typed_above_easy(fraction_multiply_gen, 'fraction'),
+    'fraction-divide':    typed_above_easy(fraction_divide_gen, 'fraction'),
     # ── Comparisons
     'compare-int':        compare_int_gen,
     'compare-decimal':    compare_decimal_gen,

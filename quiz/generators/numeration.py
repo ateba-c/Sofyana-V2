@@ -237,7 +237,7 @@ def read_number_gen(level: str = 'medium') -> dict:
 
 def write_number_gen(level: str = 'medium') -> dict:
     """
-    Typed — given French words, write the digits.
+    Typed — given the number in words (in the session language), write the digits.
     """
     n = _pick_n(level)
     words_fr = _to_fr(n)
@@ -246,7 +246,7 @@ def write_number_gen(level: str = 'medium') -> dict:
     return {
         'q_type': 'text_input',
         'prompt_fr': f'Écris en chiffres : **{words_fr}**',
-        'prompt_en': f'Write in digits: **{words_fr}**',
+        'prompt_en': f'Write in digits: **{words_en}**',
         'hint_fr': 'Identifie les milliers, centaines, dizaines et unités.',
         'hint_en': 'Identify the thousands, hundreds, tens, and units.',
         'shape_data': [],

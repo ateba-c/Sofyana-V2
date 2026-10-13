@@ -300,10 +300,11 @@ def decimal_multiply_gen(level='medium'):
         a = _dec_rand(1.0, 99.9, 1)
         b = random.randint(2, 20)
     else:
-        a = _dec_rand(1.0, 99.9, 2)
+        # tenths × tenths: the product never goes past the hundredths (primary limit)
+        a = _dec_rand(1.0, 99.9, 1)
         b = _dec_rand(1.0, 9.9, 1)
     result = round(a * b, places + 1)
-    a_s = _dec_fmt(a, places)
+    a_s = _dec_fmt(a, 1 if level == 'hard' else places)
     b_s = str(b) if isinstance(b, int) else _dec_fmt(b, 1)
     r_s = f'{result:g}'
     r = result

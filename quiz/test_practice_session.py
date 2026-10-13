@@ -23,8 +23,11 @@ class PracticeSessionTests(TestCase):
     def _answer_correct(self, topic, level):
         self.client.get(f'/practice/{topic}/next/?level={level}')
         q = self.client.session[f'pq_{topic}']
-        idx = next(i for i, c in enumerate(q['choices']) if c['correct'])
-        return self.client.post(f'/practice/{topic}/check/?lang=en', {'level': level, 'answer': str(idx)})
+        if q['q_type'] == 'text_input':
+            answer = q['correct_answers'][0]
+        else:
+            answer = str(next(i for i, c in enumerate(q['choices']) if c['correct']))
+        return self.client.post(f'/practice/{topic}/check/?lang=en', {'level': level, 'answer': answer})
 
     def test_counters_reset_on_page_open_and_score_is_server_side(self):
         for _ in range(3):
