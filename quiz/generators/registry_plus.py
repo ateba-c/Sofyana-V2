@@ -18,6 +18,13 @@ from .decimals_plus import (
     g5_estimate_decimal_gen, g5_decimal_story_gen, g6_percent_gen, g6_choose_notation_gen,
     fraction_to_decimal_gen,
 )
+from .operations_plus import (
+    g3_equality_true_gen, g4_equivalent_expr_gen, g4_properties_gen, g6_distributive_gen,
+    g4_missing_factor_gen, g4_division_remainder_gen, g4_arrays_gen, g3_story_meaning_gen,
+    g5_expression_for_story_gen, g3_estimate_sum_gen, g5_estimate_quotient_gen,
+    g6_divisibility_gen, g6_prime_factors_gen, g6_powers_gen, g5_number_patterns_gen,
+    g4_times_tables_gen, g6_write_large_number_gen,
+)
 
 _L3 = ['easy', 'medium', 'hard']
 
@@ -51,6 +58,24 @@ PLUS_GENERATORS = {
     'g6-decimal-number-line':        g6_decimal_number_line_gen,
     'g6-percent':                    g6_percent_gen,
     'g6-choose-notation':            g6_choose_notation_gen,
+    # WP4 — operations & calculation
+    'g3-equality-true':              g3_equality_true_gen,
+    'g3-story-meaning':              g3_story_meaning_gen,
+    'g3-estimate-sum':               g3_estimate_sum_gen,
+    'g4-equivalent-expressions':     g4_equivalent_expr_gen,
+    'g4-properties':                 g4_properties_gen,
+    'g4-missing-factor':             g4_missing_factor_gen,
+    'g4-division-remainder':         g4_division_remainder_gen,
+    'g4-arrays':                     g4_arrays_gen,
+    'g4-times-tables':               g4_times_tables_gen,
+    'g5-expression-for-story':       g5_expression_for_story_gen,
+    'g5-estimate-quotient':          g5_estimate_quotient_gen,
+    'g5-number-patterns':            g5_number_patterns_gen,
+    'g6-distributive':               g6_distributive_gen,
+    'g6-divisibility':               g6_divisibility_gen,
+    'g6-prime-factors':              g6_prime_factors_gen,
+    'g6-powers':                     g6_powers_gen,
+    'g6-write-large-number':         g6_write_large_number_gen,
 }
 
 PLUS_SKILL_MAP = {
@@ -74,6 +99,23 @@ PLUS_SKILL_MAP = {
     'g6-decimal-number-line':        _sk('g4-decimal-number-line', 'g6-percent', 'compare-decimal', 'g4-decimal-number-line'),
     'g6-percent':                    _sk('g5-decimal-forms', 'g6-choose-notation', 'g5-probability-forms', 'fraction-to-decimal'),
     'g6-choose-notation':            _sk('g6-percent', 'g6-decimal-number-line', 'compare-mixed', 'g6-percent'),
+    'g3-equality-true':              _sk('missing-addend', 'g3-story-meaning', 'g4-equivalent-expressions', 'add'),
+    'g3-story-meaning':              _sk('word-problem', 'g3-estimate-sum', 'choose-operation', 'missing-addend'),
+    'g3-estimate-sum':               _sk('round-ten', 'word-problem', 'g5-estimate-quotient', 'round-ten'),
+    'g4-equivalent-expressions':     _sk('g3-equality-true', 'g4-properties', 'g6-distributive', 'g3-equality-true'),
+    'g4-properties':                 _sk('g4-equivalent-expressions', 'g4-missing-factor', 'g6-distributive', 'fact-family'),
+    'g4-missing-factor':             _sk('g4-times-tables', 'g4-division-remainder', 'g5-estimate-quotient', 'fact-family'),
+    'g4-division-remainder':         _sk('g4-missing-factor', 'g4-arrays', 'divide', 'division-sharing'),
+    'g4-arrays':                     _sk('repeated-addition', 'g4-times-tables', 'g6-distributive', 'repeated-addition'),
+    'g4-times-tables':               _sk('g4-arrays', 'g4-missing-factor', 'multiply', 'repeated-addition'),
+    'g5-expression-for-story':       _sk('g5-order-ops', 'g5-estimate-quotient', 'g5-decimal-story', 'choose-operation'),
+    'g5-estimate-quotient':          _sk('g3-estimate-sum', 'g5-expression-for-story', 'g6-estimate-product', 'g4-division-remainder'),
+    'g5-number-patterns':            _sk('number-sequence', 'g6-powers', 'squares', 'number-sequence'),
+    'g6-distributive':               _sk('g4-properties', 'g6-divisibility', 'g6-partial-products', 'g4-arrays'),
+    'g6-divisibility':               _sk('g4-times-tables', 'g6-prime-factors', 'primes', 'even-odd'),
+    'g6-prime-factors':              _sk('g6-divisibility', 'g6-powers', 'g6-simplify-fraction', 'primes'),
+    'g6-powers':                     _sk('squares', 'g6-prime-factors', 'g5-number-patterns', 'squares'),
+    'g6-write-large-number':         _sk('g5-large-integer', 'g6-digit-value', 'g6-compare', 'write-number'),
 }
 
 PLUS_GROUPS = [
@@ -100,6 +142,33 @@ PLUS_GROUPS = [
         {'slug': 'g6-decimal-number-line',   'name_en': 'Decimals Between Decimals',   'name_fr': 'Décimaux entre deux décimaux'},
         {'slug': 'g6-percent',               'name_en': 'Percentages',                 'name_fr': 'Pourcentages'},
         {'slug': 'g6-choose-notation',       'name_en': 'Fraction, Decimal or %?',     'name_fr': 'Fraction, décimal ou % ?'},
+    ]},
+    {'name_en': 'Grade 3 — Arithmetic', 'grade': 3, 'topics': [
+        {'slug': 'g3-equality-true',         'name_en': 'True Equalities',             'name_fr': 'Égalités vraies'},
+        {'slug': 'g3-story-meaning',         'name_en': 'Story Problems: + and −',     'name_fr': 'Problèmes : sens de + et −'},
+        {'slug': 'g3-estimate-sum',          'name_en': 'Estimate a Sum',              'name_fr': 'Estimer une somme'},
+    ]},
+    {'name_en': 'Grade 4 — Operations', 'name_fr': '4e année — Opérations', 'icon': '✖️', 'grade': 4, 'topics': [
+        {'slug': 'g4-times-tables',          'name_en': 'Times Tables',                'name_fr': 'Tables de multiplication'},
+        {'slug': 'g4-arrays',                'name_en': 'Arrays & Strategies',         'name_fr': 'Tableaux de points et stratégies'},
+        {'slug': 'g4-missing-factor',        'name_en': 'Missing Factor',              'name_fr': 'Facteur manquant'},
+        {'slug': 'g4-division-remainder',    'name_en': 'Division with Remainder',     'name_fr': 'Division avec reste'},
+        {'slug': 'g4-equivalent-expressions','name_en': 'Equivalent Expressions',      'name_fr': 'Expressions équivalentes'},
+        {'slug': 'g4-properties',            'name_en': 'Properties of Operations',    'name_fr': 'Propriétés des opérations'},
+    ]},
+    {'name_en': 'Grade 5 — Arithmetic', 'grade': 5, 'topics': [
+        {'slug': 'g5-expression-for-story',  'name_en': 'Expression for a Story',      'name_fr': 'Chaîne d’opérations d’un problème'},
+        {'slug': 'g5-estimate-quotient',     'name_en': 'Estimate a Quotient',         'name_fr': 'Estimer un quotient'},
+        {'slug': 'g5-number-patterns',       'name_en': 'Number Patterns',             'name_fr': 'Suites de nombres'},
+    ]},
+    {'name_en': 'Grade 6 — Number Theory', 'name_fr': '6e année — Propriétés des nombres', 'icon': '🔍', 'grade': 6, 'topics': [
+        {'slug': 'g6-divisibility',          'name_en': 'Divisibility Rules',          'name_fr': 'Critères de divisibilité'},
+        {'slug': 'g6-prime-factors',         'name_en': 'Prime Factorisation',         'name_fr': 'Facteurs premiers'},
+        {'slug': 'g6-powers',                'name_en': 'Powers & Exponents',          'name_fr': 'Puissances et exposants'},
+        {'slug': 'g6-distributive',          'name_en': 'Distributive Property',       'name_fr': 'Distributivité'},
+    ]},
+    {'name_en': 'Grade 6 — Number Sense', 'grade': 6, 'topics': [
+        {'slug': 'g6-write-large-number',    'name_en': 'Write Large Numbers',         'name_fr': 'Écrire de grands nombres'},
     ]},
     {'name_en': 'Grade 5 — Fractions', 'name_fr': '5e année — Fractions', 'icon': '½', 'grade': 5, 'topics': [
         {'slug': 'g5-fraction-meanings',     'name_en': 'What a Fraction Means',       'name_fr': 'Les sens de la fraction'},

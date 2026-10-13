@@ -229,3 +229,99 @@ class PrimaryLimitsTests(SimpleTestCase):
                     for a in GENERATORS[slug](level).get('correct_answers') or []:
                         for m in dec.finditer(str(a)):
                             self.assertLessEqual(len(m.group(1)), 3, f'{slug}/{level}: {a}')
+
+
+def _eval(expr):
+    return eval(expr.replace('×', '*').replace('÷', '//').replace('−', '-'), {'__builtins__': {}})
+
+
+class OperationsPlusTests(SimpleTestCase):
+    def test_exactly_one_true_equality(self):
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g3-equality-true', level)
+                for c in q['choices']:
+                    left, right = c['label'].split(' = ')
+                    self.assertEqual(_eval(left) == _eval(right), c['correct'], c['label'])
+
+    def test_equivalent_expression_choices(self):
+        for _ in range(60):
+            q = _q('g4-equivalent-expressions', 'medium')
+            a, b = map(int, re.findall(r'\*\*(\d+) \+ (\d+)', q['prompt_fr'])[0])
+            if q['q_type'] == 'text_input':
+                r = int(re.search(r'= (\d+) \+ \?', q['prompt_fr']).group(1))
+                self.assertEqual(r + int(q['correct_answers'][0]), a + b)
+            else:
+                for c in q['choices']:
+                    self.assertEqual(_eval(c['label']) == a + b, c['correct'], c['label'])
+
+    def test_missing_factor(self):
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g4-missing-factor', level)
+                expr = re.search(r'\*\*(.+)\*\*', q['prompt_fr']).group(1).replace('?', q['correct_answers'][0])
+                left, right = expr.split(' = ')
+                self.assertEqual(_eval(left), int(right), expr)
+
+    def test_division_remainder(self):
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g4-division-remainder', level)
+                m = re.search(r'\*\*([\d ]+) ÷ (\d+)\*\*', q['prompt_fr'])
+                if not m:
+                    continue
+                n, d = int(m.group(1).replace(' ', '')), int(m.group(2))
+                want = n // d if 'quotient' in q['prompt_fr'] else n % d
+                self.assertEqual(int(q['correct_answers'][0]), want)
+
+    def test_expression_for_story_single_right_value(self):
+        for level in LEVELS:
+            for _ in range(30):
+                q = _q('g5-expression-for-story', level)
+                right = next(c for c in q['choices'] if c['correct'])['label']
+                for c in q['choices']:
+                    if not c['correct']:
+                        self.assertNotEqual(c['label'], right)
+
+    def test_divisibility_single_answer(self):
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g6-divisibility', level)
+                k = int(re.search(r'par (\d+)', q['prompt_fr']).group(1))
+                for c in q['choices']:
+                    self.assertEqual(int(c['label']) % k == 0, c['correct'], (k, c['label']))
+
+    def test_prime_factorisation(self):
+        from math import prod
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g6-prime-factors', level)
+                n = int(re.search(r'\*\*(\d+)\*\*', q['prompt_fr']).group(1))
+                if q['q_type'] == 'multiple_choice':
+                    fs = [int(x) for x in q['correct_answers'][0].split(' × ')]
+                    self.assertEqual(prod(fs), n)
+                    self.assertTrue(all(all(f % k for k in range(2, f)) for f in fs))
+
+    def test_powers_values(self):
+        sup = {'²': 2, '³': 3, '⁴': 4, '⁵': 5}
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g6-powers', level)
+                m = re.match(r'Calcule : \*\*(\d+)([²³⁴⁵])\*\*', q['prompt_fr'])
+                if m:
+                    self.assertEqual(int(q['correct_answers'][0]), int(m.group(1)) ** sup[m.group(2)])
+
+    def test_times_tables_within_10(self):
+        for level in LEVELS:
+            for _ in range(60):
+                q = _q('g4-times-tables', level)
+                nums = list(map(int, re.findall(r'\d+', q['prompt_fr'])))
+                if '×' in q['prompt_fr']:
+                    self.assertTrue(all(x <= 10 for x in nums), nums)
+                    self.assertEqual(int(q['correct_answers'][0]), nums[0] * nums[1])
+
+    def test_write_large_number_accepts_grouping(self):
+        for _ in range(30):
+            q = _q('g6-write-large-number', 'hard')
+            n = q['correct_answers'][0]
+            self.assertTrue(check_answer(f'{int(n):,}'.replace(',', ' '), q['correct_answers'], 'integer'))

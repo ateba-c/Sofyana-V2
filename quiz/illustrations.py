@@ -179,3 +179,58 @@ def number_line(majors, minor=0, point=None, w=320, mark='?', point_color=BLUE):
         c.dot(xp, y, r=6, fill=point_color)
         c.text(xp, y - 14, mark, size=15, bold=True, color=point_color)
     return c.shape()
+
+
+# ── operations ───────────────────────────────────────────────────────────────
+
+def dot_array(rows, cols, color=RED, split_col=None):
+    """rows × cols dots; ``split_col`` colours the columns after it blue and draws a dashed cut (distributivity)."""
+    cell = 22 if max(rows, cols) <= 10 else 16
+    w, h = cols * cell + 16, rows * cell + 16
+    c = Canvas(w, h, max_h=min(rows * 24 + 30, 190), css_w='max-w-sm' if cols > 10 else 'max-w-xs')
+    for r in range(rows):
+        for k in range(cols):
+            col = color if split_col is None or k < split_col else BLUE
+            c.circle(8 + k * cell + cell / 2, 8 + r * cell + cell / 2, cell * 0.32, fill=col, stroke=col, sw=1)
+    if split_col:
+        x = 8 + split_col * cell
+        c.line(x, 2, x, h - 2, color=INK, sw=2, dash='5 4')
+    return c.shape()
+
+
+def factor_tree(tree, hide=None):
+    """
+    tree: int (leaf) or (value, left, right). ``hide`` = a value to replace by « ? »
+    (first occurrence, searched top-down). Prime leaves are circled.
+    """
+    def leaves(t):
+        return 1 if isinstance(t, int) else leaves(t[1]) + leaves(t[2])
+
+    def depth(t):
+        return 1 if isinstance(t, int) else 1 + max(depth(t[1]), depth(t[2]))
+
+    n_leaves, dep = leaves(tree), depth(tree)
+    w, h = max(160, n_leaves * 56), dep * 58 + 10
+    c = Canvas(w, h, max_h=min(dep * 60 + 20, 220), css_w='max-w-sm')
+    hidden = [False]
+
+    def draw(t, x0, x1, y):
+        val = t if isinstance(t, int) else t[0]
+        x = (x0 + x1) / 2
+        if not isinstance(t, int):
+            nl = leaves(t[1])
+            total = leaves(t)
+            xm = x0 + (x1 - x0) * nl / total
+            for (a, b, child) in ((x0, xm, t[1]), (xm, x1, t[2])):
+                c.line(x, y + 10, (a + b) / 2, y + 40, color=SOFT, sw=2)
+                draw(child, a, b, y + 58)
+        label = str(val)
+        if hide is not None and val == hide and not hidden[0]:
+            hidden[0] = True
+            label = '?'
+        if isinstance(t, int):
+            c.circle(x, y - 4, 15, fill=TINTS[GREEN], stroke=GREEN, sw=2)
+        c.text(x, y + 1, label, size=15, bold=True, color=PURPLE if label == '?' else '#1E0A3C')
+
+    draw(tree, 0, w, 22)
+    return c.shape()

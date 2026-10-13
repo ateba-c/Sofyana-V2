@@ -23,6 +23,7 @@ Session log (append one line per working session):
 | Date | Session summary | Last commit |
 |---|---|---|
 | 2026-10-13 | Branch + workplan; Phase A done; WP2 + WP3 done (covered 57 → 97 of 236) | see git log |
+| 2026-10-13 | WP4 done (covered → 129 of 236). **Full suite NOT re-run after WP4**: the run was killed (machine low on memory). `quiz.test_curriculum_plus` was green (35 tests). FIRST STEP next session: `python manage.py test quiz`. | B4 checkpoint |
 
 ---
 
@@ -62,7 +63,7 @@ Session log (append one line per working session):
 - [x] A6 `quiz/curriculum.py` (slug → QC refs) + migration filling `Skill.curriculum_ref`
 - [x] A7 Generic `canvas` illustration type (`render_shape` + template) — infrastructure for B–E
 
-## Phase B — Core grades 3–6 numbers (WP2, WP3, WP4)  ← current phase
+## Phase B — Core grades 3–6 numbers (WP2, WP3, WP4)
 
 WP2 Fractions
 - [x] B2.1 `g3-fraction-words` (031, 040)
@@ -91,24 +92,25 @@ WP3 Decimals & percentages
 - [x] B3.11 `fraction-to-decimal` hundredths (052)
 
 WP4 Operations & calculation
-- [ ] B4.1 `g3-equality-true-false` (068)
-- [ ] B4.2 `g4-equivalent-expressions` (013)
-- [ ] B4.3 `g4-properties` (069, 070)
-- [ ] B4.4 `g6-distributive` (071)
-- [ ] B4.5 `g4-missing-factor` (100)
-- [ ] B4.6 `g4-division-remainder` (099)
-- [ ] B4.7 `g4-arrays` (095, 097, 067)
-- [ ] B4.8 `g3-story-meaning` (063–065)
-- [ ] B4.9 `g5-expression-for-story` (072)
-- [ ] B4.10 `g3-estimate-sum` (083)
-- [ ] B4.11 `g5-estimate-quotient` (084)
-- [ ] B4.12 `g6-divisibility` (103)
-- [ ] B4.13 `g6-prime-factors` (101)
-- [ ] B4.14 `g6-powers` (022, 025, 102)
-- [ ] B4.15 `number-sequence` upgrade: ×2, squares, triangular (016, 107)
-- [ ] B4.16 Feature: timed fact-fluency mode (087, 094, 096)
+- [x] B4.1 `g3-equality-true-false` (068)
+- [x] B4.2 `g4-equivalent-expressions` (013)
+- [x] B4.3 `g4-properties` (069, 070)
+- [x] B4.4 `g6-distributive` (071)
+- [x] B4.5 `g4-missing-factor` (100)
+- [x] B4.6 `g4-division-remainder` (099)
+- [x] B4.7 `g4-arrays` (095, 097, 067)
+- [x] B4.8 `g3-story-meaning` (063–065)
+- [x] B4.9 `g5-expression-for-story` (072)
+- [x] B4.10 `g3-estimate-sum` (083)
+- [x] B4.11 `g5-estimate-quotient` (084)
+- [x] B4.12 `g6-divisibility` (103)
+- [x] B4.13 `g6-prime-factors` (101)
+- [x] B4.14 `g6-powers` (022, 025, 102)
+- [x] B4.15 ×2 / square / triangular / growing sequences — delivered as new skill `g5-number-patterns` (legacy `number-sequence` untouched) (016, 107)
+- [~] B4.16 Fact fluency: content done (`g4-times-tables`, typed, 10 s); **todo**: per-fact adaptive tracking in the practice view (087, 094, 096)
+- [x] B4.17 `g6-write-large-number` (008) — added: writing numbers up to 999 999
 
-## Phase C — Geometry & measurement (WP5, WP6)
+## Phase C — Geometry & measurement (WP5, WP6)  ← current phase
 
 - [ ] C5.1 `g3-solid-picture` (141, 143)
 - [ ] C5.2 `g3-prism-or-pyramid` (145, 152)
