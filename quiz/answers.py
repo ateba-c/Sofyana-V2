@@ -58,7 +58,7 @@ def _strip_units(s: str) -> str:
     s = s.strip(_CURRENCY).strip()
     # Trailing unit words / symbols: "12 cm", "5 m²", "20 °C".  Only strip when
     # no digit follows the unit, so "1 h 20 min" is NOT reduced to "1".
-    s = re.sub(r'\s*[a-zA-Zµ°²³]+[^\d]*$', '', s).strip()
+    s = re.sub(r'\s*[a-zA-Zµ°²³%]+[^\d]*$', '', s).strip()     # "%" too: "25 %" in a percent question
     s = s.strip(_CURRENCY).strip()
     return s
 

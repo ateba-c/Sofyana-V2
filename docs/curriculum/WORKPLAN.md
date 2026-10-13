@@ -22,7 +22,7 @@ Session log (append one line per working session):
 
 | Date | Session summary | Last commit |
 |---|---|---|
-| 2026-10-13 | Branch + workplan; Phase A done; WP2 fractions done (score 57 → 72 covered) | see git log |
+| 2026-10-13 | Branch + workplan; Phase A done; WP2 + WP3 done (covered 57 → 97 of 236) | see git log |
 
 ---
 
@@ -78,17 +78,17 @@ WP2 Fractions
 - [x] B2.11 `fraction-shape` upgrade: circles + collections (027)
 
 WP3 Decimals & percentages
-- [ ] B3.1 `g4-decimal-grid` (041, 042)
-- [ ] B3.2 `g4-decimal-equivalence` (044, 046)
-- [ ] B3.3 `g4-decimal-number-line` (047)
-- [ ] B3.4 `g6-decimal-number-line` (048)
-- [ ] B3.5 `g4-round-decimal` (050)
-- [ ] B3.6 `g5-times-power-of-ten` (122)
-- [ ] B3.7 `g5-estimate-decimal` (118, 119)
-- [ ] B3.8 `g5-decimal-story` (075–078)
-- [ ] B3.9 `g6-percent` (034, 053, 127–129, 131)
-- [ ] B3.10 `g6-choose-notation` (130)
-- [ ] B3.11 `fraction-to-decimal` hundredths (052)
+- [x] B3.1 `g4-decimal-grid` (041, 042)
+- [x] B3.2 `g4-decimal-equivalence` (044, 046)
+- [x] B3.3 `g4-decimal-number-line` (047)
+- [x] B3.4 `g6-decimal-number-line` (048)
+- [x] B3.5 `g4-round-decimal` (050)
+- [x] B3.6 `g5-times-power-of-ten` (122)
+- [x] B3.7 `g5-estimate-decimal` (118, 119)
+- [x] B3.8 `g5-decimal-story` (075–078)
+- [x] B3.9 `g6-percent` (034, 053, 127–129, 131)
+- [x] B3.10 `g6-choose-notation` (130)
+- [x] B3.11 `fraction-to-decimal` hundredths (052)
 
 WP4 Operations & calculation
 - [ ] B4.1 `g3-equality-true-false` (068)

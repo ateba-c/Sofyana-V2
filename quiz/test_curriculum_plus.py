@@ -159,3 +159,73 @@ class FractionsPlusTests(SimpleTestCase):
             q = _q('g3-fraction-words', 'hard')
             if q['q_type'] == 'text_input':
                 self.assertTrue(check_answer(q['correct_answers'][0], q['correct_answers'], 'fraction'))
+
+
+def _dec_in(text):
+    return [Fraction(x.replace(',', '.')) for x in re.findall(r'\*\*(\d+(?:,\d+)?)', text)]
+
+
+class DecimalsPlusTests(SimpleTestCase):
+    def test_round_and_truncate(self):
+        from decimal import Decimal, ROUND_HALF_UP, ROUND_DOWN
+        places = {"à l'unité près": 0, 'au dixième près': 1, 'au centième près': 2}
+        for level in LEVELS:
+            for _ in range(60):
+                q = _q('g4-round-decimal', level)
+                x = Decimal(re.search(r'\*\*([\d,]+)\*\*', q['prompt_fr']).group(1).replace(',', '.'))
+                to = next(v for k, v in places.items() if k in q['prompt_fr'])
+                mode = ROUND_DOWN if q['prompt_fr'].startswith('Tronque') else ROUND_HALF_UP
+                want = x.quantize(Decimal(1).scaleb(-to), rounding=mode)
+                self.assertTrue(check_answer(str(want), q['correct_answers'], 'decimal'), (q['prompt_fr'], q['correct_answers']))
+
+    def test_power_of_ten(self):
+        for level in LEVELS:
+            for _ in range(60):
+                q = _q('g5-times-power-of-ten', level)
+                m = re.search(r'\*\*([\d,]+) (×|÷) (\d+)\*\*', q['prompt_fr'])
+                x, op, f = Fraction(m.group(1).replace(',', '.')), m.group(2), int(m.group(3))
+                want = x * f if op == '×' else x / f
+                self.assertEqual(Fraction(q['correct_answers'][1]), want)
+
+    def test_percent_values(self):
+        for level in LEVELS:
+            for _ in range(60):
+                q = _q('g6-percent', level)
+                p = q['prompt_fr']
+                if 'de ' in p and p.startswith('Combien font'):
+                    pct, base = map(int, re.search(r'\*\*(\d+) % de (\d+)\*\*', p).groups())
+                    self.assertEqual(int(q['correct_answers'][0]), pct * base // 100)
+                elif p.startswith('Écris **') and 'pourcentage' in p:
+                    val = _frac_in(p)[0] if '/' in p else _dec_in(p)[0]
+                    self.assertTrue(check_answer(str(val * 100), q['correct_answers'], 'integer'), p)
+
+    def test_decimal_grid_counts_squares(self):
+        for _ in range(60):
+            q = _q('g4-decimal-grid', 'medium')
+            if not q['shape_data']:
+                continue
+            filled = sum(1 for m in q['shape_data'][0]['marks'] if m['type'] == 'rect' and m['fill'] not in ('#FFFFFF', 'none'))
+            cells = sum(1 for m in q['shape_data'][0]['marks'] if m['type'] == 'rect' and m['fill'] != 'none')
+            self.assertEqual(Fraction(q['correct_answers'][1]), Fraction(filled, cells))
+
+    def test_story_answers_accept_both_notations(self):
+        for _ in range(60):
+            q = _q('g5-decimal-story', 'hard')
+            for a in q['correct_answers']:
+                self.assertTrue(check_answer(a.replace(',', '.'), q['correct_answers'], q['answer_type']))
+
+    def test_percent_sign_is_accepted(self):
+        self.assertTrue(check_answer('25 %', ['25 %', '25'], 'integer'))
+        self.assertTrue(check_answer('25%', ['25'], 'integer'))
+        self.assertIsNone(__import__('quiz.answers', fromlist=['parse_duration']).parse_duration('25 %'))
+
+
+class PrimaryLimitsTests(SimpleTestCase):
+    def test_decimals_stop_at_thousandths(self):
+        dec = re.compile(r'\d[.,](\d+)')
+        for slug in PLUS:
+            for level in LEVELS:
+                for _ in range(25):
+                    for a in GENERATORS[slug](level).get('correct_answers') or []:
+                        for m in dec.finditer(str(a)):
+                            self.assertLessEqual(len(m.group(1)), 3, f'{slug}/{level}: {a}')

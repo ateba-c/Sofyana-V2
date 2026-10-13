@@ -138,3 +138,44 @@ def collection(total, coloured, per_row=None, color=AMBER, icon='circle'):
         else:
             c.circle(x, y, 13, fill=fill, stroke=INK, sw=1.8)
     return c.shape()
+
+
+# ── decimals / number lines ──────────────────────────────────────────────────
+
+def hundred_grid(shaded, size=10, color=BLUE, cell=16):
+    """A size×size grid (10×10 → hundredths, 1 row → tenths) with ``shaded`` cells filled row by row."""
+    rows = size if size == 10 else 1
+    cols = 10
+    c = Canvas(cols * cell + 8, rows * cell + 8, max_h=170 if rows > 1 else 50, css_w='max-w-xs')
+    for i in range(rows * cols):
+        x = 4 + (i % cols) * cell
+        y = 4 + (i // cols) * cell
+        c.rect(x, y, cell, cell, fill=color if i < shaded else '#FFFFFF', stroke=SOFT, sw=1)
+    c.rect(4, 4, cols * cell, rows * cell, stroke=INK, sw=2)
+    return c.shape()
+
+
+def number_line(majors, minor=0, point=None, w=320, mark='?', point_color=BLUE):
+    """
+    majors: labels at evenly spaced major ticks — each a str or (fr, en).
+    minor:  number of sub-intervals between two majors.
+    point:  position of the marked point in minor steps from the first major.
+    """
+    c = Canvas(w, 74, max_h=90, css_w='max-w-md')
+    x0, x1, y = 18, w - 18, 38
+    c.line(x0, y, x1, y, sw=2.5, opacity=1)
+    seg = (x1 - x0) / (len(majors) - 1)
+    for i, lab in enumerate(majors):
+        x = x0 + i * seg
+        c.line(x, y - 9, x, y + 9, sw=2.5, opacity=1)
+        fr, en = (lab, None) if not isinstance(lab, tuple) else lab
+        c.text(x, y + 26, fr, size=13, bold=True, text_en=en)
+        if minor and i < len(majors) - 1:
+            for k in range(1, minor):
+                xm = x + k * seg / minor
+                c.line(xm, y - 5, xm, y + 5, sw=1.5, opacity=1)
+    if point is not None:
+        xp = x0 + point * seg / (minor or 1)
+        c.dot(xp, y, r=6, fill=point_color)
+        c.text(xp, y - 14, mark, size=15, bold=True, color=point_color)
+    return c.shape()

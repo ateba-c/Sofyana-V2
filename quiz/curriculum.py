@@ -147,6 +147,17 @@ CURRICULUM_REFS = {
     'g6-simplify-fraction': [114, 117],
     'g6-fraction-add-related': [115],
     'g6-whole-times-fraction': [82, 116],
+    # ── WP3 decimals & percentages ──
+    'g4-decimal-grid': [41, 42, 126],
+    'g4-decimal-equivalence': [44, 46, 54],
+    'g4-decimal-number-line': [47, 134],
+    'g4-round-decimal': [50],
+    'g5-times-power-of-ten': [122],
+    'g5-estimate-decimal': [118, 119],
+    'g5-decimal-story': [75, 76, 77, 78, 120, 121],
+    'g6-decimal-number-line': [48, 55],
+    'g6-percent': [34, 53, 127, 128, 129, 131],
+    'g6-choose-notation': [130],
     # Not in the audit on purpose: fraction-multiply / fraction-divide (beyond primary),
     # Roman numerals (enrichment), g6-relevant-info (cross-cutting problem solving).
 }
@@ -155,7 +166,7 @@ CURRICULUM_REFS = {
 def ref_string(slug, limit=120):
     """'QC-033, QC-113' — fits Skill.curriculum_ref (max 120 chars)."""
     out = ''
-    for n in CURRICULUM_REFS.get(slug, []):
+    for n in sorted(set(CURRICULUM_REFS.get(slug, []))):
         part = f'QC-{n:03d}'
         nxt = f'{out}, {part}' if out else part
         if len(nxt) > limit:
