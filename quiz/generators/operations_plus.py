@@ -410,12 +410,13 @@ def g6_divisibility_gen(level='medium'):
     bad = []
     while len(bad) < 4:
         x = random.randint(100, hi)
-        if x % k and str(x) not in bad:
+        if x % k:
             if k in (3, 9) and random.random() < 0.6:
                 x = x - x % 3 + (1 if x % 3 == 0 else 0)          # near misses
                 if x % k == 0:
                     continue
-            bad.append(str(x))
+            if str(x) not in bad and x != good:                    # check AFTER the near-miss tweak
+                bad.append(str(x))
     digits = ' + '.join(str(good))
     return mc((f'Lequel de ces nombres est **divisible par {k}** ?', f'Which of these numbers is **divisible by {k}**?'),
               str(good), [(b, 'rule', f'Divisible by {k}: {_RULES[k][1]}.', f'Divisible par {k} : {_RULES[k][0]}.') for b in bad],

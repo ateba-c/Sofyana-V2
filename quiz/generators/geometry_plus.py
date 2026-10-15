@@ -341,12 +341,18 @@ def is_convex(pts):
 
 
 def convex_polygon(n):
+    """n points on a circle with no two corners too close (gaps built directly, no rejection loop)."""
     import math
-    while True:
-        angles = sorted(random.uniform(0, 2 * math.pi) for _ in range(n))
-        gaps = [(angles[(i + 1) % n] - angles[i]) % (2 * math.pi) for i in range(n)]
-        if min(gaps) > 0.6 and max(gaps) < 2.6:
-            return [(math.cos(a), math.sin(a)) for a in angles]
+    g_min = 0.55
+    weights = [random.uniform(0.3, 1.0) for _ in range(n)]
+    slack = 2 * math.pi - n * g_min
+    gaps = [g_min + slack * w / sum(weights) for w in weights]
+    a = random.uniform(0, 2 * math.pi)
+    pts = []
+    for g in gaps:
+        pts.append((math.cos(a), math.sin(a)))
+        a += g
+    return pts
 
 
 def concave_polygon(n, depth):
