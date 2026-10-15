@@ -176,6 +176,21 @@ CURRICULUM_REFS = {
     'g6-prime-factors': [101],
     'g6-powers': [22, 25, 102],
     'g6-write-large-number': [8, 25],
+    # ── WP5 geometry ──
+    'g3-solid-picture': [141, 142, 143],
+    'g3-prism-or-pyramid': [145, 152, 144],
+    'g3-net-match': [146, 147, 150],
+    'g4-net-pyramid': [148, 146],
+    'g6-polyhedron-net': [149, 150, 151],
+    'g3-convex': [157, 161],
+    'g6-triangle-type': [162, 163, 165],
+    'g6-circle-parts': [164, 165],
+    'g3-symmetry-axis': [168, 170],
+    'g6-translation': [169, 171],
+    'g3-frieze': [167, 168, 169],
+    'g3-congruent': [166],
+    'g3-grid-map': [133],
+    'cartesian-place-point': [135],
     # Not in the audit on purpose: fraction-multiply / fraction-divide (beyond primary),
     # Roman numerals (enrichment), g6-relevant-info (cross-cutting problem solving).
 }

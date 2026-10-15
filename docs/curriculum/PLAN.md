@@ -177,7 +177,7 @@ Also needed: add grades 1–2 to the grade picker (automatic once domains exist)
 | `g3-symmetry-axis`: is this a line of symmetry? Complete the figure | 3–4 | MC + 🖼 grid | 168, 170 |
 | `g6-translation`: which image is the translation? Follow the arrow | 5–6 | MC + 🖼 grid | 169, 171 |
 | `g3-frieze`: which transformation built this frieze or tiling | 3–6 | MC + 🖼 | 167–169 |
-| `g2-grid-map`: square B3, follow directions on a plan | 1–4 | MC + 🖼 | 133 |
+| `g3-grid-map`: square B3, follow directions on a plan | 1–4 | MC + 🖼 | 133 |
 | `cartesian-place-point`: place (3, 5) | 3–4 | 🖐 | 135 |
 | Integers domain: 4-quadrant plane (only if D2 = b) | 6 | 🖐 | 136 |
 

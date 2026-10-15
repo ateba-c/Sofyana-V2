@@ -65,7 +65,9 @@
               stroke="{{ mark.stroke|default:shape.stroke }}"
               stroke-width="{{ mark.sw|default:'2.2' }}"
               stroke-linecap="round"
-              stroke-linejoin="round"/>
+              stroke-linejoin="round"
+              {% if mark.dash %}stroke-dasharray="{{ mark.dash }}"{% endif %}
+              {% if mark.fill_opacity %}fill-opacity="{{ mark.fill_opacity }}"{% endif %}/>
 
         {% elif mark.type == 'dashed' %}
         <line x1="{{ mark.x1 }}" y1="{{ mark.y1 }}"

@@ -25,6 +25,12 @@ from .operations_plus import (
     g6_divisibility_gen, g6_prime_factors_gen, g6_powers_gen, g5_number_patterns_gen,
     g4_times_tables_gen, g6_write_large_number_gen,
 )
+from .geometry_plus import (
+    g3_solid_picture_gen, g3_prism_or_pyramid_gen, g3_net_match_gen, g4_net_pyramid_gen,
+    g6_polyhedron_net_gen, g3_convex_gen, g6_triangle_type_gen, g6_circle_parts_gen,
+    g3_symmetry_axis_gen, g6_translation_gen, g3_frieze_gen, g3_congruent_gen,
+    g3_grid_map_gen, cartesian_place_point_gen,
+)
 
 _L3 = ['easy', 'medium', 'hard']
 
@@ -76,6 +82,21 @@ PLUS_GENERATORS = {
     'g6-prime-factors':              g6_prime_factors_gen,
     'g6-powers':                     g6_powers_gen,
     'g6-write-large-number':         g6_write_large_number_gen,
+    # WP5 — geometry
+    'g3-solid-picture':              g3_solid_picture_gen,
+    'g3-prism-or-pyramid':           g3_prism_or_pyramid_gen,
+    'g3-net-match':                  g3_net_match_gen,
+    'g4-net-pyramid':                g4_net_pyramid_gen,
+    'g6-polyhedron-net':             g6_polyhedron_net_gen,
+    'g3-convex':                     g3_convex_gen,
+    'g6-triangle-type':              g6_triangle_type_gen,
+    'g6-circle-parts':               g6_circle_parts_gen,
+    'g3-symmetry-axis':              g3_symmetry_axis_gen,
+    'g6-translation':                g6_translation_gen,
+    'g3-frieze':                     g3_frieze_gen,
+    'g3-congruent':                  g3_congruent_gen,
+    'g3-grid-map':                   g3_grid_map_gen,
+    'cartesian-place-point':         cartesian_place_point_gen,
 }
 
 PLUS_SKILL_MAP = {
@@ -115,6 +136,20 @@ PLUS_SKILL_MAP = {
     'g6-divisibility':               _sk('g4-times-tables', 'g6-prime-factors', 'primes', 'even-odd'),
     'g6-prime-factors':              _sk('g6-divisibility', 'g6-powers', 'g6-simplify-fraction', 'primes'),
     'g6-powers':                     _sk('squares', 'g6-prime-factors', 'g5-number-patterns', 'squares'),
+    'g3-solid-picture':              _sk('identify-solid', 'g3-prism-or-pyramid', 'g3-net-match', 'identify-solid'),
+    'g3-prism-or-pyramid':           _sk('g3-solid-picture', 'g3-net-match', 'g5-solid-counts', 'g3-solid-picture'),
+    'g3-net-match':                  _sk('g3-prism-or-pyramid', 'g4-net-pyramid', 'g6-polyhedron-net', 'g3-solid-picture'),
+    'g4-net-pyramid':                _sk('g3-net-match', 'g5-solid-counts', 'g6-polyhedron-net', 'g3-prism-or-pyramid'),
+    'g6-polyhedron-net':             _sk('g4-net-pyramid', 'g5-euler', 'g5-euler', 'g3-net-match'),
+    'g3-convex':                     _sk('name-polygon', 'g4-quadrilateral-name', 'g6-triangle-type', 'name-polygon'),
+    'g6-triangle-type':              _sk('identify-angle', 'g6-circle-parts', 'g4-quadrilateral-riddle', 'identify-angle'),
+    'g6-circle-parts':               _sk('g6-triangle-type', 'g6-translation', 'geometry-perimeter', 'name-polygon'),
+    'g3-symmetry-axis':              _sk('g3-congruent', 'g3-frieze', 'g6-translation', 'g3-congruent'),
+    'g6-translation':                _sk('g3-symmetry-axis', 'g3-frieze', 'cartesian-coord', 'g3-symmetry-axis'),
+    'g3-frieze':                     _sk('g3-symmetry-axis', 'g6-translation', 'g6-translation', 'g3-congruent'),
+    'g3-congruent':                  _sk('name-polygon', 'g3-symmetry-axis', 'g3-frieze', 'name-polygon'),
+    'g3-grid-map':                   _sk('cartesian-coord', 'cartesian-place-point', 'cartesian-coord', 'cartesian-coord'),
+    'cartesian-place-point':         _sk('g3-grid-map', 'cartesian-coord', 'g6-translation', 'g3-grid-map'),
     'g6-write-large-number':         _sk('g5-large-integer', 'g6-digit-value', 'g6-compare', 'write-number'),
 }
 
@@ -169,6 +204,26 @@ PLUS_GROUPS = [
     ]},
     {'name_en': 'Grade 6 — Number Sense', 'grade': 6, 'topics': [
         {'slug': 'g6-write-large-number',    'name_en': 'Write Large Numbers',         'name_fr': 'Écrire de grands nombres'},
+    ]},
+    {'name_en': 'Grade 3 — Geometry', 'grade': 3, 'topics': [
+        {'slug': 'g3-solid-picture',         'name_en': 'Name the Solid',              'name_fr': 'Nommer le solide'},
+        {'slug': 'g3-prism-or-pyramid',      'name_en': 'Prisms & Pyramids',           'name_fr': 'Prismes et pyramides'},
+        {'slug': 'g3-net-match',             'name_en': 'Nets of Prisms',              'name_fr': 'Développements de prismes'},
+        {'slug': 'g3-convex',                'name_en': 'Convex Polygons',             'name_fr': 'Polygones convexes'},
+        {'slug': 'g3-congruent',             'name_en': 'Congruent Shapes',            'name_fr': 'Figures isométriques'},
+        {'slug': 'g3-symmetry-axis',         'name_en': 'Lines of Symmetry',           'name_fr': 'Axes de symétrie'},
+        {'slug': 'g3-frieze',                'name_en': 'Friezes & Patterns',          'name_fr': 'Frises et régularités'},
+        {'slug': 'g3-grid-map',              'name_en': 'Grid Map',                    'name_fr': 'Se repérer sur un plan'},
+        {'slug': 'cartesian-place-point',    'name_en': 'Find a Point (x, y)',         'name_fr': 'Repérer un point (x, y)'},
+    ]},
+    {'name_en': 'Grade 4 — Geometry', 'grade': 4, 'topics': [
+        {'slug': 'g4-net-pyramid',           'name_en': 'Nets of Pyramids',            'name_fr': 'Développements de pyramides'},
+    ]},
+    {'name_en': 'Grade 6 — Geometry', 'name_fr': '6e année — Géométrie', 'icon': '📐', 'grade': 6, 'topics': [
+        {'slug': 'g6-triangle-type',         'name_en': 'Types of Triangles',          'name_fr': 'Sortes de triangles'},
+        {'slug': 'g6-circle-parts',          'name_en': 'Parts of a Circle',           'name_fr': 'Le cercle'},
+        {'slug': 'g6-translation',           'name_en': 'Translations',                'name_fr': 'Translations'},
+        {'slug': 'g6-polyhedron-net',        'name_en': 'Polyhedra & Nets',            'name_fr': 'Polyèdres et développements'},
     ]},
     {'name_en': 'Grade 5 — Fractions', 'name_fr': '5e année — Fractions', 'icon': '½', 'grade': 5, 'topics': [
         {'slug': 'g5-fraction-meanings',     'name_en': 'What a Fraction Means',       'name_fr': 'Les sens de la fraction'},

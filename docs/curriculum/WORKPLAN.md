@@ -24,7 +24,8 @@ Session log (append one line per working session):
 |---|---|---|
 | 2026-10-13 | Branch + workplan; Phase A done; WP2 + WP3 done (covered 57 → 97 of 236) | see git log |
 | 2026-10-13 | WP4 done (covered → 129 of 236). **Full suite NOT re-run after WP4**: the run was killed (machine low on memory). `quiz.test_curriculum_plus` was green (35 tests). FIRST STEP next session: `python manage.py test quiz`. | B4 checkpoint |
-| 2026-10-14 | Session start: full suite re-run in progress (WP4 verification). Next: fix any failures, then C5.1. If this is the last line after a restart, re-run step 2. | B4 checkpoint |
+| 2026-10-14 | Full suite (all modules at once) ran 24 min with no output and flat memory → looks like a hang, not low memory. Every test module passes when run alone (12/12). Suspect: a generator `while` loop that rarely never ends, depending on random state from earlier tests. Investigating with `-v 2`. | B4 checkpoint |
+| 2026-10-14 | WP5 geometry done: 14 skills (C5.1–C5.14), solids/nets/grids/triangles/circles in `illustrations.py`, migration 0024, coverage 129 → 149 of 236 (geometry 29/40). `g2-grid-map` renamed `g3-grid-map` (no grade 2 domain yet). Next: finish the hang investigation, then WP6 (C6.1). | C5 checkpoint |
 
 ---
 
@@ -113,19 +114,20 @@ WP4 Operations & calculation
 
 ## Phase C — Geometry & measurement (WP5, WP6)  ← current phase
 
-- [ ] C5.1 `g3-solid-picture` (141, 143)
-- [ ] C5.2 `g3-prism-or-pyramid` (145, 152)
-- [ ] C5.3 `g3-net-match` (146, 147, 150)
-- [ ] C5.4 `g4-net-pyramid` (148)
-- [ ] C5.5 `g6-polyhedron-net` (149)
-- [ ] C5.6 `g3-convex` (157)
-- [ ] C5.7 `g6-triangle-type` (162, 163, 165)
-- [ ] C5.8 `g6-circle-parts` (164, 165)
-- [ ] C5.9 `g3-symmetry-axis` (168, 170)
-- [ ] C5.10 `g6-translation` (169, 171)
-- [ ] C5.11 `g3-frieze` (167–169)
-- [ ] C5.12 `g2-grid-map` (133)
-- [ ] C5.13 `cartesian-place-point` (135)
+- [x] C5.1 `g3-solid-picture` (141, 143)
+- [x] C5.2 `g3-prism-or-pyramid` (145, 152)
+- [x] C5.3 `g3-net-match` (146, 147, 150)
+- [x] C5.4 `g4-net-pyramid` (148)
+- [x] C5.5 `g6-polyhedron-net` (149)
+- [x] C5.6 `g3-convex` (157)
+- [x] C5.7 `g6-triangle-type` (162, 163, 165)
+- [x] C5.8 `g6-circle-parts` (164, 165)
+- [x] C5.9 `g3-symmetry-axis` (168, 170)
+- [x] C5.10 `g6-translation` (169, 171)
+- [x] C5.11 `g3-frieze` (167–169)
+- [x] C5.12 `g3-grid-map` (133) — slug changed from g2- (lives in grade 3 until WP1 adds grade 2)
+- [x] C5.13 `cartesian-place-point` (135)
+- [x] C5.14 `g3-congruent` (166) — added: congruent figures
 - [ ] C6.1 `g3-ruler-mm` (176)
 - [ ] C6.2 `g5-estimate-length` (177)
 - [ ] C6.3 `g3-area-count-squares` (184, 186)

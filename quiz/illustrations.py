@@ -16,6 +16,11 @@ SOFT = '#94A3B8'
 BLUE, RED, GREEN, AMBER, PURPLE, TEAL = '#2563EB', '#EF4444', '#16A34A', '#D97706', '#9333EA', '#0891B2'
 PALETTE = [BLUE, RED, GREEN, AMBER, PURPLE, TEAL]
 TINTS = {BLUE: '#DBEAFE', RED: '#FEE2E2', GREEN: '#DCFCE7', AMBER: '#FEF3C7', PURPLE: '#F3E8FF', TEAL: '#CFFAFE'}
+# light → dark shades used to light the faces of solids
+SHADES = {BLUE: ('#EFF6FF', '#DBEAFE', '#BFDBFE'), RED: ('#FEF2F2', '#FEE2E2', '#FECACA'),
+          GREEN: ('#F0FDF4', '#DCFCE7', '#BBF7D0'), AMBER: ('#FFFBEB', '#FEF3C7', '#FDE68A'),
+          PURPLE: ('#FAF5FF', '#F3E8FF', '#E9D5FF'), TEAL: ('#ECFEFF', '#CFFAFE', '#A5F3FC')}
+DASH = '4 3'
 
 
 def _r(v):
@@ -40,13 +45,16 @@ class Canvas:
         self.marks.append(m)
         return self
 
-    def path(self, d, fill='none', stroke=INK, sw=2):
-        self.marks.append(dict(type='path', d=d, fill=fill, stroke=stroke, sw=sw))
+    def path(self, d, fill='none', stroke=INK, sw=2, dash=''):
+        m = dict(type='path', d=d, fill=fill, stroke=stroke, sw=sw)
+        if dash:
+            m['dash'] = dash
+        self.marks.append(m)
         return self
 
-    def poly(self, pts, fill='none', stroke=INK, sw=2, closed=True):
+    def poly(self, pts, fill='none', stroke=INK, sw=2, closed=True, dash=''):
         d = 'M ' + ' L '.join(f'{_r(x)},{_r(y)}' for x, y in pts) + (' Z' if closed else '')
-        return self.path(d, fill, stroke, sw)
+        return self.path(d, fill, stroke, sw, dash)
 
     def circle(self, cx, cy, r, fill='none', stroke=INK, sw=2):
         self.marks.append(dict(type='circle', cx=_r(cx), cy=_r(cy), r=_r(r), fill=fill, stroke=stroke, stroke_width=sw))
@@ -233,4 +241,455 @@ def factor_tree(tree, hide=None):
         c.text(x, y + 1, label, size=15, bold=True, color=PURPLE if label == '?' else '#1E0A3C')
 
     draw(tree, 0, w, 22)
+    return c.shape()
+
+
+# ── geometry: panels ─────────────────────────────────────────────────────────
+
+LETTERS = 'ABCDEFGH'
+
+
+def panels(n, cell_w=110, cell_h=110, cols=None, letters=True, css_w='max-w-lg'):
+    """
+    A canvas split into ``n`` boxes (rows of ``cols``), each with a letter under it.
+    ``letters`` may also be a list of labels (str or (fr, en)), one per box.
+    Returns (canvas, boxes) where boxes[i] = (x0, y0, w, h) is the drawing area of box i.
+    """
+    cols = cols or (n if n <= 3 else math.ceil(n / 2))
+    rows = math.ceil(n / cols)
+    lab_h = 22 if letters else 0
+    names = letters if isinstance(letters, (list, tuple)) else LETTERS
+    w, h = cols * cell_w, rows * (cell_h + lab_h)
+    c = Canvas(w, h, max_h=min(rows * 150, 300), css_w=css_w)
+    boxes = []
+    for i in range(n):
+        r, k = divmod(i, cols)
+        in_row = cols if r < rows - 1 else n - r * cols     # centre a short last row
+        x0 = k * cell_w + (cols - in_row) * cell_w / 2
+        y0 = r * (cell_h + lab_h)
+        boxes.append((x0 + 6, y0 + 6, cell_w - 12, cell_h - 12))
+        if letters:
+            fr, en = names[i] if isinstance(names[i], tuple) else (names[i], None)
+            c.text(x0 + cell_w / 2, y0 + cell_h + 14, fr, size=15 if len(fr) == 1 else 13, bold=True,
+                   color=PURPLE if len(fr) == 1 else INK, text_en=en)
+    return c, boxes
+
+
+def _fit(pts, box, pad=4):
+    """Scale and centre a list of point lists (screen coords) into box = (x0, y0, w, h)."""
+    xs = [x for poly in pts for x, _ in poly]
+    ys = [y for poly in pts for _, y in poly]
+    bw, bh = (max(xs) - min(xs)) or 1, (max(ys) - min(ys)) or 1
+    x0, y0, w, h = box
+    k = min((w - 2 * pad) / bw, (h - 2 * pad) / bh)
+    ox = x0 + (w - bw * k) / 2 - min(xs) * k
+    oy = y0 + (h - bh * k) / 2 - min(ys) * k
+    return [[(ox + x * k, oy + y * k) for x, y in poly] for poly in pts], k
+
+
+# ── geometry: solids (orthographic view from above-right) ────────────────────
+
+def _ngon(n, r=1.0, start=None):
+    start = (math.pi / 2 if n % 2 else math.pi / n + math.pi / 2) if start is None else start
+    return [(r * math.cos(start + 2 * math.pi * i / n), r * math.sin(start + 2 * math.pi * i / n)) for i in range(n)]
+
+
+def _base(kind):
+    """Base polygon (x, z) and height of a prism/pyramid kind."""
+    if kind == 'cube':
+        return [(-.5, -.5), (.5, -.5), (.5, .5), (-.5, .5)], 1.0
+    if kind == 'rect-prism':
+        return [(-.85, -.45), (.85, -.45), (.85, .45), (-.85, .45)], 0.9
+    n = {'tri': 3, 'square': 4, 'pent': 5, 'hex': 6}[kind.split('-')[0]]
+    return _ngon(n, 0.75, start=-math.pi / 2 + (0.35 if n == 3 else 0.2)), 1.25
+
+
+def _mesh(kind):
+    base, h = _base(kind)
+    n = len(base)
+    if kind.endswith('pyramid'):
+        verts = [(x, 0, z) for x, z in base] + [(0, h, 0)]
+        faces = [list(range(n))] + [[i, (i + 1) % n, n] for i in range(n)]
+    else:
+        verts = [(x, 0, z) for x, z in base] + [(x, h, z) for x, z in base]
+        faces = [list(range(n)), list(range(n, 2 * n))] + [[i, (i + 1) % n, n + (i + 1) % n, n + i] for i in range(n)]
+    return verts, faces
+
+
+def _rot(p, yaw=-0.55, pitch=0.42):
+    x, y, z = p
+    x1 = x * math.cos(yaw) + z * math.sin(yaw)
+    z1 = -x * math.sin(yaw) + z * math.cos(yaw)
+    y2 = y * math.cos(pitch) - z1 * math.sin(pitch)
+    z2 = y * math.sin(pitch) + z1 * math.cos(pitch)
+    return x1, y2, z2
+
+
+def draw_solid(c, kind, box, color=BLUE, hidden=True):
+    """Draw a solid in ``box``. Polyhedra: cube, rect-prism, tri/square/pent/hex-prism and -pyramid.
+    Curved: cylinder, cone, sphere. Hidden edges are dashed."""
+    if kind in ('cylinder', 'cone', 'sphere'):
+        return _draw_round(c, kind, box, color)
+    light, mid, dark = SHADES[color]
+    verts, faces = _mesh(kind)
+    R = [_rot(v) for v in verts]
+    (fitted,), _k = _fit([[(x, -y) for x, y, _ in R]], box, pad=6)
+    cen = [sum(v[i] for v in R) / len(R) for i in range(3)]
+    vis = []
+    for f in faces:
+        a, b, cc = R[f[0]], R[f[1]], R[f[2]]
+        u = [b[i] - a[i] for i in range(3)]
+        v = [cc[i] - a[i] for i in range(3)]
+        nrm = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]
+        fc = [sum(R[j][i] for j in f) / len(f) for i in range(3)]
+        if sum(nrm[i] * (fc[i] - cen[i]) for i in range(3)) < 0:
+            nrm = [-x for x in nrm]
+        ln = math.sqrt(sum(x * x for x in nrm)) or 1
+        vis.append((nrm[2] / ln > 1e-6, nrm[1] / ln, f))
+    edges = {}
+    for visible, _ny, f in vis:
+        for i in range(len(f)):
+            e = tuple(sorted((f[i], f[(i + 1) % len(f)])))
+            edges[e] = edges.get(e, False) or visible
+    for visible, ny, f in vis:
+        if visible:
+            fill = light if ny > 0.5 else mid if ny > -0.2 else dark
+            c.poly([fitted[j] for j in f], fill=fill, stroke='none', sw=0)
+    if hidden:
+        for (i, j), visible in edges.items():
+            if not visible:
+                c.line(*fitted[i], *fitted[j], color=SOFT, sw=1.6, dash=DASH)
+    for (i, j), visible in edges.items():
+        if visible:
+            c.line(*fitted[i], *fitted[j], color=INK, sw=2.2)
+    return c
+
+
+def _ellipse_half(cx, cy, rx, ry, front):
+    """Lower (front=True) or upper half of an ellipse, from left to right."""
+    sweep = 0 if front else 1
+    return f'M {_r(cx - rx)},{_r(cy)} A {_r(rx)},{_r(ry)} 0 0,{sweep} {_r(cx + rx)},{_r(cy)}'
+
+
+def _draw_round(c, kind, box, color):
+    light, mid, dark = SHADES[color]
+    x0, y0, w, h = box
+    cx = x0 + w / 2
+    if kind == 'sphere':
+        r = min(w, h) / 2 - 6
+        cy = y0 + h / 2
+        c.circle(cx, cy, r, fill=mid, stroke=INK, sw=2.2)
+        c.circle(cx - r * .35, cy - r * .35, r * .22, fill=light, stroke='none', sw=0)
+        c.path(_ellipse_half(cx, cy, r, r * 0.3, True), stroke=INK, sw=1.6)
+        c.path(_ellipse_half(cx, cy, r, r * 0.3, False), stroke=SOFT, sw=1.4, dash=DASH)
+        return c
+    r = min(w * 0.38, h * 0.36)
+    ry = r * 0.36
+    top, bot = y0 + 8 + ry, y0 + h - 8 - ry
+    front_bot = _ellipse_half(cx, bot, r, ry, True)[len(f'M {_r(cx - r)},{_r(bot)} '):]
+    if kind == 'cylinder':
+        body = f'M {_r(cx - r)},{_r(top)} L {_r(cx - r)},{_r(bot)} {front_bot} L {_r(cx + r)},{_r(top)}'
+        c.path(body + ' Z', fill=mid, stroke='none', sw=0)
+        c.path(_ellipse_half(cx, bot, r, ry, False), stroke=SOFT, sw=1.4, dash=DASH)
+        c.path(body, stroke=INK, sw=2.2)
+        c.path(f'M {_r(cx - r)},{_r(top)} A {_r(r)},{_r(ry)} 0 1,1 {_r(cx + r)},{_r(top)} '
+               f'A {_r(r)},{_r(ry)} 0 1,1 {_r(cx - r)},{_r(top)} Z', fill=light, stroke=INK, sw=2.2)
+        return c
+    # cone, apex on top
+    body = f'M {_r(cx)},{_r(y0 + 6)} L {_r(cx - r)},{_r(bot)} {front_bot} Z'
+    c.path(body, fill=mid, stroke='none', sw=0)
+    c.path(_ellipse_half(cx, bot, r, ry, False), stroke=SOFT, sw=1.4, dash=DASH)
+    c.path(body, stroke=INK, sw=2.2)
+    return c
+
+
+def solid(kind, color=BLUE, size=150):
+    c = Canvas(size, size, max_h=170, css_w='max-w-[11rem]')
+    draw_solid(c, kind, (0, 0, size, size), color)
+    return c.shape()
+
+
+# ── geometry: nets ───────────────────────────────────────────────────────────
+
+def _outward(p, q, ref):
+    """Unit normal of segment p→q pointing away from ref."""
+    dx, dy = q[0] - p[0], q[1] - p[1]
+    ln = math.hypot(dx, dy) or 1
+    nx, ny = -dy / ln, dx / ln
+    mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
+    if (mx - ref[0]) * nx + (my - ref[1]) * ny < 0:
+        nx, ny = -nx, -ny
+    return nx, ny
+
+
+def _centroid(poly):
+    return sum(x for x, _ in poly) / len(poly), sum(y for _, y in poly) / len(poly)
+
+
+def _on_edge_rect(p, q, depth, ref):
+    nx, ny = _outward(p, q, ref)
+    return [p, q, (q[0] + nx * depth, q[1] + ny * depth), (p[0] + nx * depth, p[1] + ny * depth)]
+
+
+def _on_edge_tri(p, q, height, ref):
+    nx, ny = _outward(p, q, ref)
+    m = ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)
+    return [p, q, (m[0] + nx * height, m[1] + ny * height)]
+
+
+def _on_edge_ngon(p, q, n, ref):
+    """Regular n-gon built on segment p→q, on the side away from ref."""
+    side = math.hypot(q[0] - p[0], q[1] - p[1])
+    nx, ny = _outward(p, q, ref)
+    ap = side / (2 * math.tan(math.pi / n))
+    m = ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)
+    ctr = (m[0] + nx * ap, m[1] + ny * ap)
+    R = side / (2 * math.sin(math.pi / n))
+    a0 = math.atan2(p[1] - ctr[1], p[0] - ctr[0])
+    return [(ctr[0] + R * math.cos(a0 + 2 * math.pi * i / n), ctr[1] + R * math.sin(a0 + 2 * math.pi * i / n)) for i in range(n)]
+
+
+# Six squares that do NOT fold into a cube (distractors).
+_BAD_CUBES = [
+    [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (2, 1)],
+    [(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1)],
+    [(0, 0), (1, 0), (2, 0), (3, 0), (1, 1), (2, 1)],
+]
+
+
+def net_polys(kind, variant=0):
+    """
+    Faces of the net of ``kind`` as polygons (unit coords, y down).
+    cube / rect-prism: variant 0 = cross, 1 = T-shape, 2 = zig-zag lids.
+    Non-folding nets (distractors): 'bad-cube' (variants 0–2) and 'bad-pyramid' (a face missing).
+    """
+    if kind == 'bad-cube':
+        return [[(x, y), (x + 1, y), (x + 1, y + 1), (x, y + 1)] for x, y in _BAD_CUBES[variant % 3]]
+    if kind in ('cube', 'rect-prism'):
+        l, wd, h = (1, 1, 1) if kind == 'cube' else (1.6, 0.8, 1)
+        polys, x = [], 0
+        for wv in (l, wd, l, wd):
+            polys.append([(x, 0), (x + wv, 0), (x + wv, h), (x, h)])
+            x += wv
+        top_i, bot_i = [(0, 0), (2, 0), (0, 2)][variant % 3]
+        a, b = polys[top_i], polys[bot_i]
+        polys.append(_on_edge_rect(a[0], a[1], wd, _centroid(a)))
+        polys.append(_on_edge_rect(b[3], b[2], wd, _centroid(b)))
+        return polys
+    if kind == 'bad-pyramid':
+        base = [(0, 0), (1, 0), (1, 1), (0, 1)]
+        ctr = _centroid(base)
+        return [base] + [_on_edge_tri(base[i], base[(i + 1) % 4], 0.9, ctr) for i in range(3)]
+    n = {'tri': 3, 'square': 4, 'pent': 5, 'hex': 6}[kind.split('-')[0]]
+    if kind.endswith('prism'):
+        h = 1.6
+        polys = [[(i, 0), (i + 1, 0), (i + 1, h), (i, h)] for i in range(n)]
+        k = n // 2 if n > 3 else 1
+        a = polys[k]
+        b = polys[k if variant % 2 == 0 else 0]
+        polys.append(_on_edge_ngon(a[0], a[1], n, _centroid(a)))
+        polys.append(_on_edge_ngon(b[3], b[2], n, _centroid(b)))
+        return polys
+    if kind.endswith('pyramid'):
+        base = _ngon(n, 0.7 if n == 3 else 0.6)
+        ctr = _centroid(base)
+        side = math.hypot(base[1][0] - base[0][0], base[1][1] - base[0][1])
+        ht = side * (0.87 if n == 3 else 1.0 if n == 4 else 1.15)
+        return [base] + [_on_edge_tri(base[i], base[(i + 1) % n], ht, ctr) for i in range(n)]
+    raise ValueError(kind)
+
+
+def draw_net(c, kind, box, color=BLUE, variant=0):
+    light, mid, _ = SHADES[color]
+    x0, y0, w, h = box
+    if kind == 'cylinder':
+        r = min(w / 5.2, h / 6.6)                    # rectangle 2.4 r high + two circles
+        rw, rh = 2 * math.pi * r * 0.75, 2.4 * r
+        rx, ry = x0 + (w - rw) / 2, y0 + (h - rh) / 2
+        c.rect(rx, ry, rw, rh, fill=mid, stroke=INK, sw=2)
+        c.circle(rx + rw / 2, ry - r, r, fill=light, stroke=INK, sw=2)
+        c.circle(rx + rw / 2, ry + rh + r, r, fill=light, stroke=INK, sw=2)
+        return c
+    if kind == 'cone':
+        R = min(w * 0.42, h * 0.5)
+        cx, cy = x0 + w / 2, y0 + 4
+        a0, a1 = 235, 305           # sector opening downward
+        p0 = (cx + R * math.cos(math.radians(a0)), cy - R * math.sin(math.radians(a0)))
+        p1 = (cx + R * math.cos(math.radians(a1)), cy - R * math.sin(math.radians(a1)))
+        c.path(f'M {_r(cx)},{_r(cy)} L {_r(p0[0])},{_r(p0[1])} A {_r(R)},{_r(R)} 0 0,0 {_r(p1[0])},{_r(p1[1])} Z',
+               fill=mid, stroke=INK, sw=2)
+        rr = min(R * (a1 - a0) / 360 * 1.6, (y0 + h - (cy + R)) / 2.1)
+        c.circle(cx, cy + R + rr, rr, fill=light, stroke=INK, sw=2)
+        return c
+    fitted, _ = _fit(net_polys(kind, variant), box, pad=4)
+    for i, poly in enumerate(fitted):
+        c.poly(poly, fill=mid if i % 2 else light, stroke=INK, sw=1.8)
+    return c
+
+
+def net(kind, color=BLUE, variant=0, w=220, h=170):
+    c = Canvas(w, h, max_h=180, css_w='max-w-xs')
+    draw_net(c, kind, (0, 0, w, h), color, variant)
+    return c.shape()
+
+
+# ── geometry: polygons, triangles, circles ──────────────────────────────────
+
+def draw_polygon(c, pts, box, color=BLUE, fill=True):
+    (fitted,), _ = _fit([pts], box, pad=6)
+    c.poly(fitted, fill=SHADES[color][1] if fill else 'none', stroke=INK, sw=2.2)
+    return fitted
+
+
+def _tick(c, p, q, n):
+    """n small tick marks across the middle of segment p–q (equal sides)."""
+    mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
+    dx, dy = q[0] - p[0], q[1] - p[1]
+    ln = math.hypot(dx, dy) or 1
+    ux, uy = dx / ln, dy / ln
+    nx, ny = -uy, ux
+    for i in range(n):
+        o = (i - (n - 1) / 2) * 5
+        cx, cy = mx + ux * o, my + uy * o
+        c.line(cx - nx * 6, cy - ny * 6, cx + nx * 6, cy + ny * 6, color=INK, sw=2)
+
+
+def _right_mark(c, v, a, b, s=11):
+    """Small square at vertex v between rays v→a and v→b."""
+    def unit(p):
+        dx, dy = p[0] - v[0], p[1] - v[1]
+        ln = math.hypot(dx, dy) or 1
+        return dx / ln, dy / ln
+    u, w = unit(a), unit(b)
+    c.poly([(v[0] + u[0] * s, v[1] + u[1] * s), (v[0] + (u[0] + w[0]) * s, v[1] + (u[1] + w[1]) * s),
+            (v[0] + w[0] * s, v[1] + w[1] * s)], closed=False, stroke=INK, sw=1.6)
+
+
+def triangle(pts, ticks=None, right_at=None, color=BLUE, labels=None, size=(200, 160)):
+    """
+    pts: 3 vertices (y down). ticks: {edge index: tick count} (edge i = pts[i]→pts[i+1]).
+    right_at: vertex index with a right-angle mark. labels: optional edge labels (str or (fr, en)).
+    """
+    c = Canvas(*size, max_h=170, css_w='max-w-xs')
+    f = draw_polygon(c, pts, (16, 16, size[0] - 32, size[1] - 32), color)
+    for i, n in (ticks or {}).items():
+        _tick(c, f[i], f[(i + 1) % 3], n)
+    if right_at is not None:
+        _right_mark(c, f[right_at], f[(right_at + 1) % 3], f[(right_at + 2) % 3])
+    if labels:
+        ctr = _centroid(f)
+        for i, lab in enumerate(labels):
+            if lab:
+                p, q = f[i], f[(i + 1) % 3]
+                nx, ny = _outward(p, q, ctr)
+                fr, en = (lab, None) if not isinstance(lab, tuple) else lab
+                c.text((p[0] + q[0]) / 2 + nx * 14, (p[1] + q[1]) / 2 + ny * 14 + 5, fr, size=13, bold=True, text_en=en)
+    return c.shape()
+
+
+def circle_parts(part, r=62, color=BLUE, value=None, angle=70):
+    """
+    A circle with its centre O and one highlighted part: 'radius', 'diameter', 'chord',
+    'circumference', 'central-angle'. ``value`` (optional) labels the highlighted length.
+    """
+    size = 2 * r + 40
+    c = Canvas(size, size, max_h=180, css_w='max-w-[12rem]')
+    cx = cy = size / 2
+    light = SHADES[color][1]
+    hi = RED
+
+    def pt(deg):
+        return cx + r * math.cos(math.radians(deg)), cy - r * math.sin(math.radians(deg))
+
+    ring = part == 'circumference'
+    c.circle(cx, cy, r, fill=light, stroke=hi if ring else INK, sw=4.5 if ring else 2.2)
+    lab_at = None
+    if part == 'radius':
+        p = pt(30)
+        c.line(cx, cy, *p, color=hi, sw=3.5)
+        lab_at = ((cx + p[0]) / 2 - 4, (cy + p[1]) / 2 - 9)
+    elif part == 'diameter':
+        p, q = pt(20), pt(200)
+        c.line(*q, *p, color=hi, sw=3.5)
+        lab_at = (cx + r * 0.45, cy - r * 0.45)        # above the right half of the line
+    elif part == 'chord':
+        p, q = pt(140), pt(40)
+        c.line(*p, *q, color=hi, sw=3.5)
+        lab_at = ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2 - 9)
+    elif part == 'central-angle':
+        c.line(cx, cy, *pt(10), color=INK, sw=2.2)
+        c.line(cx, cy, *pt(10 + angle), color=INK, sw=2.2)
+        c.arc(cx, cy, 20, 10, 10 + angle, stroke=hi, sw=3.5)
+    c.dot(cx, cy, r=3.5, fill=INK)
+    c.text(cx - 6, cy + 18, 'O', size=13, bold=True)
+    if value and lab_at:
+        c.text(*lab_at, value, size=13, bold=True, color=hi)
+    return c.shape()
+
+
+# ── geometry: square grids (symmetry, translation, area, maps) ──────────────
+
+def draw_grid(c, box, cols, rows, cells=None, cell=None, axis=None, arrow=None,
+              col_labels=None, row_labels=None, icons=None, points=None, axes_numbers=False):
+    """
+    Square grid in box. cells: {(col, row): colour} filled squares (row 0 = top).
+    axis: ('v', grid line) or ('h', grid line) — dashed red line of symmetry.
+    arrow: ((c0, r0), (c1, r1)) translation arrow between grid nodes (row 0 = top).
+    icons: {(col, row): text}. points: {(x, y): label} on nodes, y counted from the bottom.
+    axes_numbers: number the nodes 0…cols / 0…rows along the bottom and left (first quadrant).
+    Returns (cell, gx, gy).
+    """
+    x0, y0, w, h = box
+    lab = 18 if (col_labels or row_labels or axes_numbers) else 0
+    cell = cell or min((w - lab) / cols, (h - lab) / rows)
+    gx = x0 + lab + (w - lab - cols * cell) / 2
+    gy = y0 + (h - lab - rows * cell) / 2
+    for (k, r), col in (cells or {}).items():
+        c.rect(gx + k * cell, gy + r * cell, cell, cell, fill=col, stroke='none', sw=0)
+    for k in range(cols + 1):
+        c.line(gx + k * cell, gy, gx + k * cell, gy + rows * cell, color=SOFT, sw=1, opacity=0.9)
+    for r in range(rows + 1):
+        c.line(gx, gy + r * cell, gx + cols * cell, gy + r * cell, color=SOFT, sw=1, opacity=0.9)
+    if axes_numbers:
+        c.line(gx, gy + rows * cell, gx + cols * cell + 8, gy + rows * cell, color=INK, sw=2)
+        c.line(gx, gy + rows * cell, gx, gy - 8, color=INK, sw=2)
+        for k in range(cols + 1):
+            c.text(gx + k * cell, gy + rows * cell + 15, str(k), size=11, bold=True)
+        for r in range(1, rows + 1):
+            c.text(gx - 6, gy + (rows - r) * cell + 4, str(r), size=11, bold=True, anchor='end')
+    if col_labels:
+        for k, t in enumerate(col_labels):
+            c.text(gx + k * cell + cell / 2, gy + rows * cell + 15, t, size=12, bold=True)
+    if row_labels:
+        for r, t in enumerate(row_labels):
+            c.text(gx - 6, gy + r * cell + cell / 2 + 4, t, size=12, bold=True, anchor='end')
+    for (k, r), t in (icons or {}).items():
+        c.text(gx + k * cell + cell / 2, gy + r * cell + cell * 0.72, t, size=round(cell * 0.62))
+    if axis:
+        if axis[0] == 'v':
+            x = gx + axis[1] * cell
+            c.line(x, gy - 6, x, gy + rows * cell + 6, color=RED, sw=2.6, dash='6 4')
+        else:
+            y = gy + axis[1] * cell
+            c.line(gx - 6, y, gx + cols * cell + 6, y, color=RED, sw=2.6, dash='6 4')
+    if arrow:
+        (a0, b0), (a1, b1) = arrow
+        X0, Y0, X1, Y1 = gx + a0 * cell, gy + b0 * cell, gx + a1 * cell, gy + b1 * cell
+        c.line(X0, Y0, X1, Y1, color=GREEN, sw=3)
+        ang = math.atan2(Y1 - Y0, X1 - X0)
+        for s in (0.45, -0.45):
+            c.line(X1, Y1, X1 - 11 * math.cos(ang + s), Y1 - 11 * math.sin(ang + s), color=GREEN, sw=3)
+        c.dot(X0, Y0, r=3.5, fill=GREEN)
+    for (px, py), t in (points or {}).items():
+        X, Y = gx + px * cell, gy + (rows - py) * cell
+        c.dot(X, Y, r=4.5, fill=PURPLE)
+        c.text(X + 8, Y - 6, t, size=13, bold=True, color=PURPLE, anchor='start')
+    return cell, gx, gy
+
+
+def grid(cols, rows, cell=22, **kw):
+    lab = 18 if (kw.get('col_labels') or kw.get('row_labels') or kw.get('axes_numbers')) else 0
+    w, h = cols * cell + lab + 12, rows * cell + lab + 12
+    c = Canvas(w, h, max_h=min(rows * cell + 50, 240), css_w='max-w-sm')
+    draw_grid(c, (6, 6, w - 12, h - 12), cols, rows, cell=cell, **kw)
     return c.shape()

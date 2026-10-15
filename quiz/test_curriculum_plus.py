@@ -5,6 +5,7 @@ Every skill: wired everywhere, has audit refs, and 40 problems × 3 levels pass 
 shared structural check. Below that, one correctness test per skill whose answer
 can be recomputed from the prompt.
 """
+import random
 import re
 from fractions import Fraction
 
@@ -325,3 +326,121 @@ class OperationsPlusTests(SimpleTestCase):
             q = _q('g6-write-large-number', 'hard')
             n = q['correct_answers'][0]
             self.assertTrue(check_answer(f'{int(n):,}'.replace(',', ' '), q['correct_answers'], 'integer'))
+
+
+class GeometryPlusTests(SimpleTestCase):
+    """WP5: answers recomputed from the picture or the prompt."""
+
+    def test_triangle_shapes_match_their_type(self):
+        import math
+        from .generators.geometry_plus import _triangle_of
+        for kind in ('equi', 'iso-right', 'iso', 'scal-right', 'scal'):
+            for _ in range(30):
+                pts, _t, right, _s, _a = _triangle_of(kind)
+                d = sorted(math.dist(pts[i], pts[(i + 1) % 3]) for i in range(3))
+                equal = sum(abs(d[i] - d[j]) < 1e-6 for i, j in ((0, 1), (1, 2), (0, 2)))
+                is_right = abs(d[0] ** 2 + d[1] ** 2 - d[2] ** 2) < 1e-6
+                sides = {3: 'equi', 1: 'iso', 0: 'scal'}[equal]
+                expected = sides if sides == 'equi' else sides + ('-right' if is_right else '')
+                self.assertEqual(expected, kind, (kind, d))
+                self.assertEqual(right is not None, is_right, kind)
+
+    def test_triangle_angles_add_up(self):
+        for _ in range(80):
+            q = _q('g6-triangle-type', 'hard')
+            angles = list(map(int, re.findall(r'(\d+)°', q['prompt_fr'])))
+            if angles:
+                self.assertEqual(sum(angles), 180, q['prompt_fr'])
+
+    def test_convex_builders(self):
+        from .generators.geometry_plus import concave_polygon, convex_polygon, is_convex
+        for _ in range(100):
+            self.assertTrue(is_convex(convex_polygon(random.randint(4, 7))))
+            self.assertFalse(is_convex(concave_polygon(random.randint(4, 7), random.choice([0.35, 0.6, 0.85]))))
+
+    def test_euler_holds_for_every_polyhedron(self):
+        from .generators.geometry_plus import FACES, FVE
+        for kind, (f, v, e) in FVE.items():
+            self.assertEqual(f + v - e, 2, kind)
+            self.assertEqual(sum(n for n, _ in FACES[kind]), f, kind)
+
+    def test_circle_radius_diameter(self):
+        for _ in range(60):
+            q = _q('g6-circle-parts', 'medium')
+            n = int(re.findall(r'(\d+) cm', q['prompt_fr'])[0])
+            expected = n * 2 if 'rayon de ce cercle' in q['prompt_fr'] else n // 2
+            self.assertEqual(int(q['correct_answers'][0]), expected)
+
+    def test_translation_of_a_point(self):
+        for _ in range(80):
+            q = _q('g6-translation', 'hard')
+            m = re.search(r'A \((\d+), (\d+)\) glisse de (.*)\. Quelles', q['prompt_fr'])
+            if not m:
+                continue
+            x, y = int(m.group(1)), int(m.group(2))
+            for n, way in re.findall(r'(\d+) carreaux? vers la? ?l?e? ?(droite|gauche|haut|bas)', m.group(3)):
+                n = int(n)
+                x += n if way == 'droite' else -n if way == 'gauche' else 0
+                y += n if way == 'haut' else -n if way == 'bas' else 0
+            self.assertGreaterEqual(min(x, y), 0)                     # no negatives
+            self.assertIn(f'({x}, {y})', q['correct_answers'])
+
+    def test_translation_arrow_matches_picture(self):
+        from .generators.geometry_plus import _dir_words
+        from quiz import illustrations as I
+        blue, green = I.SHADES[I.BLUE][2], I.SHADES[I.GREEN][2]
+        for _ in range(60):
+            q = _q('g6-translation', 'easy')
+            rects = [m for m in q['shape_data'][0]['marks'] if m['type'] == 'rect']
+            cell = rects[0]['w']
+            b = min((m['x'], m['y']) for m in rects if m['fill'] == blue)
+            g = min((m['x'], m['y']) for m in rects if m['fill'] == green)
+            bx, by = min(m['x'] for m in rects if m['fill'] == blue), min(m['y'] for m in rects if m['fill'] == blue)
+            gx, gy = min(m['x'] for m in rects if m['fill'] == green), min(m['y'] for m in rects if m['fill'] == green)
+            dx, dy = round((gx - bx) / cell), round((by - gy) / cell)
+            self.assertEqual(q['correct_answers'][0], _dir_words(dx, dy)[0], (b, g))
+
+    def test_grid_map_square_matches_picture(self):
+        for _ in range(60):
+            q = _q('g3-grid-map', 'easy')
+            labels = q['shape_data'][0]['labels']
+            emoji = q['prompt_fr'].split()[-2]
+            icon = next(l for l in labels if l['text'] == emoji)
+            cols = [l for l in labels if l['text'].isalpha() and len(l['text']) == 1]
+            rows = [l for l in labels if l['text'].isdigit()]
+            col = min(cols, key=lambda l: abs(l['x'] - icon['x']))['text']
+            row = min(rows, key=lambda l: abs(l['y'] - icon['y']))['text']
+            self.assertEqual(q['correct_answers'][0], col + row)
+
+    def test_place_point_letter_matches_coordinates(self):
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('cartesian-place-point', level)
+                x, y = map(int, re.search(r'\((\d+), (\d+)\)', q['prompt_fr']).groups())
+                shape = q['shape_data'][0]
+                nums = {}
+                for l in shape['labels']:
+                    if l['text'].isdigit():
+                        nums.setdefault(l['text'], []).append(l)
+                zero = nums['0'][0]
+                one_x = next(l for l in nums['1'] if abs(l['y'] - zero['y']) < 1)
+                cell = one_x['x'] - zero['x']
+                bottom = zero['y'] - 15
+                letter = next(l for l in shape['labels'] if l['text'] == q['correct_answers'][0])
+                px, py = letter['x'] - 8, letter['y'] + 6
+                self.assertEqual((round((px - zero['x']) / cell), round((bottom - py) / cell)), (x, y))
+
+    def test_symmetry_axes_counts(self):
+        expected = {'carré': 4, 'rectangle': 2, 'triangle équilatéral': 3, 'triangle isocèle': 1,
+                    'triangle scalène': 0, 'losange': 2, 'parallélogramme': 0, 'pentagone régulier': 5,
+                    'hexagone régulier': 6}
+        for _ in range(60):
+            q = _q('g3-symmetry-axis', 'hard')
+            name = re.search(r'\(une? (.*)\)', q['prompt_fr']).group(1)
+            self.assertEqual(int(q['correct_answers'][0]), expected[name], name)
+
+    def test_motifs_have_no_symmetry(self):
+        from .generators.geometry_plus import _mirror_h, _mirror_v, _rot90, motif
+        for _ in range(100):
+            m = motif(random.randint(4, 5), 3, 3)
+            self.assertNotIn(m, (_mirror_v(m), _mirror_h(m), _rot90(m), _rot90(_rot90(m))))
