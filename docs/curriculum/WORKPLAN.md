@@ -12,7 +12,7 @@ Status keys: `[ ]` todo · `[~]` in progress · `[x]` done (commit = task ID in 
 1. `cd C:\Users\Cyrille\Documents\Playground && git status && git branch --show-current`
    - Must be on `curriculum-upgrade`. If not: `git checkout curriculum-upgrade`.
    - Uncommitted changes = the task marked `[~]` below was interrupted. Run the tests (step 2); if green, commit it; if red, finish or `git stash` it.
-2. `python manage.py test quiz` — must be green before starting the next task.
+2. `python manage.py test quiz --noinput` — must be green before starting the next task (~3–4 min). **Always pass `--noinput`**: after an interrupted run Django asks whether to delete the leftover test database and, without a terminal, waits forever (this is what looked like a hang / memory kill on 2026-10-13/14).
 3. `git log --oneline -15` — every finished task is one commit whose message starts with its task ID (e.g. `B2.3:`). Cross-check with the boxes below; the commit log wins if they disagree.
 4. Continue with the first `[ ]` / `[~]` task in the **Current phase**. Update this file in the same commit as the work.
 5. Eyeball new pictures: `python manage.py preview_skills <slugs…> --lang fr --png preview.png` (headless Chrome screenshot of sample problems; write outputs outside the repo).
@@ -26,6 +26,7 @@ Session log (append one line per working session):
 | 2026-10-13 | WP4 done (covered → 129 of 236). **Full suite NOT re-run after WP4**: the run was killed (machine low on memory). `quiz.test_curriculum_plus` was green (35 tests). FIRST STEP next session: `python manage.py test quiz`. | B4 checkpoint |
 | 2026-10-14 | Full suite (all modules at once) ran 24 min with no output and flat memory → looks like a hang, not low memory. Every test module passes when run alone (12/12). Suspect: a generator `while` loop that rarely never ends, depending on random state from earlier tests. Investigating with `-v 2`. | B4 checkpoint |
 | 2026-10-14 | WP5 geometry done: 14 skills (C5.1–C5.14), solids/nets/grids/triangles/circles in `illustrations.py`, migration 0024, coverage 129 → 149 of 236 (geometry 29/40). `g2-grid-map` renamed `g3-grid-map` (no grade 2 domain yet). Next: finish the hang investigation, then WP6 (C6.1). | C5 checkpoint |
+| 2026-10-14 | Hang solved: not a code bug — Django was waiting for a yes/no about a leftover test DB; always use `--noinput`. Full suite green (138 → 148 tests). WP6 measurement done: 11 skills (C6.1–C6.11), ruler/cube stacks/protractor/balance/jug pictures, thermometer minor ticks, `cm2`/`cm3` accepted in answers, negatives removed from `g5-thermometer`. Coverage 149 → 166 of 236 (measurement 33/38). Next: Phase D, WP7 statistics (D7.1). | C6 |
 
 ---
 
@@ -112,7 +113,7 @@ WP4 Operations & calculation
 - [~] B4.16 Fact fluency: content done (`g4-times-tables`, typed, 10 s); **todo**: per-fact adaptive tracking in the practice view (087, 094, 096)
 - [x] B4.17 `g6-write-large-number` (008) — added: writing numbers up to 999 999
 
-## Phase C — Geometry & measurement (WP5, WP6)  ← current phase
+## Phase C — Geometry & measurement (WP5, WP6)
 
 - [x] C5.1 `g3-solid-picture` (141, 143)
 - [x] C5.2 `g3-prism-or-pyramid` (145, 152)
@@ -128,19 +129,19 @@ WP4 Operations & calculation
 - [x] C5.12 `g3-grid-map` (133) — slug changed from g2- (lives in grade 3 until WP1 adds grade 2)
 - [x] C5.13 `cartesian-place-point` (135)
 - [x] C5.14 `g3-congruent` (166) — added: congruent figures
-- [ ] C6.1 `g3-ruler-mm` (176)
-- [ ] C6.2 `g5-estimate-length` (177)
-- [ ] C6.3 `g3-area-count-squares` (184, 186)
-- [ ] C6.4 `g5-area-units` (185, 187)
-- [ ] C6.5 `g3-volume-count-cubes` (188)
-- [ ] C6.6 `g6-volume-units` (191)
-- [ ] C6.7 `g4-compare-angles` (192)
-- [ ] C6.8 `g6-protractor` (194, 195)
-- [ ] C6.9 `g3-balance-scale` (200, 201)
-- [ ] C6.10 `g3-capacity-estimate` (196, 197)
-- [ ] C6.11 `g3-thermometer` grades 3–4 (208)
+- [x] C6.1 `g3-ruler-mm` (176)
+- [x] C6.2 `g5-estimate-length` (177)
+- [x] C6.3 `g3-area-count-squares` (184, 186)
+- [x] C6.4 `g5-area-units` (185, 187)
+- [x] C6.5 `g3-volume-count-cubes` (188)
+- [x] C6.6 `g6-volume-units` (191)
+- [x] C6.7 `g4-compare-angles` (192)
+- [x] C6.8 `g6-protractor` (194, 195)
+- [x] C6.9 `g3-balance-scale` (200, 201)
+- [x] C6.10 `g3-capacity-estimate` (196, 197)
+- [x] C6.11 `g3-thermometer` grades 3–4 (208) — also removed the negative numbers from the legacy `g5-thermometer` scale
 
-## Phase D — Statistics, probability, integers (WP7, WP8, WP9)
+## Phase D — Statistics, probability, integers (WP7, WP8, WP9)  ← current phase
 
 - [ ] D7.1 `g3-pictograph` (212)
 - [ ] D7.2 `g4-line-graph` (213, 219)

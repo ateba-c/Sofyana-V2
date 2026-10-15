@@ -359,11 +359,11 @@ def g5_thermometer_gen(level='easy'):
         min_t, max_t, step = 0, 40, 5
         temp = random.choice(range(0, 41, 5))
     elif level == 'medium':
-        min_t, max_t, step = -10, 40, 5
-        temp = random.choice(range(0, 41, 5))
+        min_t, max_t, step = 0, 50, 10                 # no negatives anywhere (primary rule; D2 pending)
+        temp = random.choice(range(0, 51, 5))
     else:
-        min_t, max_t, step = -20, 40, 10
-        temp = random.choice(range(0, 41, 2))
+        min_t, max_t, step = 0, 50, 10
+        temp = random.choice(range(0, 51, 2))
 
     temp_str = f"{temp} °C"
 
@@ -380,6 +380,7 @@ def g5_thermometer_gen(level='easy'):
             'min_temp': min_t,
             'max_temp': max_t,
             'step':     step,
+            'minor':    {'easy': None, 'medium': 5, 'hard': 2}[level],
         }],
         'choices':          [],
         'pairs':            [],

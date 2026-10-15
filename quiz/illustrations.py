@@ -693,3 +693,185 @@ def grid(cols, rows, cell=22, **kw):
     c = Canvas(w, h, max_h=min(rows * cell + 50, 240), css_w='max-w-sm')
     draw_grid(c, (6, 6, w - 12, h - 12), cols, rows, cell=cell, **kw)
     return c.shape()
+
+
+# ── measurement: ruler ───────────────────────────────────────────────────────
+
+def ruler(cm, start_mm, length_mm, mm_ticks=True, color=AMBER, obj='pencil'):
+    """
+    A ruler 0…cm with an object (pencil or ribbon) lying from start_mm to start_mm + length_mm.
+    """
+    unit = 300 / max(cm, 1)
+    w = cm * unit + 40
+    c = Canvas(w, 104, max_h=120, css_w='max-w-lg')
+    x0, ry = 20, 50
+    # object above the ruler
+    xa, xb = x0 + start_mm / 10 * unit, x0 + (start_mm + length_mm) / 10 * unit
+    if obj == 'pencil':
+        tip = min(14, (xb - xa) * 0.25)
+        c.poly([(xa, 22), (xb - tip, 22), (xb, 32), (xb - tip, 42), (xa, 42)], fill=SHADES[color][2], stroke=INK, sw=1.8)
+        c.poly([(xb - tip, 22), (xb, 32), (xb - tip, 42)], fill='#FDE68A', stroke=INK, sw=1.5)
+        c.rect(xa, 22, min(8, (xb - xa) * 0.15), 20, fill='#FCA5A5', stroke=INK, sw=1.5)
+    else:
+        c.rect(xa, 26, xb - xa, 14, fill=SHADES[color][2], stroke=INK, sw=1.8, rx=2)
+    c.line(xa, 18, xa, ry, color=SOFT, sw=1, dash='3 3')
+    c.line(xb, 18, xb, ry, color=SOFT, sw=1, dash='3 3')
+    # ruler body
+    c.rect(x0 - 10, ry, cm * unit + 20, 46, fill='#FEF9C3', stroke=INK, sw=1.8, rx=4)
+    for k in range(cm * 10 + 1):
+        x = x0 + k / 10 * unit
+        if k % 10 == 0:
+            c.line(x, ry, x, ry + 18, color=INK, sw=1.8)
+            c.text(x, ry + 33, str(k // 10), size=12, bold=True)
+        elif k % 5 == 0 and mm_ticks:
+            c.line(x, ry, x, ry + 12, color=INK, sw=1.2)
+        elif mm_ticks:
+            c.line(x, ry, x, ry + 7, color=INK, sw=0.9)
+    c.text(x0 + cm * unit, ry + 44, 'cm', size=10, anchor='end', color=SOFT)
+    return c.shape()
+
+
+# ── measurement: cube stacks (isometric) ────────────────────────────────────
+
+def cube_stack(heights, color=BLUE, unit=26):
+    """
+    heights[y][x] = number of unit cubes in the tower at (x, y); y = 0 is the back row.
+    Isometric view, painter's order by depth (x + y + z).
+    """
+    light, mid, dark = SHADES[color]
+    cx, sy = unit * 0.866, unit * 0.5
+
+    def P(x, y, z):
+        return (x - y) * cx, (x + y) * sy - z * unit
+
+    # row 0 = back (small y); the viewer sits on the +x, +y, +z side: depth = x + y + z
+    cubes = [(x, y, z) for y, row in enumerate(heights) for x, hgt in enumerate(row) for z in range(hgt)]
+    pts = [P(x + a, y + b, z + cz) for x, y, z in cubes for a in (0, 1) for b in (0, 1) for cz in (0, 1)] or [(0, 0)]
+    minx, maxx = min(p[0] for p in pts), max(p[0] for p in pts)
+    miny, maxy = min(p[1] for p in pts), max(p[1] for p in pts)
+    w, h = maxx - minx + 16, maxy - miny + 16
+    c = Canvas(w, h, max_h=min(h + 10, 200), css_w='max-w-xs')
+    ox, oy = 8 - minx, 8 - miny
+
+    def Q(x, y, z):
+        px, py = P(x, y, z)
+        return px + ox, py + oy
+
+    for x, y, z in sorted(cubes, key=lambda t: (t[0] + t[1] + t[2], t[2])):
+        top = [Q(x, y, z + 1), Q(x + 1, y, z + 1), Q(x + 1, y + 1, z + 1), Q(x, y + 1, z + 1)]
+        left = [Q(x, y + 1, z), Q(x + 1, y + 1, z), Q(x + 1, y + 1, z + 1), Q(x, y + 1, z + 1)]
+        right = [Q(x + 1, y, z), Q(x + 1, y + 1, z), Q(x + 1, y + 1, z + 1), Q(x + 1, y, z + 1)]
+        c.poly(left, fill=mid, stroke=INK, sw=1.4)
+        c.poly(right, fill=dark, stroke=INK, sw=1.4)
+        c.poly(top, fill=light, stroke=INK, sw=1.4)
+    return c.shape()
+
+
+# ── measurement: angles and protractor ──────────────────────────────────────
+
+def draw_angle(c, box, degrees, ray=1.0, rot=0, color=BLUE, arc=True):
+    """An angle of ``degrees`` with its vertex placed so the figure fits in box; ``ray`` scales the rays (0.4–1)."""
+    x0, y0, w, h = box
+    R = min(w, h) * 0.8 * ray
+    a0, a1 = math.radians(rot), math.radians(rot + degrees)
+    p0 = (R * math.cos(a0), -R * math.sin(a0))
+    p1 = (R * math.cos(a1), -R * math.sin(a1))
+    xs, ys = [0, p0[0], p1[0]], [0, p0[1], p1[1]]
+    vx = x0 + (w - (max(xs) - min(xs))) / 2 - min(xs)
+    vy = y0 + (h - (max(ys) - min(ys))) / 2 - min(ys)
+    c.line(vx, vy, vx + p0[0], vy + p0[1], color=INK, sw=2.4)
+    c.line(vx, vy, vx + p1[0], vy + p1[1], color=INK, sw=2.4)
+    if arc:
+        if abs(degrees - 90) < 0.5:
+            _right_mark(c, (vx, vy), (vx + p0[0], vy + p0[1]), (vx + p1[0], vy + p1[1]), s=10)
+        else:
+            c.arc(vx, vy, 14, rot, rot + degrees, stroke=color, sw=2.4)
+    c.dot(vx, vy, r=3, fill=INK)
+    return c
+
+
+def protractor(degrees, base_left=False, show_inner=False, color=RED):
+    """
+    A protractor with an angle whose vertex is at the centre. One ray lies on the 0° line
+    (right side, or left side when ``base_left``). Outer scale counts from the right.
+    """
+    R = 120
+    c = Canvas(2 * R + 40, R + 46, max_h=190, css_w='max-w-sm')
+    cx, cy = R + 20, R + 22
+    c.path(f'M {cx - R},{cy} A {R},{R} 0 0,1 {cx + R},{cy} Z', fill='#EFF6FF', stroke=INK, sw=1.8)
+    for d in range(0, 181):
+        a = math.radians(d)
+        cos, sin = math.cos(a), math.sin(a)
+        ln = 14 if d % 10 == 0 else 9 if d % 5 == 0 else 5
+        c.line(cx + R * cos, cy - R * sin, cx + (R - ln) * cos, cy - (R - ln) * sin, color=INK, sw=1 if d % 10 else 1.4)
+        if d % 10 == 0:
+            c.text(cx + (R - 24) * cos, cy - (R - 24) * sin + 4, str(d), size=9, bold=True)
+            if show_inner:
+                c.text(cx + (R - 40) * cos, cy - (R - 40) * sin + 4, str(180 - d), size=8, color=SOFT)
+    c.line(cx - R, cy, cx + R, cy, color=INK, sw=1.4)
+    c.dot(cx, cy, r=3.5, fill=INK)
+    start = 180 if base_left else 0
+    end = 180 - degrees if base_left else degrees
+    for d in (start, end):
+        a = math.radians(d)
+        c.line(cx, cy, cx + (R + 14) * math.cos(a), cy - (R + 14) * math.sin(a), color=color, sw=3)
+    lo, hi_ = sorted((start, end))
+    c.arc(cx, cy, 22, lo, hi_, stroke=color, sw=2.5)
+    return c.shape()
+
+
+# ── measurement: balance scale, measuring jug ───────────────────────────────
+
+def balance(left, right, tilt=0):
+    """
+    Two-pan balance. left/right: lists of labels (emoji or « 100 g »). tilt: −1 left pan down,
+    0 level, 1 right pan down.
+    """
+    c = Canvas(300, 170, max_h=180, css_w='max-w-sm')
+    cx, top = 150, 40
+    d = 16 * tilt                      # right end goes down when tilt = 1
+    c.poly([(cx - 30, 160), (cx + 30, 160), (cx + 6, 150), (cx - 6, 150)], fill=SOFT, stroke=INK, sw=1.5)
+    c.line(cx, 150, cx, top, color=INK, sw=4)
+    c.line(cx - 110, top - d, cx + 110, top + d, color=INK, sw=4)
+    c.dot(cx, top, r=5, fill=INK)
+    for side, items in ((-1, left), (1, right)):
+        ex, ey = cx + side * 110, top + side * d
+        pan_y = ey + 62
+        c.line(ex, ey, ex - 36, pan_y, color=SOFT, sw=1.5)
+        c.line(ex, ey, ex + 36, pan_y, color=SOFT, sw=1.5)
+        c.path(f'M {ex - 44},{pan_y} Q {ex},{pan_y + 22} {ex + 44},{pan_y} Z', fill='#E2E8F0', stroke=INK, sw=1.8)
+        n = len(items)
+        weights = [it for it in items if any(ch.isdigit() for ch in (it if isinstance(it, str) else it[0]))]
+        gap = min(40, 120 / max(n, 1)) if weights else min(26, 80 / max(n, 1))
+        for k, it in enumerate(items):
+            fr, en = (it, None) if not isinstance(it, tuple) else it
+            x = ex + (k - (n - 1) / 2) * gap
+            if any(ch.isdigit() for ch in fr):
+                bw = min(38, gap - 3)
+                c.rect(x - bw / 2, pan_y - 22, bw, 20, fill=SHADES[AMBER][2], stroke=INK, sw=1.2, rx=3)
+                c.text(x, pan_y - 8, fr, size=11 if bw >= 34 else 9, bold=True, text_en=en)
+            else:
+                c.text(x, pan_y - 4, fr, size=22, text_en=en)
+    return c.shape()
+
+
+def jug(capacity_ml, level_ml, step_ml, label_every=None, color=BLUE):
+    """A measuring jug graduated every ``step_ml`` (labels every ``label_every``), filled to ``level_ml``."""
+    label_every = label_every or step_ml * 2
+    c = Canvas(170, 190, max_h=190, css_w='max-w-[12rem]')
+    x0, x1, yb, yt = 40, 120, 176, 22
+    c.path(f'M {x1},{yt} L {x1 + 22},{yt + 30} L {x1 + 22},{yt + 110} L {x1},{yt + 130}', stroke=INK, sw=3)   # handle
+    lvl = yb - (yb - yt - 10) * level_ml / capacity_ml
+    c.rect(x0, lvl, x1 - x0, yb - lvl, fill=SHADES[color][2], stroke='none', sw=0)
+    c.line(x0, lvl, x1, lvl, color=color, sw=2)
+    c.path(f'M {x0},{yt} L {x0},{yb} L {x1},{yb} L {x1},{yt}', stroke=INK, sw=2.5)
+    v = step_ml
+    while v <= capacity_ml:
+        y = yb - (yb - yt - 10) * v / capacity_ml
+        big = v % label_every == 0
+        c.line(x0, y, x0 + (16 if big else 9), y, color=INK, sw=1.6 if big else 1)
+        if big:
+            c.text(x0 - 4, y + 4, f'{v}', size=10, bold=True, anchor='end')
+        v += step_ml
+    c.text(x0 - 4, yt - 6, 'mL', size=10, anchor='end', color=SOFT)
+    return c.shape()

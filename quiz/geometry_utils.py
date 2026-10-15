@@ -1003,6 +1003,19 @@ def render_shape(shape: dict, vw: float = 260, vh: float = 185,
             stroke='#9CA3AF',
             stroke_width=1,
         ))
+        # Minor ticks (e.g. every 2 °C between labelled steps) so in-between values can be read
+        minor = shape.get('minor')
+        if minor:
+            t = min_temp
+            while t <= max_temp:
+                if (t - min_temp) % step:
+                    ty = _t2y(t)
+                    out['lines'].append(dict(
+                        x1=round(tube_x + tube_r, 1), y1=round(ty, 1),
+                        x2=round(tube_x + tube_r + 4, 1), y2=round(ty, 1),
+                        stroke='#6B7280', width=1,
+                    ))
+                t += minor
         # Tick marks and labels
         t = min_temp
         while t <= max_temp:
@@ -1016,7 +1029,7 @@ def render_shape(shape: dict, vw: float = 260, vh: float = 185,
             if t % (step * 2) == 0 or step >= 10:
                 out['labels'].append(_label(
                     f"{t} °C", label_x + tick_len - 2, ty + 4,
-                    anchor='start', size=9, bold=False, color='#374151',
+                    anchor='start', size=11, bold=True, color='#374151',
                 ))
             t += step
 

@@ -191,6 +191,18 @@ CURRICULUM_REFS = {
     'g3-congruent': [166],
     'g3-grid-map': [133],
     'cartesian-place-point': [135],
+    # ── WP6 measurement ──
+    'g3-ruler-mm': [175, 176, 182],
+    'g5-estimate-length': [177, 183],
+    'g3-area-count-squares': [184, 186],
+    'g5-area-units': [185, 187],
+    'g3-volume-count-cubes': [188, 190],
+    'g6-volume-units': [189, 191],
+    'g4-compare-angles': [192, 193],
+    'g6-protractor': [194, 195],
+    'g3-balance-scale': [200, 201, 202],
+    'g3-capacity-estimate': [196, 197, 199],
+    'g3-thermometer': [208, 209],
     # Not in the audit on purpose: fraction-multiply / fraction-divide (beyond primary),
     # Roman numerals (enrichment), g6-relevant-info (cross-cutting problem solving).
 }

@@ -444,3 +444,102 @@ class GeometryPlusTests(SimpleTestCase):
         for _ in range(100):
             m = motif(random.randint(4, 5), 3, 3)
             self.assertNotIn(m, (_mirror_v(m), _mirror_h(m), _rot90(m), _rot90(_rot90(m))))
+
+
+class MeasurementPlusTests(SimpleTestCase):
+    """WP6: answers recomputed from the picture or the prompt."""
+
+    def test_ruler_length_matches_picture(self):
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g3-ruler-mm', level)
+                shape = q['shape_data'][0]
+                ends = sorted(m['x1'] for m in shape['marks'] if m['type'] == 'line' and m.get('dash') == '3 3')
+                zero = next(l['x'] for l in shape['labels'] if l['text'] == '0')
+                one = next(l['x'] for l in shape['labels'] if l['text'] == '1')
+                mm = round((ends[1] - ends[0]) / (one - zero) * 10)
+                expected = mm // 10 if level == 'easy' else mm
+                self.assertEqual(int(q['correct_answers'][0]), expected, level)
+
+    def test_area_counts_coloured_squares(self):
+        from quiz import illustrations as I
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g3-area-count-squares', level)
+                marks = q['shape_data'][0]['marks']
+                full = sum(1 for m in marks if m['type'] == 'rect' and m['fill'] not in ('none', '#FFFFFF'))
+                halves = sum(1 for m in marks if m['type'] == 'path' and m['fill'] != 'none')
+                self.assertEqual(halves % 2, 0)
+                self.assertEqual(int(q['correct_answers'][0]), full + halves // 2, level)
+
+    def test_balance_weights_add_up(self):
+        for _ in range(40):
+            q = _q('g3-balance-scale', 'easy')
+            grams = [int(l['text'].split()[0]) for l in q['shape_data'][0]['labels'] if l['text'].endswith(' g')]
+            self.assertEqual(int(q['correct_answers'][1]), sum(grams))
+
+    def test_balance_shared_mass(self):
+        for _ in range(60):
+            q = _q('g3-balance-scale', 'hard')
+            if not q['shape_data']:
+                continue
+            labels = q['shape_data'][0]['labels']
+            grams = sum(int(l['text'].split()[0]) for l in labels if l['text'].endswith(' g'))
+            fruit = len([l for l in labels if not l['text'].endswith(' g')])
+            self.assertEqual(int(q['correct_answers'][1]) * fruit, grams)
+
+    def test_conversions(self):
+        factors = {('m²', 'dm²'): 100, ('dm²', 'cm²'): 100, ('dm²', 'm²'): 0.01, ('cm²', 'dm²'): 0.01,
+                   ('dm³', 'L'): 1, ('L', 'cm³'): 1000, ('cm³', 'mL'): 1, ('dm³', 'cm³'): 1000}
+        for slug in ('g5-area-units', 'g6-volume-units'):
+            for _ in range(80):
+                q = _q(slug, 'hard')
+                m = re.search(r'\*\*([\d ]+) (\S+) = \? (\S+)\*\*', q['prompt_fr'])
+                if m:
+                    n = int(m.group(1).replace(' ', ''))
+                    self.assertEqual(int(q['correct_answers'][0]), round(n * factors[(m.group(2), m.group(3))]))
+
+    def test_box_volume_and_area(self):
+        for _ in range(40):
+            q = _q('g6-volume-units', 'medium')
+            a, b, h = map(int, re.findall(r'(\d+) cm', q['prompt_fr'])[:3])
+            self.assertEqual(int(q['correct_answers'][-1]), a * b * h)
+            self.assertTrue(check_answer(f'{a * b * h} cm3', q['correct_answers'], 'integer'))
+
+    def test_capacity_cups(self):
+        for _ in range(40):
+            q = _q('g3-capacity-estimate', 'easy')
+            cup = int(re.search(r'contient (\d+) mL', q['prompt_fr']).group(1))
+            m = re.search(r'carafe de (\d+) (mL|L)', q['prompt_fr'])
+            jug = int(m.group(1)) * (1000 if m.group(2) == 'L' else 1)
+            self.assertEqual(int(q['correct_answers'][0]) * cup, jug)
+
+    def test_estimates_never_offer_an_equivalent_amount(self):
+        to_ml = {'mL': 1, 'L': 1000}
+        for _ in range(80):
+            q = _q('g3-capacity-estimate', 'hard')
+            vals = []
+            for c in q['choices']:
+                num, unit = c['label'].rsplit(' ', 1)          # the number may hold a narrow no-break space
+                vals.append(int(num.replace(' ', '')) * to_ml[unit])
+            self.assertEqual(len(vals), len(set(vals)), q['choices'])
+
+    def test_no_negative_temperatures(self):
+        for slug in ('g3-thermometer', 'g5-thermometer'):
+            for level in LEVELS:
+                for _ in range(30):
+                    q = _q(slug, level)
+                    for s in q['shape_data']:
+                        if s.get('type') == 'thermometer':
+                            self.assertGreaterEqual(s['min_temp'], 0, slug)
+                    self.assertNotIn('−', q['correct_answers'][0])
+                    self.assertGreaterEqual(int(re.sub(r'\D', '', q['correct_answers'][-1]) or 0), 0)
+
+    def test_thermometer_value_is_readable(self):
+        for slug in ('g3-thermometer', 'g5-thermometer'):
+            for level in LEVELS:
+                for _ in range(30):
+                    s = next((x for x in _q(slug, level)['shape_data'] if x.get('type') == 'thermometer'), None)
+                    if s:
+                        tick = s.get('minor') or s['step']
+                        self.assertEqual((s['temp'] - s['min_temp']) % tick, 0, (slug, level, s))

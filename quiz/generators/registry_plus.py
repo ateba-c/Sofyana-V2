@@ -31,6 +31,11 @@ from .geometry_plus import (
     g3_symmetry_axis_gen, g6_translation_gen, g3_frieze_gen, g3_congruent_gen,
     g3_grid_map_gen, cartesian_place_point_gen,
 )
+from .measurement_plus import (
+    g3_ruler_mm_gen, g5_estimate_length_gen, g3_area_count_squares_gen, g5_area_units_gen,
+    g3_volume_count_cubes_gen, g6_volume_units_gen, g4_compare_angles_gen, g6_protractor_gen,
+    g3_balance_scale_gen, g3_capacity_estimate_gen, g3_thermometer_gen,
+)
 
 _L3 = ['easy', 'medium', 'hard']
 
@@ -97,6 +102,18 @@ PLUS_GENERATORS = {
     'g3-congruent':                  g3_congruent_gen,
     'g3-grid-map':                   g3_grid_map_gen,
     'cartesian-place-point':         cartesian_place_point_gen,
+    # WP6 — measurement
+    'g3-ruler-mm':                   g3_ruler_mm_gen,
+    'g5-estimate-length':            g5_estimate_length_gen,
+    'g3-area-count-squares':         g3_area_count_squares_gen,
+    'g5-area-units':                 g5_area_units_gen,
+    'g3-volume-count-cubes':         g3_volume_count_cubes_gen,
+    'g6-volume-units':               g6_volume_units_gen,
+    'g4-compare-angles':             g4_compare_angles_gen,
+    'g6-protractor':                 g6_protractor_gen,
+    'g3-balance-scale':              g3_balance_scale_gen,
+    'g3-capacity-estimate':          g3_capacity_estimate_gen,
+    'g3-thermometer':                g3_thermometer_gen,
 }
 
 PLUS_SKILL_MAP = {
@@ -150,6 +167,17 @@ PLUS_SKILL_MAP = {
     'g3-congruent':                  _sk('name-polygon', 'g3-symmetry-axis', 'g3-frieze', 'name-polygon'),
     'g3-grid-map':                   _sk('cartesian-coord', 'cartesian-place-point', 'cartesian-coord', 'cartesian-coord'),
     'cartesian-place-point':         _sk('g3-grid-map', 'cartesian-coord', 'g6-translation', 'g3-grid-map'),
+    'g3-ruler-mm':                   _sk('measure-unit', 'g5-estimate-length', 'convert-length', 'measure-unit'),
+    'g5-estimate-length':            _sk('g3-ruler-mm', 'convert-length', 'perimeter-labeled', 'measure-unit'),
+    'g3-area-count-squares':         _sk('perimeter-labeled', 'g5-area-units', 'geometry-area', 'perimeter-labeled'),
+    'g5-area-units':                 _sk('g3-area-count-squares', 'geometry-area', 'g6-volume-units', 'g3-area-count-squares'),
+    'g3-volume-count-cubes':         _sk('g3-area-count-squares', 'g5-volume', 'g6-volume-units', 'g3-area-count-squares'),
+    'g6-volume-units':               _sk('g5-volume', 'g5-capacity-convert', 'convert-volume', 'g3-volume-count-cubes'),
+    'g4-compare-angles':             _sk('identify-angle', 'g6-protractor', 'g6-triangle-type', 'identify-angle'),
+    'g6-protractor':                 _sk('g4-compare-angles', 'g6-triangle-type', 'g6-circle-parts', 'g4-compare-angles'),
+    'g3-balance-scale':              _sk('unit-by-quantity', 'g5-mass-convert', 'convert-mass', 'unit-by-quantity'),
+    'g3-capacity-estimate':          _sk('unit-by-quantity', 'g5-capacity-convert', 'g6-volume-units', 'unit-by-quantity'),
+    'g3-thermometer':                _sk('g4-number-line-point', 'g5-thermometer', 'g5-temperature', 'g4-number-line-point'),
     'g6-write-large-number':         _sk('g5-large-integer', 'g6-digit-value', 'g6-compare', 'write-number'),
 }
 
@@ -224,6 +252,25 @@ PLUS_GROUPS = [
         {'slug': 'g6-circle-parts',          'name_en': 'Parts of a Circle',           'name_fr': 'Le cercle'},
         {'slug': 'g6-translation',           'name_en': 'Translations',                'name_fr': 'Translations'},
         {'slug': 'g6-polyhedron-net',        'name_en': 'Polyhedra & Nets',            'name_fr': 'Polyèdres et développements'},
+    ]},
+    {'name_en': 'Grade 3 — Measurement & Time', 'grade': 3, 'topics': [
+        {'slug': 'g3-ruler-mm',              'name_en': 'Read a Ruler (cm, mm)',       'name_fr': 'Lire une règle (cm, mm)'},
+        {'slug': 'g3-area-count-squares',    'name_en': 'Area: Count the Squares',     'name_fr': 'Aire : compter les carrés'},
+        {'slug': 'g3-volume-count-cubes',    'name_en': 'Volume: Count the Cubes',     'name_fr': 'Volume : compter les cubes'},
+        {'slug': 'g3-balance-scale',         'name_en': 'Balance & Mass',              'name_fr': 'Balance et masse'},
+        {'slug': 'g3-capacity-estimate',     'name_en': 'Capacity',                    'name_fr': 'Capacité'},
+        {'slug': 'g3-thermometer',           'name_en': 'Thermometer',                 'name_fr': 'Le thermomètre'},
+    ]},
+    {'name_en': 'Grade 4 — Geometry', 'grade': 4, 'topics': [
+        {'slug': 'g4-compare-angles',        'name_en': 'Compare Angles',              'name_fr': 'Comparer des angles'},
+    ]},
+    {'name_en': 'Grade 5 — Measurement', 'grade': 5, 'topics': [
+        {'slug': 'g5-estimate-length',       'name_en': 'Estimate Lengths',            'name_fr': 'Estimer des longueurs'},
+        {'slug': 'g5-area-units',            'name_en': 'Area Units (cm², m²)',        'name_fr': 'Unités d’aire (cm², m²)'},
+    ]},
+    {'name_en': 'Grade 6 — Measurement', 'name_fr': '6e année — Mesure', 'icon': '📏', 'grade': 6, 'topics': [
+        {'slug': 'g6-protractor',            'name_en': 'Protractor & Degrees',        'name_fr': 'Rapporteur et degrés'},
+        {'slug': 'g6-volume-units',          'name_en': 'Volume Units (cm³, L)',       'name_fr': 'Unités de volume (cm³, L)'},
     ]},
     {'name_en': 'Grade 5 — Fractions', 'name_fr': '5e année — Fractions', 'icon': '½', 'grade': 5, 'topics': [
         {'slug': 'g5-fraction-meanings',     'name_en': 'What a Fraction Means',       'name_fr': 'Les sens de la fraction'},

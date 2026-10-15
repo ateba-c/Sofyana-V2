@@ -56,6 +56,7 @@ def _strip_units(s: str) -> str:
     """Drop currency signs, unit words, degree/exponent marks from a numeric string."""
     s = s.strip()
     s = s.strip(_CURRENCY).strip()
+    s = re.sub(r'\s*(mm|cm|dm|km|m)\s*[23]\s*$', '', s)       # "24 cm2", "60 cm3" (no ² key on the keyboard)
     # Trailing unit words / symbols: "12 cm", "5 m²", "20 °C".  Only strip when
     # no digit follows the unit, so "1 h 20 min" is NOT reduced to "1".
     s = re.sub(r'\s*[a-zA-Zµ°²³%]+[^\d]*$', '', s).strip()     # "%" too: "25 %" in a percent question
