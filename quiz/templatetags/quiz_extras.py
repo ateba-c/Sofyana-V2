@@ -36,6 +36,20 @@ def to_json(value):
 
 
 @register.filter
+def speech(value):
+    """Plain text for read-aloud: drop **bold** markers."""
+    return _re.sub(r'\*\*(.+?)\*\*', r'\1', str(value or ''))
+
+
+@register.filter
+def speech_choices(choices):
+    """JSON list of the choice labels (multiple choice), read after the question."""
+    import json
+    labels = [str(c.get('label', '')) for c in (choices or []) if isinstance(c, dict)]
+    return json.dumps(labels, ensure_ascii=False)        # autoescaping makes it attribute-safe
+
+
+@register.filter
 def md_bold(value):
     """Render **text** as <strong>text</strong>. Escapes HTML first for safety."""
     if not value:

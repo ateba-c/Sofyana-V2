@@ -1,0 +1,11 @@
+{% load quiz_extras %}
+{# Read-aloud button (browser speech synthesis). Hidden when the browser has no voice support. #}
+<button type="button"
+        x-data x-show="'speechSynthesis' in window" x-cloak
+        onclick="sayAloud(this)"
+        data-say="{{ text|speech }}"
+        data-lang="{{ lang }}"
+        data-choices='{{ choices|speech_choices }}'
+        class="read-aloud shrink-0 w-10 h-10 rounded-full bg-brand-light text-brand hover:bg-brand/20 border border-brand/20 flex items-center justify-center text-lg transition active:scale-95"
+        title="{% if lang == 'fr' %}Écouter la question{% else %}Listen to the question{% endif %}"
+        aria-label="{% if lang == 'fr' %}Écouter la question{% else %}Listen to the question{% endif %}">🔊</button>

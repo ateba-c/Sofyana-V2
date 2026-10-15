@@ -14,9 +14,12 @@
        }
      }">
 
-  <p class="text-base font-extrabold leading-snug mb-2 text-ink">
-    {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
-  </p>
+  <div class="flex items-start gap-2 mb-2">
+    <p class="flex-1 text-base font-extrabold leading-snug text-ink">
+      {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
+    </p>
+    {% if lang == 'fr' %}{% include 'partials/read_aloud.html' with text=question.prompt_fr choices=question.choices %}{% else %}{% include 'partials/read_aloud.html' with text=question.prompt_en choices=question.choices %}{% endif %}
+  </div>
 
   {% if question.shape_data %}
   <div class="rounded-xl border border-slate-200 bg-slate-50 p-2 mb-2">
@@ -126,9 +129,12 @@
        }
      }'>
 
-  <p class="text-base font-extrabold leading-snug mb-1 text-ink">
-    {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
-  </p>
+  <div class="flex items-start gap-2 mb-1">
+    <p class="flex-1 text-base font-extrabold leading-snug text-ink">
+      {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
+    </p>
+    {% if lang == 'fr' %}{% include 'partials/read_aloud.html' with text=question.prompt_fr %}{% else %}{% include 'partials/read_aloud.html' with text=question.prompt_en %}{% endif %}
+  </div>
   <p class="text-xs text-[var(--text-soft)] mb-2 flex items-center gap-1 font-bold">
     ⬆⬇ {% if lang == 'fr' %}Glissez pour réordonner{% else %}Drag to reorder{% endif %}
   </p>
@@ -206,9 +212,12 @@
        }
      }'>
 
-  <p class="text-base font-extrabold leading-snug mb-2 text-ink">
-    {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
-  </p>
+  <div class="flex items-start gap-2 mb-2">
+    <p class="flex-1 text-base font-extrabold leading-snug text-ink">
+      {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
+    </p>
+    {% if lang == 'fr' %}{% include 'partials/read_aloud.html' with text=question.prompt_fr %}{% else %}{% include 'partials/read_aloud.html' with text=question.prompt_en %}{% endif %}
+  </div>
 
   <div class="space-y-2 mb-2">
     <template x-for="pair in pairs" :key="pair.left">

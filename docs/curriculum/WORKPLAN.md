@@ -28,6 +28,7 @@ Session log (append one line per working session):
 | 2026-10-14 | WP5 geometry done: 14 skills (C5.1–C5.14), solids/nets/grids/triangles/circles in `illustrations.py`, migration 0024, coverage 129 → 149 of 236 (geometry 29/40). `g2-grid-map` renamed `g3-grid-map` (no grade 2 domain yet). Next: finish the hang investigation, then WP6 (C6.1). | C5 checkpoint |
 | 2026-10-14 | Hang solved: not a code bug — Django was waiting for a yes/no about a leftover test DB; always use `--noinput`. Full suite green (138 → 148 tests). WP6 measurement done: 11 skills (C6.1–C6.11), ruler/cube stacks/protractor/balance/jug pictures, thermometer minor ticks, `cm2`/`cm3` accepted in answers, negatives removed from `g5-thermometer`. Coverage 149 → 166 of 236 (measurement 33/38). Next: Phase D, WP7 statistics (D7.1). | C6 |
 | 2026-10-14 | WP7 statistics + WP8 probability done: 13 skills (D7.1–D7.5, D8.1–D8.8), bar chart / line graph / pictograph / spinner / bag / tree / probability-line pictures. Coverage 166 → 181 of 236 (stats 8/11, probability 12/16, nothing missing in either). Full suite green. Open widget todos: tap-to-build chart, simulation runner. Next: Phase E (E0 read-aloud, then grade 1–2 skills) — D9 still blocked on D2. | D7–D8 |
+| 2026-10-14 | Phase E done: read-aloud button (E0) + 30 grade 1–2 skills (E1.1–E1.30), hidden behind `SOFYANA_EARLY_GRADES` (D1). `quiz.test_curriculum_plus` green (77 tests). **Full suite became slow (>10 min, CPU-bound) after WP1 — investigating per module; FIRST STEP after a restart: time each module (see RESUME step 2) and find the slow test.** | E checkpoint |
 
 ---
 
@@ -159,19 +160,20 @@ WP4 Operations & calculation
 - [x] D8.8 `g3-list-outcomes` (229) — slug changed from g2- (grade 3 until WP1 adds grade 2)
 - [!] D9.1–D9.4 Integers domain — blocked on D2
 
-## Phase E — Grades 1–2 (WP1)  ← current phase
+## Phase E — Grades 1–2 (WP1)
 
-- [ ] E0 Read-aloud button (Web Speech API, FR/EN) for prompts
-- [ ] E1.1 `g1-count-objects` · [ ] E1.2 `g1-count-on` · [ ] E1.3 `g1-skip-count` · [ ] E1.4 `g1-estimate-collection`
-- [ ] E1.5 `g2-tens-ones-picture` · [ ] E1.6 `g2-hundred-chart` · [ ] E1.7 `g1-compare` · [ ] E1.8 `g2-order`
-- [ ] E1.9 `g1-add-facts` · [ ] E1.10 `g1-sub-facts` · [ ] E1.11 `g1-fact-strategies` · [ ] E1.12 `g2-add-sub-2digit`
-- [ ] E1.13 `g1-story-add-sub` · [ ] E1.14 `g2-equal-groups` · [ ] E1.15 `g1-true-equality` · [ ] E1.16 `g1-missing-number`
-- [ ] E1.17 `g1-shape-pattern` · [ ] E1.18 `g1-name-shape` · [ ] E1.19 `g1-open-closed-lines` · [ ] E1.20 `g1-solid-objects`
-- [ ] E1.21 `g1-position-words` · [ ] E1.22 `g1-same-shape-size` · [ ] E1.23 `g1-compare-lengths` · [ ] E1.24 `g1-measure-units`
-- [ ] E1.25 `g2-ruler-cm` · [ ] E1.26 `g1-clock-hour-half` · [ ] E1.27 `g1-calendar` · [ ] E1.28 `g1-half-third-quarter`
-- [ ] E1.29 `g1-pictograph` · [ ] E1.30 `g1-certain-possible-impossible`
+- [x] E0 Read-aloud button (Web Speech API, FR/EN) for prompts — 🔊 next to every prompt; reads the choices too; symbols spoken as words
+- [x] E1.1 `g1-count-objects` · [x] E1.2 `g1-count-on` · [x] E1.3 `g1-skip-count` · [x] E1.4 `g1-estimate-collection`
+- [x] E1.5 `g2-tens-ones-picture` · [x] E1.6 `g2-hundred-chart` · [x] E1.7 `g1-compare` · [x] E1.8 `g2-order`
+- [x] E1.9 `g1-add-facts` · [x] E1.10 `g1-sub-facts` · [x] E1.11 `g1-fact-strategies` · [x] E1.12 `g2-add-sub-2digit`
+- [x] E1.13 `g1-story-add-sub` · [x] E1.14 `g2-equal-groups` · [x] E1.15 `g1-true-equality` · [x] E1.16 `g1-missing-number`
+- [x] E1.17 `g1-shape-pattern` · [x] E1.18 `g1-name-shape` · [x] E1.19 `g1-open-closed-lines` · [x] E1.20 `g1-solid-objects`
+- [x] E1.21 `g1-position-words` · [x] E1.22 `g1-same-shape-size` · [x] E1.23 `g1-compare-lengths` · [x] E1.24 `g1-measure-units`
+- [x] E1.25 `g2-ruler-cm` · [x] E1.26 `g1-clock-hour-half` · [x] E1.27 `g1-calendar` · [x] E1.28 `g1-half-third-quarter`
+- [x] E1.29 `g1-pictograph` · [x] E1.30 `g1-certain-possible-impossible`
+- [x] E2 Grades 1–2 are **hidden** until `SOFYANA_EARLY_GRADES=1` (settings.SHOW_EARLY_GRADES, decision D1); direct practice URLs still work
 
-## Phase F — Cross-cutting (WP10)
+## Phase F — Cross-cutting (WP10)  ← current phase
 
 - [ ] F1 Vocabulary matching skill per domain (term ↔ picture/symbol)
 - [ ] F2 "Who is right?" reasoning items (≥ 1 per domain)

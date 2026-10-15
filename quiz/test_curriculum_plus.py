@@ -639,3 +639,126 @@ class StatsProbabilityPlusTests(SimpleTestCase):
             q = _q('g3-equally-likely', 'easy')
             self.assertEqual(len(q['choices']), 5)
             self.assertIn(q['correct_answers'][0], 'ABCDE')
+
+
+class EarlyGradesTests(SimpleTestCase):
+    """WP1 (grades 1–2): answers recomputed from the picture or the prompt."""
+
+    def test_count_objects(self):
+        for level in LEVELS:
+            for _ in range(30):
+                q = _q('g1-count-objects', level)
+                labels = q['shape_data'][0]['labels']
+                self.assertEqual(int(q['correct_answers'][0]), len(labels))
+
+    def test_base_ten_blocks(self):
+        for level in ('easy', 'hard'):
+            for _ in range(30):
+                q = _q('g2-tens-ones-picture', level)
+                rects = [m for m in q['shape_data'][0]['marks'] if m['type'] == 'rect']
+                unit = min(r['w'] for r in rects)
+                value = sum(100 if r['w'] > 5 * unit else 10 if r['h'] > 5 * unit else 1 for r in rects)
+                self.assertEqual(int(q['correct_answers'][0]), value)
+
+    def test_hundred_chart(self):
+        for level in LEVELS:
+            for _ in range(30):
+                q = _q('g2-hundred-chart', level)
+                labels = q['shape_data'][0]['labels']
+                hole = next(l for l in labels if l['text'] == '?')
+                ref = next(l for l in labels if l['text'].isdigit())
+                dx, dy = round((hole['x'] - ref['x']) / 36), round((hole['y'] - ref['y']) / 36)
+                self.assertEqual(int(q['correct_answers'][0]), int(ref['text']) + dx + 10 * dy)
+
+    def test_number_line_jumps(self):
+        for level in LEVELS:
+            for _ in range(30):
+                q = _q('g2-add-sub-2digit', level)
+                labels = q['shape_data'][0]['labels']
+                start = int(labels[0]['text'])
+                jumps = [int(l['text'].replace('−', '-')) for l in labels if l['text'][0] in '+−']
+                self.assertEqual(int(q['correct_answers'][0]), start + sum(jumps))
+
+    def test_equal_groups_total(self):
+        for _ in range(30):
+            q = _q('g2-equal-groups', 'easy')
+            self.assertEqual(int(q['correct_answers'][0]), len(q['shape_data'][0]['labels']))
+
+    def test_facts_and_missing_numbers(self):
+        for slug in ('g1-add-facts', 'g1-sub-facts', 'g1-missing-number'):
+            for level in LEVELS:
+                for _ in range(40):
+                    q = _q(slug, level)
+                    expr = re.search(r'\*\*(.+?)\*\*', q['prompt_fr']).group(1).replace('−', '-')
+                    ans = q['correct_answers'][0]
+                    left, right = expr.replace('?', ans).split('=')
+                    if right.strip() == '':
+                        right = ans
+                    self.assertEqual(eval(left), eval(right), (slug, expr, ans))
+                    if slug != 'g1-missing-number':
+                        self.assertLessEqual(int(ans), 20)
+
+    def test_true_equality_single(self):
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g1-true-equality', level)
+                true = [c for c in q['choices'] if eval(c['label'].replace('−', '-').replace('=', '=='))]
+                self.assertEqual(len(true), 1)
+                self.assertTrue(true[0]['correct'])
+
+    def test_clock_matches(self):
+        for level in ('easy', 'medium'):
+            for _ in range(30):
+                q = _q('g1-clock-hour-half', level)
+                s = q['shape_data']
+                s = s[0] if isinstance(s, list) else s
+                h, m = s['hours'], s['minutes']
+                self.assertEqual(q['correct_answers'][0], f'{h} h {m:02d}' if m else f'{h} h')
+
+    def test_paper_clips(self):
+        for level in ('easy', 'medium'):
+            for _ in range(30):
+                q = _q('g1-measure-units', level)
+                outer = [m for m in q['shape_data'][0]['marks'] if m['type'] == 'rect' and m['rx'] == 8]
+                self.assertEqual(int(q['correct_answers'][0]), len(outer))
+
+    def test_same_shape_is_unique(self):
+        import math
+        def sides(d):
+            pts = [tuple(map(float, p.split(','))) for p in re.findall(r'-?[\d.]+,-?[\d.]+', d)]
+            return sorted(round(math.dist(pts[i], pts[(i + 1) % len(pts)])) for i in range(len(pts)))
+        for level in LEVELS:
+            for _ in range(30):
+                q = _q('g1-same-shape-size', level)
+                polys = [m['d'] for m in q['shape_data'][0]['marks'] if m['type'] == 'path']
+                model, options = sides(polys[0]), [sides(p) for p in polys[1:]]
+                same = [k for k, o in enumerate(options) if len(o) == len(model) and all(abs(a - b) <= 1 for a, b in zip(o, model))]
+                self.assertEqual(len(same), 1, (model, options))
+                self.assertEqual(q['correct_answers'][0], 'ABCDE'[same[0]])
+
+    def test_early_grades_hidden_by_default(self):
+        from django.test import override_settings
+        from . import taxonomy
+        taxonomy.invalidate()
+        self.assertNotIn(1, taxonomy.available_grades())
+        self.assertNotIn(2, taxonomy.available_grades())
+        with override_settings(SHOW_EARLY_GRADES=True):
+            taxonomy.invalidate()
+            self.assertIn(1, taxonomy.available_grades())
+            self.assertIn(2, taxonomy.available_grades())
+        taxonomy.invalidate()
+
+
+class ReadAloudTests(SimpleTestCase):
+    def test_button_on_every_question_type(self):
+        import json
+        from django.template.loader import render_to_string
+        for slug in ('g4-independence', 'g3-story-meaning', 'g2-order', 'g6-choose-notation'):
+            q = _q(slug, 'medium')
+            html = render_to_string('partials/practice_question.html', {'question': q, 'lang': 'fr', 'topic': slug, 'level': 'medium'})
+            self.assertIn('sayAloud(this)', html, slug)
+            m = re.search(r"data-choices='([^']*)'", html)
+            labels = json.loads(m.group(1).replace('&quot;', '"').replace('&#x27;', "'").replace('&amp;', '&'))
+            if q['q_type'] == 'multiple_choice':
+                self.assertEqual(labels, [c['label'] for c in q['choices']])
+            self.assertNotIn('**', re.search(r'data-say="([^"]*)"', html).group(1))

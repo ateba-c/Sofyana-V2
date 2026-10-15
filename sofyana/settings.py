@@ -48,6 +48,10 @@ _load_dotenv(BASE_DIR / '.env')
 
 # ── LLM provider (see quiz/ai/client.py) ─────────────────────────────────────
 # DeepSeek's Anthropic-compatible endpoint by default; swap via env to use Anthropic.
+# Decision D1 (curriculum upgrade): launch grades 3–6 first. Grade 1–2 domains exist in the
+# database but stay hidden from the grade picker, home page and search until this is turned on.
+SHOW_EARLY_GRADES = os.environ.get('SOFYANA_EARLY_GRADES', '0') == '1'
+
 LLM_API_KEY  = (os.environ.get('LLM_API_KEY') or os.environ.get('DEEPSEEK_API_KEY')
                 or os.environ.get('ANTHROPIC_API_KEY', ''))
 LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.deepseek.com/anthropic')

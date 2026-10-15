@@ -26,6 +26,7 @@
         <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">⏱ {{ question.time_limit }}s</span>
       </div>
     </div>
+    {% if lang == 'fr' %}{% include 'partials/read_aloud.html' with text=question.prompt_fr|default:question.prompt_en %}{% else %}{% include 'partials/read_aloud.html' with text=question.prompt_en %}{% endif %}
   </div>
 
   <!-- Shape canvas (geometry questions) -->

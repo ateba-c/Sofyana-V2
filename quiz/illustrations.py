@@ -1085,3 +1085,182 @@ def prob_line(marks, w=330):
         c.dot(x, y, r=6, fill=PURPLE)
         c.text(x, y - 13, letter, size=14, bold=True, color=PURPLE)
     return c.shape()
+
+
+# ── grades 1–2: counting, base ten, hundred chart ───────────────────────────
+
+def emoji_set(icon, n, per_row=10, group_tens=False, scatter=False, size=22):
+    """n copies of an emoji. group_tens: rows of 10 with a gap after 5 (ten-frame feel). scatter: random spots."""
+    if scatter:
+        w, h = 320, 170
+        c = Canvas(w, h, max_h=180, css_w='max-w-md')
+        spots = set()
+        while len(spots) < n:
+            spots.add((random.randrange(14, w - 14, 18), random.randrange(22, h - 4, 18)))
+        for x, y in spots:
+            c.text(x, y, icon, size=size - 6)
+        return c.shape()
+    per_row = 10 if group_tens else per_row
+    rows = -(-n // per_row)
+    cell = size + 8
+    w = per_row * cell + (12 if group_tens else 0) + 10
+    c = Canvas(w, rows * cell + 10, max_h=min(rows * (cell + 4) + 20, 260), css_w='max-w-md')
+    for k in range(n):
+        r, i = divmod(k, per_row)
+        x = 8 + i * cell + cell / 2 + (12 if group_tens and i >= 5 else 0)
+        c.text(x, 6 + r * cell + cell * 0.8, icon, size=size)
+    return c.shape()
+
+
+def base_ten(hundreds, tens, ones, unit=9, color=BLUE):
+    """Base-ten blocks: flats (100), rods (10), small cubes (1)."""
+    light, mid, dark = SHADES[color]
+    w = hundreds * (10 * unit + 10) + tens * (unit + 7) + 20 + (-(-ones // 5)) * (unit + 4) + 20
+    h = 10 * unit + 20
+    c = Canvas(max(w, 80), h, max_h=min(h + 10, 140), css_w='max-w-md')
+    x = 8
+    for _ in range(hundreds):
+        c.rect(x, 8, 10 * unit, 10 * unit, fill=mid, stroke=INK, sw=1.5)
+        for k in range(1, 10):
+            c.line(x + k * unit, 8, x + k * unit, 8 + 10 * unit, color=dark, sw=0.8, opacity=1)
+            c.line(x, 8 + k * unit, x + 10 * unit, 8 + k * unit, color=dark, sw=0.8, opacity=1)
+        x += 10 * unit + 10
+    for _ in range(tens):
+        c.rect(x, 8, unit, 10 * unit, fill=mid, stroke=INK, sw=1.5)
+        for k in range(1, 10):
+            c.line(x, 8 + k * unit, x + unit, 8 + k * unit, color=dark, sw=0.8, opacity=1)
+        x += unit + 7
+    x += 10
+    for k in range(ones):
+        col, row = divmod(k, 5)
+        c.rect(x + col * (unit + 4), 8 + 10 * unit - (row + 1) * (unit + 4) + 4, unit, unit, fill=light, stroke=INK, sw=1.3)
+    return c.shape()
+
+
+def hundred_window(start_row, start_col, rows, cols, hide, show_all=False):
+    """
+    A window of the 1–100 chart: rows × cols cells starting at row/col (0-based).
+    ``hide`` = the number replaced by « ? ». Other cells show their numbers.
+    """
+    cell = 36
+    c = Canvas(cols * cell + 8, rows * cell + 8, max_h=rows * cell + 20, css_w='max-w-xs')
+    for r in range(rows):
+        for k in range(cols):
+            n = (start_row + r) * 10 + start_col + k + 1
+            x, y = 4 + k * cell, 4 + r * cell
+            q = n == hide
+            c.rect(x, y, cell, cell, fill=TINTS[PURPLE] if q else '#FFFFFF', stroke=SOFT, sw=1)
+            c.text(x + cell / 2, y + cell / 2 + 5, '?' if q else str(n), size=14 if not q else 17, bold=True,
+                   color=PURPLE if q else INK)
+    return c.shape()
+
+
+def number_jumps(start, jumps, end_label='?'):
+    """Open number line: arcs from ``start`` for each jump (+10, +3…). Labels the landing points except the last."""
+    total = sum(abs(j) for j in jumps)
+    w = 340
+    c = Canvas(w, 96, max_h=110, css_w='max-w-md')
+    x0, x1, y = 20, w - 20, 66
+    c.line(x0 - 6, y, x1 + 6, y, color=INK, sw=2)
+    scale = (x1 - x0) / max(total, 1)
+    sign = 1 if jumps[0] > 0 else -1
+    pos = start
+    x = x0 if sign > 0 else x1
+    c.line(x, y - 7, x, y + 7, color=INK, sw=2)
+    c.text(x, y + 22, str(start), size=13, bold=True)
+    for k, j in enumerate(jumps):
+        nx = x + sign * abs(j) * scale
+        mid = (x + nx) / 2
+        hgt = 18 + min(abs(j), 10) * 2
+        c.path(f'M {_r(x)},{y} Q {_r(mid)},{y - 2 * hgt} {_r(nx)},{y}', stroke=GREEN, sw=2.2)
+        c.text(mid, y - hgt - 6, f'{"+" if j > 0 else "−"}{abs(j)}', size=12, bold=True, color=GREEN)
+        pos += j
+        c.line(nx, y - 7, nx, y + 7, color=INK, sw=2)
+        last = k == len(jumps) - 1
+        c.text(nx, y + 22, end_label if last else str(pos), size=13 if not last else 15, bold=True,
+               color=PURPLE if last else INK)
+        x = nx
+    return c.shape()
+
+
+def equal_groups(groups, each, icon='🍪'):
+    """``groups`` circles (plates) with ``each`` emoji in each."""
+    per_row = min(groups, 4)
+    rows = -(-groups // per_row)
+    pw = 84
+    c = Canvas(per_row * (pw + 8) + 8, rows * (pw + 8) + 8, max_h=min(rows * 100 + 10, 220), css_w='max-w-md')
+    for g in range(groups):
+        r, k = divmod(g, per_row)
+        cx, cy = 8 + k * (pw + 8) + pw / 2, 8 + r * (pw + 8) + pw / 2
+        c.circle(cx, cy, pw / 2 - 2, fill='#F8FAFC', stroke=SOFT, sw=2)
+        cols = 3 if each > 4 else 2
+        for i in range(each):
+            rr, cc = divmod(i, cols)
+            nrows = -(-each // cols)
+            x = cx + (cc - (cols - 1) / 2) * 20
+            y = cy + (rr - (nrows - 1) / 2) * 20 + 6
+            c.text(x, y, icon, size=16)
+    return c.shape()
+
+
+# ── grades 1–2: plane shapes and lines ───────────────────────────────────────
+
+def plane_shape_pts(kind, rot=0.0, stretch=1.0):
+    """Unit points for square, rectangle, triangle, rhombus, or None for a circle."""
+    if kind == 'circle':
+        return None
+    base = {
+        'square': [(-1, -1), (1, -1), (1, 1), (-1, 1)],
+        'rectangle': [(-1.6 * stretch, -0.8), (1.6 * stretch, -0.8), (1.6 * stretch, 0.8), (-1.6 * stretch, 0.8)],
+        'triangle': [(-1.1, 0.8), (1.1, 0.8), (0.2 * stretch, -1.1)],
+        'rhombus': [(0, -1.3), (0.8, 0), (0, 1.3), (-0.8, 0)],
+        'pentagon': _ngon(5), 'hexagon': _ngon(6),
+    }[kind]
+    cs, sn = math.cos(rot), math.sin(rot)
+    return [(x * cs - y * sn, x * sn + y * cs) for x, y in base]
+
+
+def draw_plane_shape(c, kind, box, color=BLUE, rot=0.0, stretch=1.0, scale=1.0):
+    x0, y0, w, h = box
+    if kind == 'circle':
+        r = min(w, h) / 2 * 0.8 * scale
+        c.circle(x0 + w / 2, y0 + h / 2, r, fill=SHADES[color][1], stroke=INK, sw=2.2)
+        return
+    pts = plane_shape_pts(kind, rot, stretch)
+    if scale != 1.0:
+        mw, mh = w * (1 - scale) / 2, h * (1 - scale) / 2
+        box = (x0 + mw, y0 + mh, w * scale, h * scale)
+    draw_polygon(c, pts, box, color)
+
+
+def draw_line_kind(c, box, closed, curved, color=INK):
+    """Open/closed, curved/broken lines for grade 1."""
+    x0, y0, w, h = box
+    cx, cy = x0 + w / 2, y0 + h / 2
+    if curved:
+        if closed:
+            c.path(f'M {_r(cx - w * .35)},{_r(cy)} C {_r(cx - w * .35)},{_r(cy - h * .5)} {_r(cx + w * .2)},{_r(cy - h * .45)} '
+                   f'{_r(cx + w * .35)},{_r(cy - h * .05)} C {_r(cx + w * .45)},{_r(cy + h * .4)} {_r(cx - w * .3)},{_r(cy + h * .45)} '
+                   f'{_r(cx - w * .35)},{_r(cy)} Z', stroke=color, sw=3)
+        else:
+            c.path(f'M {_r(x0 + 6)},{_r(cy + h * .2)} C {_r(cx - w * .2)},{_r(cy - h * .5)} {_r(cx + w * .1)},{_r(cy + h * .5)} '
+                   f'{_r(x0 + w - 6)},{_r(cy - h * .2)}', stroke=color, sw=3)
+    else:
+        pts = [(cx - w * .38, cy + h * .25), (cx - w * .15, cy - h * .35), (cx + w * .1, cy + h * .1), (cx + w * .38, cy - h * .3),
+               (cx + w * .3, cy + h * .35)]
+        c.poly(pts, closed=closed, stroke=color, sw=3)
+
+
+def clip_measure(length, clip_w=34):
+    """A ribbon above a row of paper clips laid end to end from the same start."""
+    w = length * clip_w + 40
+    c = Canvas(max(w, 160), 92, max_h=100, css_w='max-w-md')
+    x0 = 16
+    c.rect(x0, 14, length * clip_w, 16, fill=SHADES[RED][2], stroke=INK, sw=1.6, rx=3)
+    for k in range(length):                  # exactly as many clips as the ribbon is long
+        x = x0 + k * clip_w
+        c.rect(x + 2, 50, clip_w - 4, 16, fill='none', stroke=SOFT, sw=2.2, rx=8)
+        c.rect(x + 7, 54, clip_w - 14, 8, fill='none', stroke=SOFT, sw=1.6, rx=4)
+    c.line(x0, 8, x0, 72, color=SOFT, sw=1, dash='3 3')
+    c.line(x0 + length * clip_w, 8, x0 + length * clip_w, 72, color=SOFT, sw=1, dash='3 3')
+    return c.shape()

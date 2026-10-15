@@ -61,6 +61,11 @@ def _load():
         _cache['skill_map'] = skill_map
         _cache['answer_types'] = answer_types
 
+    from django.conf import settings
+    if not getattr(settings, 'SHOW_EARLY_GRADES', False):
+        # D1: grades 1–2 are built but not shown yet (direct practice URLs still work)
+        _cache['groups'] = [g for g in _cache['groups'] if not g.get('grade') or g['grade'] >= 3]
+
     meta = {}
     for g in _cache['groups']:
         for t in g['topics']:
