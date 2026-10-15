@@ -248,6 +248,14 @@ CURRICULUM_REFS = {
     'g1-half-third-quarter': [26, 39],
     'g1-pictograph': [212, 218],
     'g1-certain-possible-impossible': [225, 229],
+    # ── WP10 vocabulary and reasoning ──
+    'g3-vocab-numbers': [23, 24, 112],
+    'g3-vocab-geometry': [137, 150, 161],
+    'g3-vocab-measurement': [181, 182, 186],
+    'g4-vocab-chance': [236],
+    'g4-who-is-right-numbers': [14, 36, 48],
+    'g5-who-is-right-shapes': [160, 180, 187, 192],
+    'g5-who-is-right-data': [217, 223, 234],
     # Not in the audit on purpose: fraction-multiply / fraction-divide (beyond primary),
     # Roman numerals (enrichment), g6-relevant-info (cross-cutting problem solving).
 }

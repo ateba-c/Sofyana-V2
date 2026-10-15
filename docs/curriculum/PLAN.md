@@ -259,6 +259,8 @@ Same pattern as the grade-4 and grade-6 rollouts:
 
 ## Appendix A: Coverage for each entry
 
+> **Re-scored 2026-10-14 (task F4):** after WP0–WP8, WP1 and WP10 the score is **214 covered, 10 partial, 0 missing, 5 off-screen, 7 awaiting decision D2** (was 57 covered). The live per-entry table is `docs/curriculum/COVERAGE.md`, regenerated with `python docs/curriculum/coverage_map.py docs/curriculum/AUDIT_REFERENCE.md docs/curriculum/COVERAGE.md`. The table below is the original October 13 baseline, kept for comparison.
+
 Grade columns follow the audit: **A** = taught with support, **M** = independent by end of year, **R** = reused, **·** = no milestone.
 
 | ID | Objective | 1 2 3 4 5 6 | Status | Sofyana skills | Gap / action |

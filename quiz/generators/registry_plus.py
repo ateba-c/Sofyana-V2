@@ -49,6 +49,10 @@ from .early_numbers import (
 from .early_space import (
     g1_shape_pattern_gen, g1_name_shape_gen, g1_open_closed_lines_gen, g1_solid_objects_gen, g1_position_words_gen, g1_same_shape_size_gen, g1_compare_lengths_gen, g1_measure_units_gen, g2_ruler_cm_gen, g1_clock_hour_half_gen, g1_calendar_gen, g1_half_third_quarter_gen, g1_pictograph_gen, g1_certain_possible_impossible_gen,
 )
+from .vocab_reasoning_plus import (
+    vocab_numbers_gen, vocab_geometry_gen, vocab_measurement_gen, vocab_chance_gen,
+    who_numbers_gen, who_geometry_gen, who_data_gen,
+)
 
 _L3 = ['easy', 'medium', 'hard']
 
@@ -142,6 +146,14 @@ PLUS_GENERATORS = {
     'g5-tree-diagram':               g5_tree_diagram_gen,
     'g5-simulation':                 g5_simulation_gen,
     'g3-list-outcomes':              g3_list_outcomes_gen,
+    # WP10 — vocabulary and « who is right? »
+    'g3-vocab-numbers':              vocab_numbers_gen,
+    'g3-vocab-geometry':             vocab_geometry_gen,
+    'g3-vocab-measurement':          vocab_measurement_gen,
+    'g4-vocab-chance':               vocab_chance_gen,
+    'g4-who-is-right-numbers':       who_numbers_gen,
+    'g5-who-is-right-shapes':        who_geometry_gen,
+    'g5-who-is-right-data':          who_data_gen,
     # WP1 — grades 1–2
     'g1-count-objects':                g1_count_objects_gen,
     'g1-count-on':                     g1_count_on_gen,
@@ -280,6 +292,13 @@ PLUS_SKILL_MAP = {
     'g1-half-third-quarter':           _sk('g1-same-shape-size', 'fraction-shape', 'g3-fraction-words', 'g1-same-shape-size'),
     'g1-pictograph':                   _sk('g1-count-objects', 'g3-pictograph', 'read-bar-chart', 'g1-count-objects'),
     'g1-certain-possible-impossible':  _sk('g1-pictograph', 'probability-vocab', 'g3-list-outcomes', 'g1-pictograph'),
+    'g3-vocab-numbers':              _sk('digit-position', 'compare-int', 'g4-who-is-right-numbers', 'digit-position'),
+    'g3-vocab-geometry':             _sk('name-polygon', 'g4-lines', 'g5-who-is-right-shapes', 'name-polygon'),
+    'g3-vocab-measurement':          _sk('measure-unit', 'g3-area-count-squares', 'g5-who-is-right-shapes', 'measure-unit'),
+    'g4-vocab-chance':               _sk('probability-vocab', 'g4-compare-likelihood', 'g5-who-is-right-data', 'probability-vocab'),
+    'g4-who-is-right-numbers':       _sk('g3-vocab-numbers', 'compare-decimal', 'g6-fraction-order', 'compare-int'),
+    'g5-who-is-right-shapes':        _sk('g3-vocab-geometry', 'g5-area-units', 'g6-circle-parts', 'g3-vocab-geometry'),
+    'g5-who-is-right-data':          _sk('g4-vocab-chance', 'g5-simulation', 'g5-arithmetic-mean', 'g4-independence'),
     'g6-write-large-number':         _sk('g5-large-integer', 'g6-digit-value', 'g6-compare', 'write-number'),
 }
 
@@ -436,6 +455,27 @@ PLUS_GROUPS = [
     ]},
     {'name_en': 'Grade 2 — Measurement', 'name_fr': '2e année — Mesure', 'icon': '📐', 'grade': 2, 'topics': [
         {'slug': 'g2-ruler-cm', 'name_en': 'Read a Ruler (cm)', 'name_fr': 'Lire une règle (cm)'},
+    ]},
+    {'name_en': 'Grade 3 — Number Sense', 'grade': 3, 'topics': [
+        {'slug': 'g3-vocab-numbers',         'name_en': 'Number Words & Symbols',      'name_fr': 'Vocabulaire des nombres'},
+    ]},
+    {'name_en': 'Grade 3 — Geometry', 'grade': 3, 'topics': [
+        {'slug': 'g3-vocab-geometry',        'name_en': 'Geometry Words & Symbols',    'name_fr': 'Vocabulaire de géométrie'},
+    ]},
+    {'name_en': 'Grade 3 — Measurement & Time', 'grade': 3, 'topics': [
+        {'slug': 'g3-vocab-measurement',     'name_en': 'Measurement Words',           'name_fr': 'Vocabulaire de la mesure'},
+    ]},
+    {'name_en': 'Grade 4 — Statistics & Probability', 'grade': 4, 'topics': [
+        {'slug': 'g4-vocab-chance',          'name_en': 'Words of Chance',             'name_fr': 'Vocabulaire du hasard'},
+    ]},
+    {'name_en': 'Grade 4 — Operations', 'grade': 4, 'topics': [
+        {'slug': 'g4-who-is-right-numbers',  'name_en': 'Who Is Right? Numbers',       'name_fr': 'Qui a raison ? Nombres'},
+    ]},
+    {'name_en': 'Grade 5 — Measurement', 'grade': 5, 'topics': [
+        {'slug': 'g5-who-is-right-shapes',   'name_en': 'Who Is Right? Shapes & Measures', 'name_fr': 'Qui a raison ? Figures et mesures'},
+    ]},
+    {'name_en': 'Grade 5 — Statistics & Probability', 'grade': 5, 'topics': [
+        {'slug': 'g5-who-is-right-data',     'name_en': 'Who Is Right? Data & Chance', 'name_fr': 'Qui a raison ? Données et hasard'},
     ]},
     {'name_en': 'Grade 5 — Fractions', 'name_fr': '5e année — Fractions', 'icon': '½', 'grade': 5, 'topics': [
         {'slug': 'g5-fraction-meanings',     'name_en': 'What a Fraction Means',       'name_fr': 'Les sens de la fraction'},

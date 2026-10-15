@@ -30,6 +30,7 @@ Session log (append one line per working session):
 | 2026-10-14 | WP7 statistics + WP8 probability done: 13 skills (D7.1–D7.5, D8.1–D8.8), bar chart / line graph / pictograph / spinner / bag / tree / probability-line pictures. Coverage 166 → 181 of 236 (stats 8/11, probability 12/16, nothing missing in either). Full suite green. Open widget todos: tap-to-build chart, simulation runner. Next: Phase E (E0 read-aloud, then grade 1–2 skills) — D9 still blocked on D2. | D7–D8 |
 | 2026-10-14 | Phase E done: read-aloud button (E0) + 30 grade 1–2 skills (E1.1–E1.30), hidden behind `SOFYANA_EARLY_GRADES` (D1). `quiz.test_curriculum_plus` green (77 tests). **Full suite became slow (>10 min, CPU-bound) after WP1 — investigating per module; FIRST STEP after a restart: time each module (see RESUME step 2) and find the slow test.** | E checkpoint |
 | 2026-10-14 | Slowdown solved: `convex_polygon` (WP5) used a rejection loop that succeeds ~1/1000 tries for 7 corners → rewritten to build gaps directly. Stress test (1500 runs × 3 levels per skill) also caught a rare duplicate-distractor crash in `g6-divisibility` (WP4) → fixed. Full suite green: **169 tests in 87 s**. Next: Phase F (vocabulary, « who is right? », resolution levels, re-score). | F-pre |
+| 2026-10-14 | F1 vocabulary (4 skills), F2 « who is right? » (3 skills), F4 re-score: **214 / 236 covered, 0 missing**. Full suite green (171 tests, 73 s). Remaining: F3 resolution level for new skills, widget todos (tap-to-build chart, simulation runner, tap-to-place point), B4.16 per-fact tracking, decimal versions of 079/080, D2 decision. | F1-F2-F4 |
 
 ---
 
@@ -176,10 +177,10 @@ WP4 Operations & calculation
 
 ## Phase F — Cross-cutting (WP10)  ← current phase
 
-- [ ] F1 Vocabulary matching skill per domain (term ↔ picture/symbol)
-- [ ] F2 "Who is right?" reasoning items (≥ 1 per domain)
+- [x] F1 Vocabulary matching skill per domain — `g3-vocab-numbers`, `g3-vocab-geometry`, `g3-vocab-measurement`, `g4-vocab-chance`
+- [x] F2 "Who is right?" reasoning items — `g4-who-is-right-numbers`, `g5-who-is-right-shapes`, `g5-who-is-right-data` (each wrong claim = a classic misconception)
 - [ ] F3 Resolution level for new skills where it makes sense
-- [ ] F4 Re-score Appendix A of PLAN.md with the new skills; final coverage numbers
+- [x] F4 Re-score — 214 covered / 10 partial / 0 missing / 5 off-screen / 7 decision; live table in `docs/curriculum/COVERAGE.md`
 
 ## Release checklist (owner-triggered, not done automatically)
 

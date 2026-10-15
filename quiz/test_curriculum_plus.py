@@ -762,3 +762,22 @@ class ReadAloudTests(SimpleTestCase):
             if q['q_type'] == 'multiple_choice':
                 self.assertEqual(labels, [c['label'] for c in q['choices']])
             self.assertNotIn('**', re.search(r'data-say="([^"]*)"', html).group(1))
+
+
+class VocabReasoningTests(SimpleTestCase):
+    def test_vocab_meanings_are_unique(self):
+        for slug in ('g3-vocab-numbers', 'g3-vocab-geometry', 'g3-vocab-measurement', 'g4-vocab-chance'):
+            for level in LEVELS:
+                for _ in range(30):
+                    pairs = _q(slug, level)['pairs']
+                    self.assertGreaterEqual(len(pairs), 3)
+                    self.assertEqual(len({p['right'] for p in pairs}), len(pairs), slug)
+                    self.assertEqual(len({p['left'] for p in pairs}), len(pairs), slug)
+
+    def test_who_is_right_has_one_answer(self):
+        for slug in ('g4-who-is-right-numbers', 'g5-who-is-right-shapes', 'g5-who-is-right-data'):
+            for level in LEVELS:
+                for _ in range(40):
+                    q = _q(slug, level)
+                    self.assertEqual(sum(c['correct'] for c in q['choices']), 1)
+                    self.assertNotIn('On ne peut pas savoir', q['correct_answers'][0])

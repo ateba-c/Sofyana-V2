@@ -184,4 +184,12 @@ UPGRADES = {
     218: ('C', 'g1-pictograph, g3-pictograph', ''),
     225: ('C', 'g1-certain-possible-impossible, probability-vocab', ''),
     229: ('C', 'g1-certain-possible-impossible, g3-list-outcomes, g5-count-outcomes', ''),
+    # WP10 vocabulary
+    23: ('C', 'g3-vocab-numbers, compare-int, digit-position', ''),
+    24: ('C', 'g3-vocab-numbers (≠ < > symbols)', ''),
+    112: ('C', 'g3-vocab-numbers (régularité, suite, calculator key)', ''),
+    137: ('C', 'g3-vocab-geometry (plan cartésien, couple)', ''),
+    161: ('C', 'g3-vocab-geometry (// ⊥, quadrilatère, convexe)', ''),
+    181: ('C', 'g3-vocab-measurement, measure-unit', ''),
+    236: ('C', 'g4-vocab-chance, probability-vocab', ''),
 }
