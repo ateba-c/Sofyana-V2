@@ -24,6 +24,7 @@ Session log (append one line per working session):
 |---|---|---|
 | 2026-10-13 | Branch + workplan; Phase A done; WP2 + WP3 done (covered 57 → 97 of 236) | see git log |
 | 2026-10-13 | WP4 done (covered → 129 of 236). **Full suite NOT re-run after WP4**: the run was killed (machine low on memory). `quiz.test_curriculum_plus` was green (35 tests). FIRST STEP next session: `python manage.py test quiz`. | B4 checkpoint |
+| 2026-10-14 | Session start: full suite re-run in progress (WP4 verification). Next: fix any failures, then C5.1. If this is the last line after a restart, re-run step 2. | B4 checkpoint |
 
 ---
 
