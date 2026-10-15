@@ -10,6 +10,7 @@ Labels: {x, y, text, size, anchor, bold, color} plus optional ``text_en`` (picke
 labels.localize_problem for English sessions).
 """
 import math
+import random
 
 INK = '#334155'
 SOFT = '#94A3B8'
@@ -874,4 +875,213 @@ def jug(capacity_ml, level_ml, step_ml, label_every=None, color=BLUE):
             c.text(x0 - 4, y + 4, f'{v}', size=10, bold=True, anchor='end')
         v += step_ml
     c.text(x0 - 4, yt - 6, 'mL', size=10, anchor='end', color=SOFT)
+    return c.shape()
+
+
+# ── statistics: bar chart, line graph, pictograph ───────────────────────────
+
+def _nice_step(top):
+    for s in (1, 2, 5, 10, 20, 25, 50, 100):
+        if top / s <= 8:
+            return s
+    return 200
+
+
+def draw_bar_chart(c, box, cats, vals, color=BLUE, step=None, top=None, title=None, small=False):
+    """Vertical bar chart in box. cats: labels (str or (fr, en)). Grid lines every ``step``.
+    color: one colour, a list (one per bar) or 'multi' (palette)."""
+    x0, y0, w, h = box
+    top = top or max(vals)
+    step = step or _nice_step(top)
+    top = -(-top // step) * step
+    left, bottom = (22 if small else 34), (16 if small else 24)
+    gx, gy, gw, gh = x0 + left, y0 + (4 if small else 10), w - left - 4, h - bottom - (4 if small else 10)
+    fs = 8 if small else 11
+    v = 0
+    while v <= top:
+        y = gy + gh - gh * v / top
+        c.line(gx, y, gx + gw, y, color='#E2E8F0', sw=1, opacity=1)
+        c.text(gx - 4, y + 3, str(v), size=fs, anchor='end', color=INK)
+        v += step
+    c.line(gx, gy, gx, gy + gh, color=INK, sw=1.6)
+    c.line(gx, gy + gh, gx + gw, gy + gh, color=INK, sw=1.6)
+    n = len(cats)
+    slot = gw / n
+    for i, (cat, val) in enumerate(zip(cats, vals)):
+        bw = slot * 0.6
+        bx = gx + i * slot + (slot - bw) / 2
+        bh = gh * val / top
+        col = color[i] if isinstance(color, (list, tuple)) else PALETTE[i % len(PALETTE)] if color == 'multi' else color
+        c.rect(bx, gy + gh - bh, bw, bh, fill=col, stroke=INK, sw=1)
+        fr, en = (cat, None) if not isinstance(cat, tuple) else cat
+        c.text(bx + bw / 2, gy + gh + (11 if small else 16), fr, size=fs if not small else 9, bold=True, text_en=en)
+    return c
+
+
+def bar_chart(cats, vals, color=BLUE, step=None, ylabel=None):
+    c = Canvas(320, 200, max_h=210, css_w='max-w-md')
+    draw_bar_chart(c, (0, 0, 320, 200), cats, vals, color, step)
+    return c.shape()
+
+
+def line_graph(xlabels, vals, step=None, unit='', color=RED):
+    """A broken-line graph: one point per x label, joined by segments."""
+    c = Canvas(340, 210, max_h=220, css_w='max-w-md')
+    top = max(vals)
+    step = step or _nice_step(top)
+    top = -(-top // step) * step + (step if top % step == 0 else 0)
+    gx, gy, gw, gh = 40, 18, 290, 162
+    v = 0
+    while v <= top:
+        y = gy + gh - gh * v / top
+        c.line(gx, y, gx + gw, y, color='#E2E8F0', sw=1, opacity=1)
+        c.text(gx - 5, y + 4, f'{v}', size=10, anchor='end')
+        v += step
+    if unit:
+        c.text(gx - 5, gy - 2, unit, size=9, anchor='end', color=SOFT)
+    c.line(gx, gy, gx, gy + gh, color=INK, sw=1.6)
+    c.line(gx, gy + gh, gx + gw, gy + gh, color=INK, sw=1.6)
+    n = len(vals)
+    pts = [(gx + (i + 0.5) * gw / n, gy + gh - gh * v / top) for i, v in enumerate(vals)]
+    c.poly(pts, closed=False, stroke=color, sw=2.6)
+    for (x, y), lab in zip(pts, xlabels):
+        c.dot(x, y, r=4, fill=color)
+        fr, en = (lab, None) if not isinstance(lab, tuple) else lab
+        c.text(x, gy + gh + 16, fr, size=10, bold=True, text_en=en)
+    return c.shape()
+
+
+def pictograph(cats, vals, icon, per, half_ok=False):
+    """
+    Rows of icons: one icon = ``per`` items (key printed under the chart). A value that is a
+    half multiple of ``per`` ends with a half icon when ``half_ok``.
+    """
+    rows = len(cats)
+    max_icons = max(math.ceil(v / per) for v in vals)
+    cell = 26
+    w = 96 + max_icons * cell + 10
+    h = rows * 32 + 34
+    c = Canvas(w, h, max_h=min(h + 10, 230), css_w='max-w-md')
+    for r, (cat, v) in enumerate(zip(cats, vals)):
+        y = 8 + r * 32
+        fr, en = (cat, None) if not isinstance(cat, tuple) else cat
+        c.text(88, y + 19, fr, size=12, bold=True, anchor='end', text_en=en)
+        c.line(94, y + 30, w - 6, y + 30, color='#E2E8F0', sw=1, opacity=1)
+        full, rest = divmod(v, per)
+        for k in range(full):
+            c.text(108 + k * cell, y + 21, icon, size=19)
+        if rest:
+            # half icon: draw the icon, then cover its right half
+            x = 108 + full * cell
+            c.text(x, y + 21, icon, size=19)
+            c.rect(x, y + 1, cell / 2 + 1, 28, fill='#FFFFFF', stroke='none', sw=0)
+    c.line(94, 4, 94, rows * 32 + 8, color=INK, sw=1.4)
+    c.text(10, h - 6, f'{icon} = {per}', size=13, bold=True, anchor='start', color=PURPLE,
+           text_en=f'{icon} = {per}')
+    return c.shape()
+
+
+# ── probability: spinner, bag of marbles, probability line, tree diagram ────
+
+def draw_spinner(c, box, sectors, arrow=True):
+    """sectors: list of colours, one per equal sector — or (colour, weight) pairs for unequal sectors."""
+    x0, y0, w, h = box
+    r = min(w, h) / 2 - 4
+    cx, cy = x0 + w / 2, y0 + h / 2
+    parts = [(s, 1) if isinstance(s, str) else s for s in sectors]
+    total = sum(wt for _, wt in parts)
+    a = math.pi / 2
+    for col, wt in parts:
+        span = 2 * math.pi * wt / total
+        if span >= 2 * math.pi - 1e-9:
+            c.circle(cx, cy, r, fill=col, stroke=INK, sw=1.6)
+            break
+        x1, y1 = cx + r * math.cos(a), cy - r * math.sin(a)
+        x2, y2 = cx + r * math.cos(a - span), cy - r * math.sin(a - span)
+        large = 1 if span > math.pi else 0
+        c.path(f'M {_r(cx)},{_r(cy)} L {_r(x1)},{_r(y1)} A {_r(r)},{_r(r)} 0 {large},1 {_r(x2)},{_r(y2)} Z',
+               fill=col, stroke=INK, sw=1.6)
+        a -= span
+    if arrow:
+        c.line(cx, cy, cx + r * 0.55, cy - r * 0.35, color=INK, sw=3)
+        c.dot(cx, cy, r=4, fill=INK)
+    return c
+
+
+def spinner(sectors, size=150):
+    c = Canvas(size, size, max_h=160, css_w='max-w-[10rem]')
+    draw_spinner(c, (0, 0, size, size), sectors)
+    return c.shape()
+
+
+def draw_bag(c, box, counts):
+    """A bag (rounded outline) with marbles: counts = [(colour, n), …]."""
+    x0, y0, w, h = box
+    c.path(f'M {_r(x0 + w * .2)},{_r(y0 + h * .18)} Q {_r(x0)},{_r(y0 + h * .55)} {_r(x0 + w * .12)},{_r(y0 + h * .92)} '
+           f'L {_r(x0 + w * .88)},{_r(y0 + h * .92)} Q {_r(x0 + w)},{_r(y0 + h * .55)} {_r(x0 + w * .8)},{_r(y0 + h * .18)} Z',
+           fill='#F8FAFC', stroke=INK, sw=2)
+    c.line(x0 + w * .2, y0 + h * .18, x0 + w * .8, y0 + h * .18, color=INK, sw=3)
+    balls = [col for col, n in counts for _ in range(n)]
+    random.shuffle(balls)
+    n = len(balls)
+    per = 4 if n <= 12 else 5
+    rr = min(w / (2 * per + 3), 9)
+    for i, col in enumerate(balls):
+        row, k = divmod(i, per)
+        in_row = min(per, n - row * per)
+        x = x0 + w / 2 + (k - (in_row - 1) / 2) * (2 * rr + 3)
+        y = y0 + h * .82 - row * (2 * rr + 3)
+        c.circle(x, y, rr, fill=col, stroke=INK, sw=1.2)
+    return c
+
+
+def bag(counts, size=(140, 130)):
+    c = Canvas(*size, max_h=140, css_w='max-w-[9rem]')
+    draw_bag(c, (4, 4, size[0] - 8, size[1] - 8), counts)
+    return c.shape()
+
+
+def tree_diagram(first, second, hide=None):
+    """
+    Two-stage tree. first, second: label lists (str or (fr, en)). ``hide`` = (i, j) puts « ? »
+    on second-stage leaf j of branch i.
+    """
+    n1, n2 = len(first), len(second)
+    leaves = n1 * n2
+    row = 22
+    h = leaves * row + 16
+    c = Canvas(300, h, max_h=min(h + 10, 300), css_w='max-w-sm')
+    root = (16, h / 2)
+    c.dot(*root, r=4, fill=INK)
+    for i, a in enumerate(first):
+        ym = 8 + (i * n2 + n2 / 2) * row
+        mid = (120, ym)
+        c.line(*root, mid[0] - 30, ym, color=SOFT, sw=2)
+        fa, ea = (a, None) if not isinstance(a, tuple) else a
+        c.text(mid[0] - 26, ym + 4, fa, size=12, bold=True, anchor='start', text_en=ea)
+        for j, b in enumerate(second):
+            y = 8 + (i * n2 + j + 0.5) * row
+            c.line(mid[0] + 22, ym, 214, y, color=SOFT, sw=1.6)
+            fb, eb = (b, None) if not isinstance(b, tuple) else b
+            if hide == (i, j):
+                fb, eb = '?', None
+            c.text(220, y + 4, fb, size=12, bold=True, anchor='start', color=PURPLE if fb == '?' else '#1E0A3C', text_en=eb)
+    return c.shape()
+
+
+def prob_line(marks, w=330):
+    """A 0–1 probability line with lettered points: marks = [(position 0..1, letter)]."""
+    c = Canvas(w, 92, max_h=100, css_w='max-w-md')
+    x0, x1, y = 20, w - 20, 40
+    c.line(x0, y, x1, y, color=INK, sw=2.5)
+    for v, lab in ((0, '0'), (0.5, '½'), (1, '1')):
+        x = x0 + v * (x1 - x0)
+        c.line(x, y - 8, x, y + 8, color=INK, sw=2)
+        c.text(x, y + 26, lab, size=13, bold=True)
+    c.text(x0, y + 44, 'impossible', size=10, color=SOFT, text_en='impossible')
+    c.text(x1, y + 44, 'certain', size=10, color=SOFT, text_en='certain')
+    for v, letter in marks:
+        x = x0 + v * (x1 - x0)
+        c.dot(x, y, r=6, fill=PURPLE)
+        c.text(x, y - 13, letter, size=14, bold=True, color=PURPLE)
     return c.shape()

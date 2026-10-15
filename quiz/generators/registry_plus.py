@@ -36,6 +36,13 @@ from .measurement_plus import (
     g3_volume_count_cubes_gen, g6_volume_units_gen, g4_compare_angles_gen, g6_protractor_gen,
     g3_balance_scale_gen, g3_capacity_estimate_gen, g3_thermometer_gen,
 )
+from .stats_plus import (
+    g3_pictograph_gen, g4_line_graph_gen, g3_tally_table_gen, g3_build_chart_gen, g4_survey_question_gen,
+)
+from .probability_plus import (
+    g3_equally_likely_gen, g4_compare_likelihood_gen, g4_independence_gen, g4_variability_gen,
+    g5_probability_line_gen, g5_tree_diagram_gen, g5_simulation_gen, g3_list_outcomes_gen,
+)
 
 _L3 = ['easy', 'medium', 'hard']
 
@@ -114,6 +121,21 @@ PLUS_GENERATORS = {
     'g3-balance-scale':              g3_balance_scale_gen,
     'g3-capacity-estimate':          g3_capacity_estimate_gen,
     'g3-thermometer':                g3_thermometer_gen,
+    # WP7 — statistics
+    'g3-pictograph':                 g3_pictograph_gen,
+    'g4-line-graph':                 g4_line_graph_gen,
+    'g3-tally-table':                g3_tally_table_gen,
+    'g3-build-chart':                g3_build_chart_gen,
+    'g4-survey-question':            g4_survey_question_gen,
+    # WP8 — probability
+    'g3-equally-likely':             g3_equally_likely_gen,
+    'g4-compare-likelihood':         g4_compare_likelihood_gen,
+    'g4-independence':               g4_independence_gen,
+    'g4-variability':                g4_variability_gen,
+    'g5-probability-line':           g5_probability_line_gen,
+    'g5-tree-diagram':               g5_tree_diagram_gen,
+    'g5-simulation':                 g5_simulation_gen,
+    'g3-list-outcomes':              g3_list_outcomes_gen,
 }
 
 PLUS_SKILL_MAP = {
@@ -178,6 +200,19 @@ PLUS_SKILL_MAP = {
     'g3-balance-scale':              _sk('unit-by-quantity', 'g5-mass-convert', 'convert-mass', 'unit-by-quantity'),
     'g3-capacity-estimate':          _sk('unit-by-quantity', 'g5-capacity-convert', 'g6-volume-units', 'unit-by-quantity'),
     'g3-thermometer':                _sk('g4-number-line-point', 'g5-thermometer', 'g5-temperature', 'g4-number-line-point'),
+    'g3-pictograph':                 _sk('read-bar-chart', 'g3-tally-table', 'g4-line-graph', 'read-bar-chart'),
+    'g3-tally-table':                _sk('g3-pictograph', 'g3-build-chart', 'g5-data-table', 'g3-pictograph'),
+    'g3-build-chart':                _sk('g3-tally-table', 'g4-line-graph', 'g5-pie-chart', 'read-bar-chart'),
+    'g4-line-graph':                 _sk('g3-build-chart', 'g4-survey-question', 'g5-data-table', 'read-bar-chart'),
+    'g4-survey-question':            _sk('g3-tally-table', 'g4-line-graph', 'g5-arithmetic-mean', 'g3-tally-table'),
+    'g3-list-outcomes':              _sk('probability-vocab', 'g3-equally-likely', 'g5-count-outcomes', 'probability-vocab'),
+    'g3-equally-likely':             _sk('g3-list-outcomes', 'g4-compare-likelihood', 'g5-probability-frac', 'probability-vocab'),
+    'g4-compare-likelihood':         _sk('g3-equally-likely', 'g4-independence', 'g5-probability-line', 'g3-equally-likely'),
+    'g4-independence':               _sk('g4-compare-likelihood', 'g4-variability', 'g5-simulation', 'g3-equally-likely'),
+    'g4-variability':                _sk('g4-independence', 'g5-simulation', 'g5-simulation', 'probability-vocab'),
+    'g5-probability-line':           _sk('g4-compare-likelihood', 'g5-probability-frac', 'g5-probability-forms', 'probability-vocab'),
+    'g5-tree-diagram':               _sk('g3-list-outcomes', 'g5-count-outcomes', 'g5-probability-frac', 'g3-list-outcomes'),
+    'g5-simulation':                 _sk('g4-variability', 'g5-probability-frac', 'g5-probability-forms', 'g4-compare-likelihood'),
     'g6-write-large-number':         _sk('g5-large-integer', 'g6-digit-value', 'g6-compare', 'write-number'),
 }
 
@@ -271,6 +306,25 @@ PLUS_GROUPS = [
     {'name_en': 'Grade 6 — Measurement', 'name_fr': '6e année — Mesure', 'icon': '📏', 'grade': 6, 'topics': [
         {'slug': 'g6-protractor',            'name_en': 'Protractor & Degrees',        'name_fr': 'Rapporteur et degrés'},
         {'slug': 'g6-volume-units',          'name_en': 'Volume Units (cm³, L)',       'name_fr': 'Unités de volume (cm³, L)'},
+    ]},
+    {'name_en': 'Grade 3 — Statistics & Probability', 'grade': 3, 'topics': [
+        {'slug': 'g3-pictograph',            'name_en': 'Pictographs',                 'name_fr': 'Diagrammes à pictogrammes'},
+        {'slug': 'g3-tally-table',           'name_en': 'Count & Organise Data',       'name_fr': 'Dépouiller des données'},
+        {'slug': 'g3-build-chart',           'name_en': 'Which Chart Shows the Data?', 'name_fr': 'Quel diagramme ?'},
+        {'slug': 'g3-list-outcomes',         'name_en': 'List the Outcomes',           'name_fr': 'Résultats possibles'},
+        {'slug': 'g3-equally-likely',        'name_en': 'Equally Likely',              'name_fr': 'Autant de chances'},
+    ]},
+    {'name_en': 'Grade 4 — Statistics & Probability', 'name_fr': '4e année — Statistique et probabilité', 'icon': '🎲', 'grade': 4, 'topics': [
+        {'slug': 'g4-line-graph',            'name_en': 'Line Graphs',                 'name_fr': 'Diagrammes à ligne brisée'},
+        {'slug': 'g4-survey-question',       'name_en': 'Survey Questions',            'name_fr': 'Questions d’enquête'},
+        {'slug': 'g4-compare-likelihood',    'name_en': 'More or Less Likely',         'name_fr': 'Plus ou moins probable'},
+        {'slug': 'g4-independence',          'name_en': 'Does Chance Remember?',       'name_fr': 'Le hasard a-t-il une mémoire ?'},
+        {'slug': 'g4-variability',           'name_en': 'Results Vary',                'name_fr': 'Des résultats qui varient'},
+    ]},
+    {'name_en': 'Grade 5 — Statistics & Probability', 'grade': 5, 'topics': [
+        {'slug': 'g5-probability-line',      'name_en': 'Probability Line (0 to 1)',   'name_fr': 'Droite des probabilités'},
+        {'slug': 'g5-tree-diagram',          'name_en': 'Tree Diagrams',               'name_fr': 'Diagrammes en arbre'},
+        {'slug': 'g5-simulation',            'name_en': 'Experiments vs Theory',       'name_fr': 'Expérience et théorie'},
     ]},
     {'name_en': 'Grade 5 — Fractions', 'name_fr': '5e année — Fractions', 'icon': '½', 'grade': 5, 'topics': [
         {'slug': 'g5-fraction-meanings',     'name_en': 'What a Fraction Means',       'name_fr': 'Les sens de la fraction'},

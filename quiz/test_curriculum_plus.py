@@ -543,3 +543,99 @@ class MeasurementPlusTests(SimpleTestCase):
                     if s:
                         tick = s.get('minor') or s['step']
                         self.assertEqual((s['temp'] - s['min_temp']) % tick, 0, (slug, level, s))
+
+
+class StatsProbabilityPlusTests(SimpleTestCase):
+    """WP7–WP8: answers recomputed from the picture or the prompt."""
+
+    def test_pictograph_value_matches_icons(self):
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g3-pictograph', level)
+                if 'ont choisi **' not in q['prompt_fr'] or 'plutôt' in q['prompt_fr']:
+                    continue
+                shape = q['shape_data'][0]
+                cat = re.search(r'ont choisi \*\*(.+?)\*\*', q['prompt_fr']).group(1)
+                per = int(re.search(r'vaut (\d+)', q['prompt_fr']).group(1))
+                row = next(l for l in shape['labels'] if l['text'] == cat)
+                icon = shape['labels'][-1]['text'].split(' = ')[0]
+                icons = [l for l in shape['labels'] if l['text'] == icon and abs(l['y'] - row['y'] - 2) <= 3]
+                covers = [m for m in shape['marks'] if m['type'] == 'rect' and m['fill'] == '#FFFFFF' and abs(m['y'] + 20 - row['y'] - 2) <= 4]
+                self.assertEqual(int(q['correct_answers'][0]), round((len(icons) - len(covers) / 2) * per), (cat, level))
+
+    def test_line_graph_reading(self):
+        for _ in range(40):
+            q = _q('g4-line-graph', 'easy')
+            shape = q['shape_data'][0]
+            ticks = sorted(((l['y'], int(l['text'])) for l in shape['labels'] if l['text'].isdigit() and l['anchor'] == 'end'))
+            (y_hi, v_hi), (y_lo, v_lo) = ticks[0], ticks[-1]
+            dots = [m for m in shape['marks'] if m['type'] == 'dot']
+            values = [round(v_lo + (y_lo - 4 - d['y']) * (v_hi - v_lo) / (y_lo - y_hi)) for d in dots]
+            self.assertIn(int(q['correct_answers'][0]), values)
+
+    def test_tally_marks_count(self):
+        for _ in range(40):
+            q = _q('g3-tally-table', 'medium')
+            shape = q['shape_data'][0]
+            cat = re.search(r'pour \*\*(.+?)\*\*', q['prompt_fr']).group(1)
+            row = next(l for l in shape['labels'] if l['text'] == cat)
+            lines = [m for m in shape['marks'] if m['type'] == 'line' and row['y'] - 20 <= min(m['y1'], m['y2']) <= row['y'] + 6]
+            self.assertEqual(int(q['correct_answers'][0]), len(lines))   # 4 strokes + 1 bar per five
+
+    def test_raw_data_count(self):
+        for _ in range(40):
+            q = _q('g3-tally-table', 'easy')
+            emoji = q['prompt_fr'].split()[-2]
+            n = sum(1 for l in q['shape_data'][0]['labels'] if l['text'] == emoji)
+            self.assertEqual(int(q['correct_answers'][0]), n)
+
+    def test_build_chart_single_matching_panel(self):
+        for level in LEVELS:
+            for _ in range(30):
+                q = _q('g3-build-chart', level)
+                vals = list(map(int, re.findall(r' : (\d+)', q['prompt_fr'])))
+                n = len(vals)
+                bars = [m for m in q['shape_data'][0]['marks'] if m['type'] == 'rect']
+                panels = [[b['h'] for b in bars[k * n:(k + 1) * n]] for k in range(5)]
+                unit = max(max(p) for p in panels) / max(max(vals), 1)
+                # a panel matches when every bar is the same multiple of its value
+                matches = []
+                for k, p in enumerate(panels):
+                    scale = p[0] / vals[0]
+                    if all(abs(h - v * scale) < 1.0 for h, v in zip(p, vals)):
+                        matches.append(k)
+                self.assertEqual(len(matches), 1, (vals, panels))
+                self.assertEqual(q['correct_answers'][0], 'ABCDE'[matches[0]])
+                self.assertGreater(unit, 0)
+
+    def test_probability_line_matches_bag(self):
+        from fractions import Fraction
+        for level in LEVELS:
+            for _ in range(40):
+                q = _q('g5-probability-line', level)
+                bag, line = q['shape_data']
+                balls = [m for m in bag['marks'] if m['type'] == 'circle']
+                red = sum(1 for b in balls if b['fill'] == '#EF4444')
+                p = Fraction(red, len(balls))
+                x0, x1 = 20, line['vw'] - 20
+                letter = next(l for l in line['labels'] if l['text'] == q['correct_answers'][0])
+                self.assertAlmostEqual((letter['x'] - x0) / (x1 - x0), float(p), places=2)
+
+    def test_tree_leaves(self):
+        for _ in range(30):
+            q = _q('g5-tree-diagram', 'easy')
+            shape = q['shape_data'][0]
+            leaves = [l for l in shape['labels'] if l['x'] == 220]
+            self.assertEqual(int(q['correct_answers'][0]), len(leaves))
+
+    def test_spinner_outcomes(self):
+        for _ in range(30):
+            q = _q('g3-list-outcomes', 'easy')
+            fills = {m['fill'] for m in q['shape_data'][0]['marks'] if m['type'] in ('path', 'circle') and m['fill'] not in ('none',)}
+            self.assertEqual(int(q['correct_answers'][0]), len(fills))
+
+    def test_equally_likely_spinners(self):
+        for _ in range(40):
+            q = _q('g3-equally-likely', 'easy')
+            self.assertEqual(len(q['choices']), 5)
+            self.assertIn(q['correct_answers'][0], 'ABCDE')

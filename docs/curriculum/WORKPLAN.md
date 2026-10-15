@@ -27,6 +27,7 @@ Session log (append one line per working session):
 | 2026-10-14 | Full suite (all modules at once) ran 24 min with no output and flat memory → looks like a hang, not low memory. Every test module passes when run alone (12/12). Suspect: a generator `while` loop that rarely never ends, depending on random state from earlier tests. Investigating with `-v 2`. | B4 checkpoint |
 | 2026-10-14 | WP5 geometry done: 14 skills (C5.1–C5.14), solids/nets/grids/triangles/circles in `illustrations.py`, migration 0024, coverage 129 → 149 of 236 (geometry 29/40). `g2-grid-map` renamed `g3-grid-map` (no grade 2 domain yet). Next: finish the hang investigation, then WP6 (C6.1). | C5 checkpoint |
 | 2026-10-14 | Hang solved: not a code bug — Django was waiting for a yes/no about a leftover test DB; always use `--noinput`. Full suite green (138 → 148 tests). WP6 measurement done: 11 skills (C6.1–C6.11), ruler/cube stacks/protractor/balance/jug pictures, thermometer minor ticks, `cm2`/`cm3` accepted in answers, negatives removed from `g5-thermometer`. Coverage 149 → 166 of 236 (measurement 33/38). Next: Phase D, WP7 statistics (D7.1). | C6 |
+| 2026-10-14 | WP7 statistics + WP8 probability done: 13 skills (D7.1–D7.5, D8.1–D8.8), bar chart / line graph / pictograph / spinner / bag / tree / probability-line pictures. Coverage 166 → 181 of 236 (stats 8/11, probability 12/16, nothing missing in either). Full suite green. Open widget todos: tap-to-build chart, simulation runner. Next: Phase E (E0 read-aloud, then grade 1–2 skills) — D9 still blocked on D2. | D7–D8 |
 
 ---
 
@@ -141,24 +142,24 @@ WP4 Operations & calculation
 - [x] C6.10 `g3-capacity-estimate` (196, 197)
 - [x] C6.11 `g3-thermometer` grades 3–4 (208) — also removed the negative numbers from the legacy `g5-thermometer` scale
 
-## Phase D — Statistics, probability, integers (WP7, WP8, WP9)  ← current phase
+## Phase D — Statistics, probability, integers (WP7, WP8, WP9)
 
-- [ ] D7.1 `g3-pictograph` (212)
-- [ ] D7.2 `g4-line-graph` (213, 219)
-- [ ] D7.3 `g3-tally-table` (211)
-- [ ] D7.4 `g3-build-chart` (215, 216)
-- [ ] D7.5 `g4-survey-question` (210)
-- [ ] D8.1 `g3-equally-likely` (222)
-- [ ] D8.2 `g4-compare-likelihood` (226, 231)
-- [ ] D8.3 `g4-independence` (223)
-- [ ] D8.4 `g4-variability` (221)
-- [ ] D8.5 `g5-probability-line` (232)
-- [ ] D8.6 `g5-tree-diagram` (230)
-- [ ] D8.7 `g5-simulation` (224, 227, 228, 234, 235)
-- [ ] D8.8 `g2-list-outcomes` (229)
+- [x] D7.1 `g3-pictograph` (212)
+- [x] D7.2 `g4-line-graph` (213, 219)
+- [x] D7.3 `g3-tally-table` (211)
+- [x] D7.4 `g3-build-chart` (215, 216) — MC « which chart matches »; **todo** tap-to-build bar chart widget
+- [x] D7.5 `g4-survey-question` (210)
+- [x] D8.1 `g3-equally-likely` (222)
+- [x] D8.2 `g4-compare-likelihood` (226, 231)
+- [x] D8.3 `g4-independence` (223)
+- [x] D8.4 `g4-variability` (221)
+- [x] D8.5 `g5-probability-line` (232)
+- [x] D8.6 `g5-tree-diagram` (230)
+- [x] D8.7 `g5-simulation` (224, 227, 228, 234, 235) — results simulated in the generator; **todo** interactive spin/roll runner
+- [x] D8.8 `g3-list-outcomes` (229) — slug changed from g2- (grade 3 until WP1 adds grade 2)
 - [!] D9.1–D9.4 Integers domain — blocked on D2
 
-## Phase E — Grades 1–2 (WP1)
+## Phase E — Grades 1–2 (WP1)  ← current phase
 
 - [ ] E0 Read-aloud button (Web Speech API, FR/EN) for prompts
 - [ ] E1.1 `g1-count-objects` · [ ] E1.2 `g1-count-on` · [ ] E1.3 `g1-skip-count` · [ ] E1.4 `g1-estimate-collection`

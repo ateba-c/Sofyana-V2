@@ -203,6 +203,20 @@ CURRICULUM_REFS = {
     'g3-balance-scale': [200, 201, 202],
     'g3-capacity-estimate': [196, 197, 199],
     'g3-thermometer': [208, 209],
+    # ── WP7 statistics, WP8 probability ──
+    'g3-pictograph': [212, 218],
+    'g4-line-graph': [213, 214, 219],
+    'g3-tally-table': [211],
+    'g3-build-chart': [215, 216],
+    'g4-survey-question': [210],
+    'g3-equally-likely': [222],
+    'g4-compare-likelihood': [226, 231],
+    'g4-independence': [223],
+    'g4-variability': [221],
+    'g5-probability-line': [232, 225],
+    'g5-tree-diagram': [230],
+    'g5-simulation': [224, 227, 228, 234, 235],
+    'g3-list-outcomes': [229, 236],
     # Not in the audit on purpose: fraction-multiply / fraction-divide (beyond primary),
     # Roman numerals (enrichment), g6-relevant-info (cross-cutting problem solving).
 }
