@@ -90,3 +90,50 @@ class ResolutionEngineTests(TestCase):
         self.assertEqual(r.context['suggested_action'], 'level_up')
         self.assertEqual(r.context['suggested_level'], 'resolution')
         self.assertEqual(r.context['suggested_level_name'], 'Résolution')
+
+
+class ResolutionPlusTests(SimpleTestCase):
+    """Task F3: the curriculum-upgrade skills that got a 4th level, and their new story families."""
+
+    def test_plus_skills_have_four_levels(self):
+        from .generators.resolution_plus import FAMILIES_PLUS
+        for slug in FAMILIES_PLUS:
+            self.assertEqual(SKILL_MAP[slug]['level_sequence'], ['easy', 'medium', 'hard', 'resolution'], slug)
+            self.assertIs(generator_for(slug, 'resolution'), RESOLUTION[slug])
+        for slug in ('g3-vocab-numbers', 'g4-who-is-right-numbers', 'g3-convex'):   # naming / reasoning skills stay at 3
+            self.assertNotIn('resolution', SKILL_MAP[slug]['level_sequence'])
+
+    def test_answers_recompute(self):
+        import re
+        from fractions import Fraction
+        from .answers import parse_number
+        from .generators import resolution_plus as rp
+        nums = lambda q: [int(x) for x in re.findall(r'\*\*(\d+)', q['prompt_en'].replace(',', ''))]
+        for _ in range(200):
+            q = rp.angles(6)
+            if 'In a triangle' in q['prompt_en']:
+                a, b = nums(q)
+                self.assertEqual(int(q['correct_answers'][0]) + a + b, 180)
+            q = rp.recipe_fractions(6)
+            m = re.findall(r'\*\*(\d+)/(\d+)\*\*', q['prompt_en'])
+            if 'cup more' in q['prompt_en']:
+                self.assertEqual(parse_number(q['correct_answers'][0]), sum(Fraction(int(n), int(d)) for n, d in m))
+            q = rp.plant_growth(4)
+            if 'week 6' in q['prompt_en']:
+                h = nums(q)
+                step = h[1] - h[0]
+                self.assertGreater(step, 0)
+                self.assertEqual([h[i + 1] - h[i] for i in range(3)], [step] * 3)
+                self.assertEqual(int(q['correct_answers'][0]), h[3] + 2 * step)
+            q = rp.balance(3)
+            self.assertGreater(int(q['correct_answers'][0]), 0)
+            q = rp.powers_story(6)
+            self.assertGreater(int(q['correct_answers'][0]), 0)
+            q = rp.remainder_trips(4)
+            total, size = nums(q)[:2]
+            if 'needed so everyone' in q['prompt_en']:
+                self.assertEqual(int(q['correct_answers'][0]), -(-total // size))
+            elif 'full' in q['prompt_en']:
+                self.assertEqual(int(q['correct_answers'][0]), total // size)
+            else:
+                self.assertEqual(int(q['correct_answers'][0]), total % size)

@@ -567,5 +567,7 @@ def resolution_gen(slug):
 
 from .resolution_g35 import FAMILIES_G35  # noqa: E402  (grade 3 / 5 families reuse the helpers above)
 RESOLUTION_FAMILIES.update(FAMILIES_G35)
+from .resolution_plus import FAMILIES_PLUS  # noqa: E402  (curriculum-upgrade skills, task F3)
+RESOLUTION_FAMILIES.update(FAMILIES_PLUS)
 
 RESOLUTION = {slug: resolution_gen(slug) for slug in RESOLUTION_FAMILIES}

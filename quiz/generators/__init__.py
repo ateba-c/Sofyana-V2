@@ -533,9 +533,13 @@ LEVEL_NAMES = {
     'hard':       ('Hard', 'Difficile'),
     'resolution': ('Problem solving', 'Résolution'),
 }
-for _slug in RESOLUTION_FAMILIES:
-    if _slug in SKILL_MAP and 'resolution' not in SKILL_MAP[_slug]['level_sequence']:
-        SKILL_MAP[_slug]['level_sequence'] = SKILL_MAP[_slug]['level_sequence'] + ['resolution']
+def _add_resolution_level():
+    for _slug in RESOLUTION_FAMILIES:
+        if _slug in SKILL_MAP and 'resolution' not in SKILL_MAP[_slug]['level_sequence']:
+            SKILL_MAP[_slug]['level_sequence'] = SKILL_MAP[_slug]['level_sequence'] + ['resolution']
+
+
+_add_resolution_level()
 
 
 def generator_for(slug, level):
@@ -751,3 +755,4 @@ TOPIC_GROUPS = [
 # ── Curriculum upgrade (2026-10): new skills + rewrites, see registry_plus.py ──
 from .registry_plus import merge as _merge_plus
 _merge_plus(GENERATORS, SKILL_MAP, TOPIC_GROUPS)
+_add_resolution_level()   # the merged skills get their 4th level too (task F3)
