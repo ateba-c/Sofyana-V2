@@ -185,5 +185,6 @@ WP4 Operations & calculation
 
 ## Release checklist (owner-triggered, not done automatically)
 
-- [ ] Full test suite green · [ ] manual click-through of each new domain (FR + EN, mobile width)
-- [ ] Merge `curriculum-upgrade` → `master`, push, deploy per DEBUG.md, `migrate`, `ai_enrich_skills`
+- [x] Full test suite green (191 tests, 2026-10-17) · [ ] manual click-through of each new domain (FR + EN, mobile width) — now done in the QA Studio (/qa/)
+- [x] Merge `curriculum-upgrade` (+ `qa-studio`) → `master`, push, deploy per DEBUG.md, `migrate` — **deployed 2026-10-17 at `bdc8da6`** (DB backup `/opt/sofyana/backups/db_v2_pre-qa-studio_20261017-1446.sqlite3`; `qa_ingest --per-skill 12` → 2945 samples)
+- [ ] `ai_enrich_skills` on the server (not run yet)
