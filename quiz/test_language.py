@@ -2,6 +2,7 @@
 One language, end to end: the session language sticks, and every part of a
 question (prompt, hint, choices, pairs, items) is in that language.
 """
+import copy
 import re
 
 from django.contrib.auth.models import User
@@ -106,3 +107,29 @@ class IllustrationAndPromptTests(SimpleTestCase):
                         for key in ('chart_labels', 'categories'):
                             for lab in shape.get(key) or []:
                                 self.assertIsNone(cats.search(lab), f'{slug} svg: {lab}')
+
+
+class DataTableTests(SimpleTestCase):
+    """g5-data-table: the data is a real table, the prompt says it once, Quebec wording, worked explanation."""
+
+    def test_table_not_inline_and_explained(self):
+        for level in ('easy', 'medium', 'hard'):
+            for _ in range(40):
+                raw = GENERATORS['g5-data-table'](level)
+                for lang in ('fr', 'en'):
+                    q = localize_problem(copy.deepcopy(raw), lang)
+                    prompt = q[f'prompt_{lang}']
+                    self.assertNotIn('|', prompt)
+                    self.assertNotIn('Tableau', prompt)
+                    self.assertNotIn('Football', prompt + str(q['table']))
+                    self.assertGreaterEqual(len(q['table']['rows']), 3)
+                    self.assertTrue(all(isinstance(c, str) for row in q['table']['rows'] for c in row))
+                    self.assertEqual(sum(c['correct'] for c in q['choices']), 1)
+                    labels = [c['label'] for c in q['choices']]
+                    self.assertEqual(len(labels), len(set(labels)))
+                    # a word answer never gets number padding ("Pomme, Raisin, 38, 75")
+                    self.assertEqual(len({l.isdigit() for l in labels}), 1, labels)
+                expl = raw['explanation_fr']
+                if "en tout" in raw['prompt_fr']:
+                    values = [int(r[1]) for r in raw['table']['rows']]
+                    self.assertIn(f"= {sum(values)}", expl)

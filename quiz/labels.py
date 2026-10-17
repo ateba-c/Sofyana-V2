@@ -154,6 +154,13 @@ def _pick(d, base, lang):
     return translate_label(src, lang) if src is not None else ''
 
 
+def _cell(value, lang):
+    """A table cell: (fr, en) pair → the session language; anything else → str."""
+    if isinstance(value, (tuple, list)) and len(value) == 2:
+        return str(value[0] if lang == 'fr' else value[1])
+    return str(value)
+
+
 def localize_problem(q, lang):
     """Rewrite choices / pairs / items of a generated problem into ``lang`` (in place)."""
     for c in q.get('choices') or []:
@@ -176,6 +183,13 @@ def localize_problem(q, lang):
                 if lang == 'en':
                     lbl['text'] = lbl['text_en']
                 del lbl['text_en']
+    # Data table under the prompt: each header / cell is a plain value or a (fr, en) pair
+    if isinstance(q.get('table'), dict):
+        t = q['table']
+        q['table'] = {
+            'headers': [_cell(h, lang) for h in t.get('headers') or []],
+            'rows':    [[_cell(c, lang) for c in row] for row in t.get('rows') or []],
+        }
     if q.get('q_type') == 'mix_match' and q.get('pairs'):
         q['correct_answers'] = [p['right'] for p in q['pairs']]
     elif q.get('q_type') in ('ordering', 'sorting') and q.get('items'):

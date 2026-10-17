@@ -1,0 +1,25 @@
+{# Data table shown under a prompt. `table` = {headers: [str], rows: [[str]]} (already localized). #}
+{% if table and table.rows %}
+<div class="rounded-xl border border-slate-200 overflow-hidden mb-2">
+  <table class="w-full text-sm">
+    {% if table.headers %}
+    <thead class="bg-brand-light">
+      <tr>
+        {% for h in table.headers %}
+        <th scope="col" class="px-3 py-2 font-black text-ink {% if forloop.last and not forloop.first %}text-right{% else %}text-left{% endif %}">{{ h }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    {% endif %}
+    <tbody>
+      {% for row in table.rows %}
+      <tr class="{% if forloop.counter|divisibleby:2 %}bg-slate-50{% else %}bg-white{% endif %} border-t border-slate-200">
+        {% for c in row %}
+        <td class="px-3 py-2 font-bold text-ink {% if forloop.last and not forloop.first %}text-right tabular-nums{% endif %}">{{ c }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}

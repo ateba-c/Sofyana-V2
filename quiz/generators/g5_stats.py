@@ -312,116 +312,135 @@ def g5_count_outcomes_gen(level='easy'):
 # g5_data_table_gen
 # ─────────────────────────────────────────────────────────────────────────────
 
+# One survey per context. Each category: (table label FR, table label EN, phrase FR with article, phrase EN).
 _TABLE_CONTEXTS = [
-    (['Chat', 'Chien', 'Oiseau', 'Poisson'],  "animaux de compagnie", "pets"),
-    (['Pomme', 'Orange', 'Raisin', 'Banane'],  "fruits préférés",      "favourite fruits"),
-    (['Football', 'Basketball', 'Natation', 'Tennis'], "sports", "sports"),
-    (['Rouge', 'Bleu', 'Vert', 'Jaune'],       "couleurs préférées",   "favourite colours"),
+    {
+        'cats': [('Chat', 'Cat', 'le chat', 'cats'), ('Chien', 'Dog', 'le chien', 'dogs'),
+                 ('Oiseau', 'Bird', "l'oiseau", 'birds'), ('Poisson', 'Fish', 'le poisson', 'fish')],
+        'col': ('Animal', 'Pet'),
+        'intro': ("On a demandé aux élèves de la classe quel est leur animal de compagnie préféré.",
+                  "The students in a class were asked which pet they like best."),
+        'which': ('Quel animal', 'Which pet'),
+    },
+    {
+        'cats': [('Pomme', 'Apple', 'la pomme', 'apples'), ('Orange', 'Orange', "l'orange", 'oranges'),
+                 ('Raisin', 'Grapes', 'le raisin', 'grapes'), ('Banane', 'Banana', 'la banane', 'bananas')],
+        'col': ('Fruit', 'Fruit'),
+        'intro': ("On a demandé aux élèves de la classe quel est leur fruit préféré.",
+                  "The students in a class were asked which fruit they like best."),
+        'which': ('Quel fruit', 'Which fruit'),
+    },
+    {
+        # Quebec French: « soccer » (« football » means American football there)
+        'cats': [('Soccer', 'Soccer', 'le soccer', 'soccer'), ('Basketball', 'Basketball', 'le basketball', 'basketball'),
+                 ('Natation', 'Swimming', 'la natation', 'swimming'), ('Tennis', 'Tennis', 'le tennis', 'tennis')],
+        'col': ('Sport', 'Sport'),
+        'intro': ("On a demandé aux élèves de la classe quel est leur sport préféré.",
+                  "The students in a class were asked which sport they like best."),
+        'which': ('Quel sport', 'Which sport'),
+    },
+    {
+        'cats': [('Rouge', 'Red', 'le rouge', 'red'), ('Bleu', 'Blue', 'le bleu', 'blue'),
+                 ('Vert', 'Green', 'le vert', 'green'), ('Jaune', 'Yellow', 'le jaune', 'yellow')],
+        'col': ('Couleur', 'Colour'),
+        'intro': ("On a demandé aux élèves de la classe quelle est leur couleur préférée.",
+                  "The students in a class were asked which colour they like best."),
+        'which': ('Quelle couleur', 'Which colour'),
+    },
 ]
 
 
 def g5_data_table_gen(level='easy'):
-    """QCM — interpret a simple frequency table."""
-    cats, ctx_fr, ctx_en = random.choice(_TABLE_CONTEXTS)
-    n_cats  = len(cats) if level == 'hard' else random.randint(3, len(cats))
-    cats    = cats[:n_cats]
+    """QCM — interpret a survey table (shown as a real table, not inline text)."""
+    ctx     = random.choice(_TABLE_CONTEXTS)
+    n_cats  = len(ctx['cats']) if level == 'hard' else random.randint(3, len(ctx['cats']))
+    cats    = ctx['cats'][:n_cats]
     while True:                 # a tie on the max/min would make a "wrong" choice correct too
         values = [random.randint(2, 15) for _ in cats]
         if values.count(max(values)) == 1 and values.count(min(values)) == 1:
             break
+    labels  = [(c[0], c[1]) for c in cats]
+    which_fr, which_en = ctx['which']
+    max_v, min_v = max(values), min(values)
+    hi, lo  = cats[values.index(max_v)], cats[values.index(min_v)]
 
     q_type  = random.choice(['largest', 'smallest', 'total', 'difference'])
 
-    if q_type == 'largest':
-        correct_idx = values.index(max(values))
-        correct     = cats[correct_idx]
-        prompt_fr   = f"D'après ce tableau sur les {ctx_fr}, quelle catégorie a le plus grand effectif ?"
-        prompt_en   = f"According to this table about {ctx_en}, which category has the highest count?"
-        tagged_candidates = [
-            (c, 'wrong_category',
-             'Find the highest number in the table.',
-             'Trouve le plus grand nombre dans le tableau.')
-            for c in cats if c != correct
-        ]
-    elif q_type == 'smallest':
-        correct_idx = values.index(min(values))
-        correct     = cats[correct_idx]
-        prompt_fr   = f"D'après ce tableau sur les {ctx_fr}, quelle catégorie a le plus petit effectif ?"
-        prompt_en   = f"According to this table about {ctx_en}, which category has the lowest count?"
-        tagged_candidates = [
-            (c, 'wrong_category',
-             'Find the lowest number in the table.',
-             'Trouve le plus petit nombre dans le tableau.')
-            for c in cats if c != correct
-        ]
+    if q_type in ('largest', 'smallest'):
+        most     = q_type == 'largest'
+        pick     = hi if most else lo
+        pick_v   = max_v if most else min_v
+        correct  = (pick[0], pick[1])
+        agree    = 'e' if which_fr.startswith('Quelle') else ''
+        q_fr = f"{which_fr} a été choisi{agree} par le {'plus' if most else 'moins'} d'élèves ?"
+        q_en = f"{which_en} was chosen by the {'most' if most else 'fewest'} students?"
+        fb   = (('Find the largest number in the table.', 'Cherche le plus grand nombre du tableau.') if most else
+                ('Find the smallest number in the table.', 'Cherche le plus petit nombre du tableau.'))
+        tagged_candidates = [(lb, 'wrong_category', fb[0], fb[1]) for lb in labels if lb != correct]
+        hint_fr = f"Compare les nombres de la colonne « Nombre d'élèves » : lequel est le plus {'grand' if most else 'petit'} ?"
+        hint_en = f"Compare the numbers in the “Number of students” column: which one is the {'largest' if most else 'smallest'}?"
+        expl_fr = [f"Les nombres d'élèves sont : {', '.join(map(str, values))}.",
+                   f"Le plus {'grand' if most else 'petit'} est {pick_v}, sur la ligne « {pick[0]} »."]
+        expl_en = [f"The numbers of students are: {', '.join(map(str, values))}.",
+                   f"The {'largest' if most else 'smallest'} is {pick_v}, on the “{pick[1]}” row."]
+        ans_fr, ans_en = pick[0], pick[1]
     elif q_type == 'total':
         total   = sum(values)
         correct = str(total)
-        prompt_fr = f"Combien d'élèves au total ont répondu ?"
-        prompt_en = "How many students answered in total?"
+        q_fr = "Combien d'élèves ont répondu en tout ?"
+        q_en = "How many students answered in all?"
         tagged_candidates = [
-            (str(total - values[-1]), 'forgot_last',
-             'Add ALL categories.',
-             'Additionne TOUTES les catégories.'),
-            (str(total + values[0]), 'counted_twice',
-             'Each category should be counted once.',
-             'Chaque catégorie doit être comptée une fois.'),
-            (str(max(values)),       'max_not_total',
-             'The question asks for the total, not the largest.',
-             'La question demande le total, pas le maximum.'),
-            (str(total - 1),         'off_by_one',
-             'Recheck your addition.',
-             'Revérifie ton addition.'),
+            (str(total - values[-1]), 'forgot_last', 'Add ALL the rows of the table.', 'Additionne TOUTES les lignes du tableau.'),
+            (str(total + values[0]), 'counted_twice', 'Count each row only once.', 'Compte chaque ligne une seule fois.'),
+            (str(max_v), 'max_not_total', 'The question asks for the total, not the largest number.',
+             'La question demande le total, pas le plus grand nombre.'),
+            (str(total - 1), 'off_by_one', 'Check your addition again.', 'Vérifie ton addition.'),
         ]
+        hint_fr = "Additionne les nombres d'élèves de toutes les lignes du tableau."
+        hint_en = "Add the numbers of students from every row of the table."
+        calc = f"{' + '.join(map(str, values))} = {total}"
+        expl_fr = ["Il faut additionner toutes les lignes du tableau.", calc]
+        expl_en = ["Add every row of the table.", calc]
+        ans_fr, ans_en = f"{total} élèves", f"{total} students"
     else:  # difference
-        max_v, min_v = max(values), min(values)
         diff    = max_v - min_v
         correct = str(diff)
-        max_cat = cats[values.index(max_v)]
-        min_cat = cats[values.index(min_v)]
-        prompt_fr = f"Combien de plus {max_cat} a-t-il par rapport à {min_cat} ?"
-        prompt_en = f"How many more does {_L(max_cat, 'en')} have compared to {_L(min_cat, 'en')}?"
+        q_fr = f"Combien d'élèves de plus ont choisi {hi[2]} plutôt que {lo[2]} ?"
+        q_en = f"How many more students chose {hi[3]} than {lo[3]}?"
         tagged_candidates = [
-            (str(max_v),     'max_not_diff',   'Subtract the two values.', 'Soustrait les deux valeurs.'),
-            (str(min_v),     'min_not_diff',   'Subtract the two values.', 'Soustrait les deux valeurs.'),
-            (str(diff + 1),  'off_by_one',     'Recheck.', 'Revérifie.'),
+            (str(max_v), 'max_not_diff', 'Subtract the two numbers.', 'Soustrais les deux nombres.'),
+            (str(min_v), 'min_not_diff', 'Subtract the two numbers.', 'Soustrais les deux nombres.'),
+            (str(diff + 1), 'off_by_one', 'Check your subtraction again.', 'Vérifie ta soustraction.'),
             (str(max_v + min_v), 'added_not_subtracted', 'Find the difference, not the sum.', 'Cherche la différence, pas la somme.'),
         ]
+        hint_fr = f"Trouve les nombres de « {hi[0]} » et de « {lo[0]} », puis soustrais le plus petit du plus grand."
+        hint_en = f"Find the numbers for “{hi[1]}” and “{lo[1]}”, then subtract the smaller from the larger."
+        calc = f"{max_v} − {min_v} = {diff}"
+        expl_fr = [f"{hi[0]} : {max_v} élèves. {lo[0]} : {min_v} élèves.", calc]
+        expl_en = [f"{hi[1]}: {max_v} students. {lo[1]}: {min_v} students.", calc]
+        ans_fr, ans_en = f"{diff} élèves de plus", f"{diff} more students"
 
-    table_str = ' | '.join(f"{c}: {v}" for c, v in zip(cats, values))
-    table_str_en = ' | '.join(f"{_L(c, 'en')}: {v}" for c, v in zip(cats, values))
-    full_prompt_fr = f"Tableau des {ctx_fr} : {table_str}. {prompt_fr}"
-    full_prompt_en = f"Table of {ctx_en}: {table_str_en}. {prompt_en}"
-
-    if q_type in ('largest', 'smallest'):
-        full_prompt_fr = prompt_fr + f" (Tableau : {table_str})"
-        full_prompt_en = prompt_en + f" (Table: {table_str_en})"
-
-    tagged_candidates = [c for c in tagged_candidates if c[0] != str(correct)]
+    intro_fr, intro_en = ctx['intro']
+    tagged_candidates = [c for c in tagged_candidates if c[0] != correct]
 
     return {
         'q_type':           'multiple_choice',
-        'prompt_fr':        full_prompt_fr,
-        'prompt_en':        full_prompt_en,
-        'hint_fr':          'Lis bien chaque valeur avant de calculer.',
-        'hint_en':          'Read each value carefully before calculating.',
+        'prompt_fr':        f"{intro_fr} {q_fr}",
+        'prompt_en':        f"{intro_en} {q_en}",
+        # Rendered as a real table under the prompt (partials/data_table.html); cells may be (fr, en) pairs.
+        'table': {
+            'headers': [ctx['col'], ("Nombre d'élèves", 'Number of students')],
+            'rows':    [[lb, str(v)] for lb, v in zip(labels, values)],
+        },
+        'hint_fr':          hint_fr,
+        'hint_en':          hint_en,
         'show_illustration': False,
         'shape_data':       [],
-        'choices':          _tagged_shuffle_mc(str(correct), tagged_candidates[:4]),
+        'choices':          _tagged_shuffle_mc(correct, tagged_candidates[:4]),
         'pairs':            [],
-        'explanation_en': (
-            f'Step 1: Read the table values for each category.\n'
-            f'Step 2: Identify the question type (largest / smallest / total / difference).\n'
-            f'Step 3: Apply the correct operation to the relevant values.\n'
-            f'Answer: {_L(correct, 'en')}'
-        ),
-        'explanation_fr': (
-            f'Étape 1 : Lis les valeurs du tableau pour chaque catégorie.\n'
-            f'Étape 2 : Identifie le type de question (maximum / minimum / total / différence).\n'
-            f'Étape 3 : Applique l\'opération correcte aux valeurs concernées.\n'
-            f'Réponse : {correct}'
-        ),
-        'correct_answers':  [str(correct)],
+        'explanation_fr':   '\n'.join(expl_fr + [f'Réponse : {ans_fr}']),
+        'explanation_en':   '\n'.join(expl_en + [f'Answer: {ans_en}']),
+        'correct_answers':  [correct[0] if isinstance(correct, tuple) else correct],
     }
 
 

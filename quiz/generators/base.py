@@ -110,21 +110,23 @@ def _tagged_shuffle_mc(correct_str, tagged_candidates):
             pool.append(_choice(label, False, error_type, fb_en, fb_fr))
         if len(pool) == 4:
             break
-    # Fallback padding — always positive, no misconception tag
+    # Fallback padding — always positive, no misconception tag.  Only for numeric
+    # answers: a word answer (a fruit, a shape…) would get "38" and "75" as choices,
+    # so it keeps fewer choices instead.
+    try:
+        base_val = abs(int(float(
+            correct_fr.split('/')[0] if '/' in correct_fr else correct_fr
+        )))
+    except (ValueError, AttributeError):
+        base_val = None
     pad = 1
-    while len(pool) < 4:
-        try:
-            base_val = abs(int(float(
-                correct_fr.split('/')[0] if '/' in correct_fr else correct_fr
-            )))
-        except (ValueError, AttributeError):
-            base_val = 1
+    while base_val is not None and len(pool) < 4:
         s = str(base_val + pad * 37)
         if s not in seen:
             seen.add(s)
             pool.append(_choice(s, False, 'distractor'))
         pad += 1
-    pos = random.randint(0, 4)
+    pos = random.randint(0, len(pool))
     pool.insert(pos, _choice(correct_str, True))
     return pool[:5]
 

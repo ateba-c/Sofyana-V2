@@ -78,9 +78,10 @@ class Grade4GeneratorTests(SimpleTestCase):
 
         if q['q_type'] == 'multiple_choice':
             choices = q['choices']
-            self.assertEqual(len(choices), 5, f'{slug}: {choices}')
+            # 5 choices, or fewer for a word answer (no "38"/"75" number padding next to words)
+            self.assertIn(len(choices), (3, 4, 5), f'{slug}: {choices}')
             self.assertEqual(sum(1 for c in choices if c['correct']), 1, f'{slug}: {choices}')
-            self.assertEqual(len({c['label'] for c in choices}), 5, f'{slug}: duplicate labels {choices}')
+            self.assertEqual(len({c['label'] for c in choices}), len(choices), f'{slug}: duplicate labels {choices}')
             idx = next(i for i, c in enumerate(choices) if c['correct'])
             self.assertTrue(_check_practice(q, str(idx)))
             self.assertFalse(_check_practice(q, str((idx + 1) % 5)))

@@ -21,6 +21,7 @@
     {% if lang == 'fr' %}{% include 'partials/read_aloud.html' with text=question.prompt_fr choices=question.choices %}{% else %}{% include 'partials/read_aloud.html' with text=question.prompt_en choices=question.choices %}{% endif %}
   </div>
 
+  {% include 'partials/data_table.html' with table=question.table %}
   {% if question.shape_data %}
   <div class="rounded-xl border border-slate-200 bg-slate-50 p-2 mb-2">
     {% shape_canvas question.shape_data lang %}
