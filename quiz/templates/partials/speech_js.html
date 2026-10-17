@@ -1,0 +1,39 @@
+{# Read-aloud helpers used by partials/read_aloud.html. Also used by the QA Studio simulator. #}
+<script>
+    // Read-aloud (Web Speech API): the question, then the choices, with math symbols spoken as words.
+    const SAY_WORDS = {
+      fr: [['×', ' fois '], ['÷', ' divisé par '], ['−', ' moins '], ['+', ' plus '], ['=', ' égale '],
+           ['<', ' plus petit que '], ['>', ' plus grand que '], ['°C', ' degrés '], ['°', ' degrés '], ['%', ' pour cent '],
+           ['cm²', ' centimètres carrés '], ['m²', ' mètres carrés '], ['cm³', ' centimètres cubes '], ['?', ' ? ']],
+      en: [['×', ' times '], ['÷', ' divided by '], ['−', ' minus '], ['+', ' plus '], ['=', ' equals '],
+           ['<', ' is less than '], ['>', ' is greater than '], ['°C', ' degrees '], ['°', ' degrees '], ['%', ' percent '],
+           ['cm²', ' square centimetres '], ['m²', ' square metres '], ['cm³', ' cubic centimetres '], ['?', ' ? ']],
+    };
+    function sayText(text, lang) {
+      let t = ' ' + text + ' ';
+      for (const [a, b] of SAY_WORDS[lang] || []) t = t.split(a).join(b);
+      // « 3/4 » → « 3 sur 4 » / "3 over 4"
+      t = t.replace(/(\d+)\s*\/\s*(\d+)/g, lang === 'fr' ? '$1 sur $2' : '$1 over $2');
+      return t.replace(/[“”«»"]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+    function sayAloud(btn) {
+      if (!('speechSynthesis' in window)) return;
+      const synth = window.speechSynthesis;
+      if (synth.speaking) { synth.cancel(); return; }       // second tap = stop
+      const lang = btn.dataset.lang === 'en' ? 'en' : 'fr';
+      const parts = [sayText(btn.dataset.say || '', lang)];
+      let choices = [];
+      try { choices = JSON.parse(btn.dataset.choices || '[]'); } catch (e) {}
+      choices.forEach((c, i) => parts.push((lang === 'fr' ? 'Réponse ' : 'Answer ') + (i + 1) + ' : ' + sayText(c, lang)));
+      const voices = synth.getVoices();
+      const want = lang === 'fr' ? ['fr-CA', 'fr-FR', 'fr'] : ['en-CA', 'en-US', 'en-GB', 'en'];
+      const voice = want.map(w => voices.find(v => v.lang && v.lang.startsWith(w))).find(Boolean);
+      parts.forEach(p => {
+        const u = new SpeechSynthesisUtterance(p);
+        u.lang = voice ? voice.lang : (lang === 'fr' ? 'fr-CA' : 'en-CA');
+        if (voice) u.voice = voice;
+        u.rate = 0.9;
+        synth.speak(u);
+      });
+    }
+</script>

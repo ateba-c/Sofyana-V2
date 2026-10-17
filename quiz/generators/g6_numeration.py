@@ -184,7 +184,7 @@ def g6_additive_form_gen(level='easy'):
         wrong.add(' + '.join(terms[:-1]))
     wrong.add(' + '.join(sc.fmt_n(int(ch) * 10 ** (len(s) - 2 - idx)) for idx, ch in enumerate(s) if ch != '0' and len(s) - 2 - idx >= 0))
     wrong.discard(correct)
-    tagged = [(w, 'wrong_decomposition', 'Check each digit against its place value.', 'Vérifie chaque chiffre avec la valeur de sa position.') for w in wrong if w]
+    tagged = [(w, 'wrong_decomposition', 'Check each digit against its place value.', 'Vérifie chaque chiffre avec la valeur de sa position.') for w in sorted(wrong) if w]
     return {
         'q_type': 'multiple_choice',
         'prompt_fr': f"Quelle est la forme additive de **{sc.fmt_n(n)}** ?",

@@ -52,6 +52,14 @@ _load_dotenv(BASE_DIR / '.env')
 # database but stay hidden from the grade picker, home page and search until this is turned on.
 SHOW_EARLY_GRADES = os.environ.get('SOFYANA_EARLY_GRADES', '0') == '1'
 
+# QA Studio (/qa/): a skill is certified once it has QA_DEFAULT_THRESHOLD approved samples.
+# With SOFYANA_QA_GATE=1 students only see certified skills (off by default so turning
+# the Studio on doesn't hide the whole catalogue before anything is reviewed).
+QA_DEFAULT_THRESHOLD = int(os.environ.get('QA_DEFAULT_THRESHOLD', '10'))
+QA_GATE_ENABLED      = os.environ.get('SOFYANA_QA_GATE', '0') == '1'
+QA_WEBHOOK_URL       = os.environ.get('QA_WEBHOOK_URL', '')      # receives EVENT_SUBTOPIC_* as JSON
+QA_WEBHOOK_SECRET    = os.environ.get('QA_WEBHOOK_SECRET', '')   # HMAC-SHA256 → X-Sofyana-Signature
+
 LLM_API_KEY  = (os.environ.get('LLM_API_KEY') or os.environ.get('DEEPSEEK_API_KEY')
                 or os.environ.get('ANTHROPIC_API_KEY', ''))
 LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.deepseek.com/anthropic')
@@ -98,6 +106,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'quiz',
+    'qastudio',
 ]
 
 MIDDLEWARE = [

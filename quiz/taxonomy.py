@@ -8,9 +8,15 @@ SkillDomain is saved or deleted.  If the tables are empty (fresh checkout
 before the seed migration ran) we fall back to the legacy lists so nothing
 breaks.
 """
+import time
+
+from django.conf import settings
 from django.db.models.signals import post_save, post_delete
 
 _cache = {}
+# With the QA gate on, certifications change from the Studio (maybe in another gunicorn
+# worker), so the gated lists are rebuilt at most this many seconds after a change.
+GATE_TTL = 30
 
 
 def invalidate(**kwargs):
@@ -19,7 +25,10 @@ def invalidate(**kwargs):
 
 def _load():
     if 'groups' in _cache:
-        return
+        if not getattr(settings, 'QA_GATE_ENABLED', False) or time.time() - _cache['loaded_at'] < GATE_TTL:
+            return
+        _cache.clear()
+    _cache['loaded_at'] = time.time()
     from .models import Skill
     try:
         skills = list(
@@ -61,10 +70,20 @@ def _load():
         _cache['skill_map'] = skill_map
         _cache['answer_types'] = answer_types
 
-    from django.conf import settings
     if not getattr(settings, 'SHOW_EARLY_GRADES', False):
         # D1: grades 1–2 are built but not shown yet (direct practice URLs still work)
         _cache['groups'] = [g for g in _cache['groups'] if not g.get('grade') or g['grade'] >= 3]
+
+    if getattr(settings, 'QA_GATE_ENABLED', False):
+        # QA Studio gate: only skills certified by reviewers (or force-unlocked) are listed.
+        from qastudio.certification import live_slugs
+        live = live_slugs()
+        gated = []
+        for g in _cache['groups']:
+            topics = [t for t in g['topics'] if t['slug'] in live]
+            if topics:
+                gated.append(dict(g, topics=topics))
+        _cache['groups'] = gated
 
     meta = {}
     for g in _cache['groups']:

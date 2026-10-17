@@ -1,4 +1,4 @@
-{# Data table shown under a prompt. `table` = {headers: [str], rows: [[str]]} (already localized). #}
+{# Data shown under a prompt (already localized): `table` = {headers: [str], rows: [[str]]}, or `bullets` = [str]. #}
 {% if table and table.rows %}
 <div class="rounded-xl border border-slate-200 overflow-hidden mb-2">
   <table class="w-full text-sm">
@@ -22,4 +22,11 @@
     </tbody>
   </table>
 </div>
+{% endif %}
+{% if bullets %}
+<ul class="mb-2 space-y-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2">
+  {% for b in bullets %}
+  <li class="flex gap-2 text-sm font-bold text-ink"><span class="text-brand">•</span><span>{{ b }}</span></li>
+  {% endfor %}
+</ul>
 {% endif %}

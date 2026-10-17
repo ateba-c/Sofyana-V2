@@ -492,12 +492,23 @@ def scoreboard(request, quiz_id):
 
 # ---------- practice views ----------
 
+def _skill_locked(request, topic, lang):
+    """QA Studio gate: a skill that isn't certified yet shows a 'coming soon' page instead of questions."""
+    from qastudio.certification import is_skill_live
+    if is_skill_live(topic):
+        return None
+    return render(request, 'quiz/skill_locked.html', {'lang': lang, 'topic_name': _topic_label(topic, lang)}, status=403)
+
+
 @login_required
 def practice_page(request, topic):
     if topic not in GENERATORS:
         from django.http import Http404
         raise Http404
     lang  = resolve_lang(request)
+    locked = _skill_locked(request, topic, lang)
+    if locked:
+        return locked
     level = request.GET.get('level', 'medium')
     level_seq = skill_map().get(topic, {}).get('level_sequence') or ['easy', 'medium', 'hard']
     if level not in level_seq:
@@ -581,6 +592,9 @@ def practice_next(request, topic):
         raise Http404
     import random as _random
     lang  = resolve_lang(request)
+    locked = _skill_locked(request, topic, lang)
+    if locked:
+        return locked
     level = request.GET.get('level', 'medium')
     # Student dismissed a suggestion — snooze it for 5 more questions
     if request.GET.get('snooze') == '1':

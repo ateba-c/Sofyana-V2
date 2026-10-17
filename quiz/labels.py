@@ -190,6 +190,8 @@ def localize_problem(q, lang):
             'headers': [_cell(h, lang) for h in t.get('headers') or []],
             'rows':    [[_cell(c, lang) for c in row] for row in t.get('rows') or []],
         }
+    if isinstance(q.get('bullets'), list):
+        q['bullets'] = [_cell(b, lang) for b in q['bullets']]
     if q.get('q_type') == 'mix_match' and q.get('pairs'):
         q['correct_answers'] = [p['right'] for p in q['pairs']]
     elif q.get('q_type') in ('ordering', 'sorting') and q.get('items'):

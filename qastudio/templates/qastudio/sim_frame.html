@@ -1,0 +1,40 @@
+{% extends 'quiz/practice.html' %}
+{# The real child practice page, shown in the QA Studio phone frame. Its htmx calls go to this sample instead of the generator. #}
+{% block content %}
+{{ block.super }}
+<script>
+(function () {
+  const QUESTION = "{% url 'qastudio:sim_question' sample.pk %}";
+  const CHECK = "{% url 'qastudio:sim_check' sample.pk %}";
+  const LANG = "{{ lang }}";
+  window.QA_DRAFT = {{ draft|yesno:"true,false" }};
+  let served = 0;
+  const qUrl = () => QUESTION + '?lang=' + LANG + '&draft=' + (window.QA_DRAFT ? 1 : 0);
+
+  document.addEventListener('htmx:configRequest', (e) => {
+    const p = e.detail.path || '';
+    if (p.indexOf('/qa/') === 0) return;
+    if (p.indexOf('/next/') !== -1) {
+      // first load shows the sample; the feedback's auto-advance must not hide the explanation
+      if (served > 0) { e.preventDefault(); return; }
+      served += 1;
+      e.detail.path = qUrl();
+      e.detail.parameters = {};
+    } else if (p.indexOf('/check/') !== -1) {
+      e.detail.path = CHECK;
+    }
+  });
+  // Links would leave the simulated screen: keep the reviewer on the question.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a');
+    if (a && !a.hasAttribute('hx-get')) e.preventDefault();
+  }, true);
+  // Called by the Studio (same origin) after each edit: re-render only the question card.
+  window.qaReload = function (draft) {
+    window.QA_DRAFT = !!draft;
+    const area = document.getElementById('practice-area');
+    if (area) htmx.ajax('GET', qUrl(), { target: '#practice-area', swap: 'outerHTML' });
+  };
+})();
+</script>
+{% endblock %}

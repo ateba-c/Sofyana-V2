@@ -1,0 +1,15 @@
+{% extends 'quiz/base.html' %}
+{# Shown when the QA gate is on and this skill isn't certified yet (or its certification was suspended). #}
+{% block title %}{% if lang == 'fr' %}Bientôt disponible{% else %}Coming soon{% endif %} — Sofyana{% endblock %}
+{% block content %}
+<div id="practice-area" class="mx-auto max-w-xl card-glass rounded-[2rem] p-6 text-center space-y-3 animate-slide-up">
+  <div class="text-5xl">🔒</div>
+  <h1 class="font-display text-2xl font-extrabold text-ink">{% if lang == 'fr' %}Bientôt disponible{% else %}Coming soon{% endif %}</h1>
+  <p class="font-bold text-[var(--text-soft)]">
+    {% if lang == 'fr' %}Nos enseignants vérifient encore les questions de « {{ topic_name }} ». Choisis une autre compétence en attendant !
+    {% else %}Our teachers are still checking the questions for “{{ topic_name }}”. Pick another skill in the meantime!{% endif %}
+  </p>
+  <a href="{% url 'quiz:index' %}?lang={{ lang }}" class="inline-flex rounded-xl bg-brand px-5 py-3 font-black text-white shadow-warm">
+    {% if lang == 'fr' %}Choisir une compétence{% else %}Choose a skill{% endif %}</a>
+</div>
+{% endblock %}

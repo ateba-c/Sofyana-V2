@@ -1,0 +1,597 @@
+{% load qa_extras %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA Studio — Sofyana</title>
+  <link rel="icon" type="image/svg+xml" href="/static/quiz/img/favicon.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: {
+      colors: { brand: { DEFAULT: '#F97316', dark: '#EA580C', light: '#FFF7ED' }, ink: '#1C1018' },
+      fontFamily: { sans: ['Nunito', 'system-ui', 'sans-serif'], display: ['"Baloo 2"', 'Nunito', 'sans-serif'] },
+    } } };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    body { background: #F1F5F9; color: #1C1018; }
+    .panel { background: #fff; border: 1px solid #E2E8F0; border-radius: 1rem; }
+    .chip { display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: .2rem .65rem; font-size: .75rem; font-weight: 800; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; border-radius: .75rem; padding: .5rem .9rem; font-weight: 900; font-size: .8rem; transition: .15s; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .field { width: 100%; border: 1.5px solid #E2E8F0; border-radius: .6rem; padding: .45rem .6rem; font-size: .85rem; font-weight: 700; background: #fff; }
+    .field:focus { outline: none; border-color: #F97316; box-shadow: 0 0 0 3px rgba(249,115,22,.15); }
+    .phone { width: 390px; height: 780px; border-radius: 2.6rem; padding: 12px; background: #1C1018; box-shadow: 0 20px 50px rgba(15,23,42,.25); }
+    .phone iframe { width: 100%; height: 100%; border: 0; border-radius: 2rem; background: #F1F5F9; }
+    .scroll { overflow-y: auto; scrollbar-width: thin; }
+    kbd { font-family: ui-monospace, monospace; font-size: .65rem; border: 1px solid #CBD5E1; border-bottom-width: 2px; border-radius: .3rem; padding: 0 .3rem; background: #fff; color: #475569; }
+  </style>
+</head>
+<body class="font-sans antialiased text-sm" x-data="{ teamOpen: false }">
+
+{# ── HEADER ─────────────────────────────────────────────────────────────── #}
+<header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+  <div class="flex flex-wrap items-center gap-3 px-4 py-2.5">
+    <a href="{% url 'qastudio:studio' %}" class="flex items-center gap-2">
+      <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 via-brand to-rose-500 text-lg">⭐</span>
+      <span class="leading-none"><span class="font-display text-lg font-extrabold">Sofyana</span>
+        <span class="block text-[10px] font-black uppercase tracking-[0.2em] text-brand">QA Studio</span></span>
+    </a>
+
+    <div class="flex flex-wrap items-center gap-1.5 ml-2">
+      <span class="chip bg-emerald-50 text-emerald-700" title="Compétences certifiées / dans votre périmètre">✅ {{ metrics.certified }} / {{ metrics.skills }} certifiées</span>
+      {% if metrics.degraded %}<span class="chip bg-rose-50 text-rose-700">⚠️ {{ metrics.degraded }} dégradées</span>{% endif %}
+      <span class="chip bg-slate-100 text-slate-700">📝 {{ metrics.todo }} à faire</span>
+      <span class="chip bg-amber-50 text-amber-700">🚩 {{ metrics.flagged }} signalées</span>
+      <span class="chip bg-emerald-50 text-emerald-700">✔ {{ metrics.approved }} validées</span>
+      <span class="chip bg-rose-50 text-rose-700">✕ {{ metrics.rejected }} rejetées</span>
+      <span class="chip {% if gate_enabled %}bg-ink text-white{% else %}bg-slate-100 text-slate-500{% endif %}"
+            title="QA_GATE_ENABLED : les compétences non certifiées sont cachées aux élèves">
+        {% if gate_enabled %}🔐 Verrou élèves actif{% else %}🔓 Verrou élèves inactif{% endif %}</span>
+    </div>
+
+    <div class="ml-auto flex items-center gap-2">
+      {% if is_master %}
+      <form method="get" class="flex items-center gap-1">
+        {% if skill %}<input type="hidden" name="skill" value="{{ skill.slug }}">{% endif %}
+        <label class="text-[11px] font-black uppercase tracking-wider text-slate-400">Vue</label>
+        <select name="as" class="field !w-auto !py-1.5" onchange="this.form.submit()">
+          <option value="">Moi ({{ prof.user.username }})</option>
+          {% for r in reviewers %}{% if r != prof %}
+          <option value="{{ r.pk }}" {% if viewer == r %}selected{% endif %}>{{ r.user.get_full_name|default:r.user.username }} — lecture</option>
+          {% endif %}{% endfor %}
+        </select>
+      </form>
+      <button class="btn bg-slate-100 hover:bg-slate-200" @click="teamOpen = true">👥 Équipe</button>
+      <div x-data="{ o: false }" class="relative">
+        <button class="btn bg-slate-100 hover:bg-slate-200" @click="o = !o">⬇ Export</button>
+        <div x-show="o" x-cloak @click.outside="o = false" class="absolute right-0 mt-1 w-56 panel p-1.5 shadow-lg z-40">
+          <a class="block rounded-lg px-3 py-2 font-bold hover:bg-slate-50" href="{% url 'qastudio:export' 'json' %}">JSON (tout)</a>
+          <a class="block rounded-lg px-3 py-2 font-bold hover:bg-slate-50" href="{% url 'qastudio:export' 'json' %}?status=APPROVED">JSON (validées)</a>
+          <a class="block rounded-lg px-3 py-2 font-bold hover:bg-slate-50" href="{% url 'qastudio:export' 'csv' %}">CSV (tout)</a>
+          <a class="block rounded-lg px-3 py-2 font-bold hover:bg-slate-50" href="{% url 'qastudio:export' 'csv' %}?status=FLAGGED_FOR_REWORK">CSV (retouches)</a>
+        </div>
+      </div>
+      <form method="post" action="{% url 'qastudio:refresh' %}">{% csrf_token %}<input type="hidden" name="qs" value="{{ qs }}">
+        <button class="btn bg-slate-100 hover:bg-slate-200" title="Régénère chaque échantillon : si le code d'un générateur a changé, la question repasse « à faire »">↻ Générateurs</button>
+      </form>
+      {% else %}
+      <a href="?{% if not global_mode %}global=1{% endif %}{% if skill %}&skill={{ skill.slug }}{% endif %}"
+         class="btn {% if global_mode %}bg-ink text-white{% else %}bg-slate-100 hover:bg-slate-200{% endif %}">
+        🌐 Lecture globale {% if global_mode %}(active){% endif %}</a>
+      {% endif %}
+      <span class="hidden xl:inline text-xs font-bold text-slate-500">{{ prof.user.get_full_name|default:prof.user.username }} · {{ prof.get_role_display }}</span>
+      <a href="/logout/" class="btn bg-white ring-1 ring-slate-200 hover:bg-slate-50">Sortir</a>
+    </div>
+  </div>
+  {% if read_only %}
+  <div class="bg-ink px-4 py-1.5 text-xs font-black text-white">
+    👁 Lecture seule — {% if viewer != prof %}vue du périmètre de {{ viewer.user.get_full_name|default:viewer.user.username }}{% else %}toutes les compétences{% endif %}. Les votes sont désactivés.
+  </div>
+  {% endif %}
+  {% if flash %}
+  <div class="px-4 py-2 text-sm font-black {% if flash.level == 'error' %}bg-rose-600 text-white{% elif flash.level == 'warn' %}bg-amber-400 text-ink{% else %}bg-emerald-600 text-white{% endif %}"
+       x-data="{ s: true }" x-show="s" x-init="setTimeout(() => s = false, 6000)">{{ flash.msg }}</div>
+  {% endif %}
+</header>
+
+<main class="grid gap-3 p-3 lg:grid-cols-[300px_430px_minmax(0,1fr)] lg:h-[calc(100vh-64px)]">
+
+{# ── PANEL 1: NAVIGATION & QUEUE ───────────────────────────────────────── #}
+<section class="panel flex min-h-0 flex-col">
+  <form method="get" class="space-y-2 border-b border-slate-100 p-3">
+    {% if viewer != prof %}<input type="hidden" name="as" value="{{ viewer.pk }}">{% endif %}
+    {% if global_mode %}<input type="hidden" name="global" value="1">{% endif %}
+    <select name="band" class="field" onchange="this.form.cat.value=''; this.form.submit()">
+      <option value="">Tous les niveaux</option>
+      {% for id, title in bands %}<option value="{{ id }}" {% if band == id %}selected{% endif %}>{{ title }}</option>{% endfor %}
+    </select>
+    <select name="cat" class="field" onchange="this.form.submit()">
+      <option value="">Toutes les catégories</option>
+      {% for id, title in cats %}<option value="{{ id }}" {% if cat == id %}selected{% endif %}>{{ title }}</option>{% endfor %}
+    </select>
+  </form>
+
+  <div class="scroll max-h-[38vh] lg:max-h-none lg:flex-[3] border-b border-slate-100">
+    {% for r in rows %}
+    <a href="?skill={{ r.skill.slug }}{% if band %}&band={{ band }}{% endif %}{% if cat %}&cat={{ cat }}{% endif %}{% if viewer != prof %}&as={{ viewer.pk }}{% endif %}{% if global_mode %}&global=1{% endif %}&tab={{ tab }}"
+       class="block border-l-4 px-3 py-2 hover:bg-slate-50 {% if skill and skill.pk == r.skill.pk %}border-brand bg-brand-light{% else %}border-transparent{% endif %}"
+       {% if skill and skill.pk == r.skill.pk %}x-data x-init="$el.parentElement.scrollTop = $el.offsetTop - $el.parentElement.offsetTop - 80"{% endif %}>
+      <div class="flex items-center gap-2">
+        <span title="{{ r.state|state_label }}">{{ r.state|state_icon }}</span>
+        <span class="flex-1 truncate font-extrabold">{{ r.skill.name_fr|default:r.skill.name_en }}</span>
+        <span class="text-[11px] font-black {% if r.approved >= r.threshold %}text-emerald-600{% else %}text-slate-500{% endif %}">{{ r.approved }}/{{ r.threshold }}</span>
+      </div>
+      <div class="mt-1 flex items-center gap-2">
+        <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+          <div class="h-full rounded-full {% if r.approved >= r.threshold %}bg-emerald-500{% else %}bg-brand{% endif %}" style="width: {{ r.pct }}%"></div>
+        </div>
+        {% if r.flagged %}<span class="text-[10px] font-black text-amber-600">🚩{{ r.flagged }}</span>{% endif %}
+        {% if r.todo %}<span class="text-[10px] font-black text-slate-500">📝{{ r.todo }}</span>{% endif %}
+        {% if not r.total %}<span class="text-[10px] font-bold text-slate-400">aucun échantillon</span>{% endif %}
+        {% if r.override %}<span class="text-[10px] font-black text-ink" title="Forçage manuel">{% if r.override == 'lock' %}⛔{% else %}🔑{% endif %}</span>{% endif %}
+      </div>
+      <div class="mt-0.5 truncate text-[10px] font-bold text-slate-400">{{ r.skill.slug }} · {{ r.path.1.title_fr }}</div>
+    </a>
+    {% empty %}
+    <p class="p-4 text-slate-500 font-bold">Aucune compétence dans ce périmètre.</p>
+    {% endfor %}
+  </div>
+
+  {% if skill and is_master %}
+  <div class="space-y-2 border-b border-slate-100 bg-slate-50 p-3">
+    <form method="post" action="{% url 'qastudio:ingest' skill.slug %}" class="flex items-center gap-2">{% csrf_token %}
+      <input type="hidden" name="qs" value="{{ qs }}">
+      <input type="number" name="count" value="10" min="1" max="50" class="field !w-16">
+      <button class="btn flex-1 bg-brand text-white hover:bg-brand-dark">+ Générer des échantillons</button>
+    </form>
+    {% with c=skill.qa_cert %}
+    <form method="post" action="{% url 'qastudio:skill_settings' skill.slug %}" class="flex items-center gap-2">{% csrf_token %}
+      <input type="hidden" name="qs" value="{{ qs }}">
+      <label class="text-[11px] font-black text-slate-500">N =</label>
+      <input type="number" name="threshold" value="{{ c.threshold|default:10 }}" min="1" max="100" class="field !w-16">
+      <select name="override" class="field">
+        <option value="" {% if not c.override %}selected{% endif %}>Automatique</option>
+        <option value="unlock" {% if c.override == 'unlock' %}selected{% endif %}>Forcer : visible</option>
+        <option value="lock" {% if c.override == 'lock' %}selected{% endif %}>Forcer : cachée</option>
+      </select>
+      <button class="btn bg-white ring-1 ring-slate-200 hover:bg-slate-100">OK</button>
+    </form>
+    {% endwith %}
+  </div>
+  {% endif %}
+
+  <nav class="flex gap-1 border-b border-slate-100 p-2">
+    {% for key, label in tabs %}
+    <a href="?tab={{ key }}{% if skill %}&skill={{ skill.slug }}{% endif %}{% if band %}&band={{ band }}{% endif %}{% if cat %}&cat={{ cat }}{% endif %}{% if viewer != prof %}&as={{ viewer.pk }}{% endif %}{% if global_mode %}&global=1{% endif %}"
+       class="flex-1 rounded-lg py-1.5 text-center text-xs font-black {% if tab == key %}bg-ink text-white{% else %}text-slate-500 hover:bg-slate-100{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+  <div class="scroll lg:flex-[2] min-h-[120px]">
+    {% for s in items %}
+    <a href="{% url 'qastudio:sample' s.pk %}{{ qs }}"
+       class="flex gap-2 border-b border-slate-50 px-3 py-2 hover:bg-slate-50 {% if sample and sample.pk == s.pk %}bg-brand-light{% endif %}">
+      <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style="background: {{ s.status|status_dot }}"></span>
+      <span class="min-w-0 flex-1">
+        <span class="flex items-center gap-1.5 text-[11px] font-black text-slate-500">
+          {{ s.code }} · {{ s.level }}{% if not skill %} · {{ s.skill.slug }}{% endif %}
+          {% if s.lint_errors %}<span class="text-rose-600">● {{ s.lint_errors|length }}</span>{% endif %}
+          {% if s.proposal %}<span title="Correction proposée">✏️</span>{% endif %}
+          {% if s.stale %}<span title="Générateur modifié">↻</span>{% endif %}
+        </span>
+        <span class="block truncate font-bold">{{ s.payload.prompt_fr|plain|truncatechars:90 }}</span>
+      </span>
+    </a>
+    {% empty %}
+    <p class="p-4 text-xs font-bold text-slate-400">
+      {% if tab == 'todo' %}Rien à faire ici{% if skill and is_master %} — générez des échantillons ci-dessus{% endif %}.{% else %}Aucune question.{% endif %}
+    </p>
+    {% endfor %}
+  </div>
+</section>
+
+{% if sample %}
+{# ── PANEL 2: CHILD APP SIMULATOR ──────────────────────────────────────── #}
+<section class="flex flex-col items-center gap-2" x-data>
+  <div class="flex w-full items-center justify-between gap-2 px-1">
+    <div class="flex rounded-xl bg-white p-0.5 ring-1 ring-slate-200">
+      <a href="{% url 'qastudio:sample' sample.pk %}{{ sample_qs }}&lang=fr" class="rounded-lg px-3 py-1 text-xs font-black {% if lang == 'fr' %}bg-brand text-white{% else %}text-slate-500{% endif %}">FR</a>
+      <a href="{% url 'qastudio:sample' sample.pk %}{{ sample_qs }}&lang=en" class="rounded-lg px-3 py-1 text-xs font-black {% if lang == 'en' %}bg-brand text-white{% else %}text-slate-500{% endif %}">EN</a>
+    </div>
+    <span class="text-[11px] font-black uppercase tracking-wider text-slate-400" id="sim-mode">{% if has_proposal %}Correction proposée{% else %}Question générée{% endif %}</span>
+    <button class="btn !py-1 bg-white ring-1 ring-slate-200 hover:bg-slate-50" onclick="document.getElementById('sim').src = document.getElementById('sim').src" title="Recharger l'écran (touche P)">↻ Rejouer</button>
+  </div>
+  <div class="phone">
+    <iframe id="sim" title="Aperçu de l'application élève"
+            src="{% url 'qastudio:sim_frame' sample.pk %}?lang={{ lang }}{% if has_proposal %}&draft=1{% endif %}{% if global_mode %}&global=1{% endif %}"></iframe>
+  </div>
+  <p class="text-center text-[11px] font-bold text-slate-400">Écran réel de l'élève (390 px). Répondez pour voir la correction et l'explication.</p>
+</section>
+
+{# ── PANEL 3: AUDIT & REMEDIATION ──────────────────────────────────────── #}
+<section class="scroll panel min-h-0 p-4 space-y-4"
+         x-data="workstation({{ checklist_json }}, {{ editor_json }}, {{ original_json }}, {{ has_proposal|yesno:'true,false' }})"
+         @keydown.window="keys($event)">
+
+  {# Breadcrumb + certification meter #}
+  <div>
+    <div class="flex flex-wrap items-center gap-1 text-[11px] font-bold text-slate-500">
+      {% for p in path %}<span>{{ p.title_fr }}</span>{% if not forloop.last %}<span class="text-slate-300">›</span>{% endif %}{% endfor %}
+    </div>
+    <div class="mt-1 flex flex-wrap items-center gap-2">
+      <h1 class="font-display text-xl font-extrabold">{{ sample.code }}</h1>
+      <span class="chip ring-1 {{ sample.status|status_cls }}">{{ sample.status|status_label }}</span>
+      <span class="chip bg-slate-100 text-slate-600">{{ level_name }}</span>
+      <span class="chip bg-slate-100 text-slate-500" title="Graine aléatoire : la même graine donne toujours la même question">graine {{ sample.seed }}</span>
+      {% if sample.stale %}<span class="chip bg-sky-100 text-sky-800" title="Le code du générateur a changé depuis la dernière revue">↻ générateur modifié</span>{% endif %}
+    </div>
+    <div class="mt-3 rounded-xl border border-slate-200 p-3">
+      <div class="flex items-center justify-between text-xs font-black">
+        <span>{{ cert.state|state_icon }} {{ sample.skill.name_fr|default:sample.skill.name_en }}</span>
+        <span class="{% if cert.state == 'CERTIFIED' %}text-emerald-600{% elif cert.state == 'DEGRADED' %}text-rose-600{% else %}text-slate-500{% endif %}">
+          [ {{ cert.approved_count }} / {{ cert.threshold }} Validées — {{ cert.state|state_label }}{% if cert.override %} · forcé {% if cert.override == 'lock' %}caché{% else %}visible{% endif %}{% endif %} ]</span>
+      </div>
+      <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
+        <div class="h-full rounded-full transition-all {% if cert.state == 'CERTIFIED' %}bg-emerald-500{% elif cert.state == 'DEGRADED' %}bg-rose-500{% else %}bg-brand{% endif %}" style="width: {{ cert_pct }}%"></div>
+      </div>
+    </div>
+  </div>
+
+  {# Automated lint findings #}
+  {% if sample.lint %}
+  <div class="rounded-xl border {% if sample.lint_errors %}border-rose-200 bg-rose-50{% else %}border-amber-200 bg-amber-50{% endif %} p-3">
+    <p class="text-xs font-black uppercase tracking-wider {% if sample.lint_errors %}text-rose-700{% else %}text-amber-700{% endif %}">🤖 Pré-revue automatique</p>
+    <ul class="mt-1.5 space-y-1">
+      {% for f in sample.lint %}
+      <li class="text-xs font-bold {% if f.severity == 'error' %}text-rose-800{% else %}text-amber-800{% endif %}">
+        <span class="font-black">{{ f.rule }}</span>{% if f.lang %} [{{ f.lang|upper }}]{% endif %} — {{ f.message }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% else %}
+  <p class="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-xs font-black text-emerald-700">🤖 Pré-revue automatique : aucun problème détecté.</p>
+  {% endif %}
+
+  {# 6-point rubric + vote #}
+  <form method="post" action="{% url 'qastudio:vote' sample.pk %}" id="vote-form" class="space-y-2">{% csrf_token %}
+    <input type="hidden" name="qs" value="{{ sample_qs }}">
+    <input type="hidden" name="action" x-ref="action">
+    <p class="text-xs font-black uppercase tracking-wider text-slate-400">Grille pédagogique (6 critères)</p>
+    <div class="grid gap-1.5 sm:grid-cols-2">
+      {% for key, fr, en in criteria %}
+      <label class="flex cursor-pointer items-start gap-2 rounded-xl border p-2 transition"
+             :class="check['{{ key }}'] ? 'border-emerald-300 bg-emerald-50' : (check['{{ key }}'] === false ? 'border-rose-200 bg-rose-50/60' : 'border-slate-200 hover:bg-slate-50')">
+        <input type="checkbox" name="c_{{ key }}" class="mt-0.5 h-4 w-4 accent-emerald-600" x-model="check['{{ key }}']" {% if not can_act %}disabled{% endif %}>
+        <span class="min-w-0">
+          <span class="block text-xs font-black">{{ forloop.counter }}. {{ fr }} <kbd>{{ forloop.counter }}</kbd></span>
+          {% with hits=lint_by_criterion|get:key %}{% if hits %}
+          <span class="block text-[10px] font-bold text-rose-700">🤖 {{ hits|length }} alerte{{ hits|length|pluralize }} : {{ hits.0.message|truncatechars:70 }}</span>
+          {% endif %}{% endwith %}
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    <textarea name="note" rows="2" class="field" placeholder="Commentaire (obligatoire pour une retouche sans correction ou un rejet)" {% if not can_act %}disabled{% endif %}></textarea>
+    {% if can_act %}
+    <div class="flex flex-wrap gap-2">
+      <button type="button" class="btn flex-1 bg-emerald-600 text-white hover:bg-emerald-700" @click="submitVote('approve')"
+              :disabled="!allChecked || hasProposal" :title="hasProposal ? 'Une correction est proposée : envoyez en retouche' : (allChecked ? '' : 'Cochez les 6 critères')">✓ Approuver <kbd>A</kbd></button>
+      <button type="button" class="btn flex-1 bg-amber-400 text-ink hover:bg-amber-500" @click="submitVote('rework')">⚠ Retouche <kbd>R</kbd></button>
+      <button type="button" class="btn flex-1 bg-rose-600 text-white hover:bg-rose-700" @click="submitVote('reject')">✕ Rejeter <kbd>X</kbd></button>
+      {% if sample.status != 'UNREVIEWED' %}<button type="button" class="btn bg-slate-100 hover:bg-slate-200" @click="submitVote('reopen')">Remettre à faire</button>{% endif %}
+    </div>
+    <label class="flex items-center gap-2 text-[11px] font-bold text-slate-500"><input type="checkbox" name="stay_on_skill" value="1" {% if skill %}checked{% endif %}> Rester sur cette compétence après le vote · <kbd>J</kbd> question suivante</label>
+    {% else %}
+    <p class="text-xs font-bold text-slate-400">Lecture seule : cette question n'est pas dans votre périmètre.</p>
+    {% endif %}
+  </form>
+
+  {# Live editor (proposal) #}
+  <div class="rounded-xl border border-slate-200" x-data="{ open: {{ has_proposal|yesno:'true,false' }} }">
+    <button type="button" class="flex w-full items-center justify-between px-3 py-2.5 text-left" @click="open = !open">
+      <span class="text-xs font-black uppercase tracking-wider text-slate-500">✏️ Corriger la question {% if has_proposal %}<span class="text-brand">· correction enregistrée</span>{% endif %}</span>
+      <span x-text="open ? '▲' : '▼'" class="text-slate-400"></span>
+    </button>
+    <div x-show="open" x-cloak class="space-y-3 border-t border-slate-100 p-3">
+      <p class="text-[11px] font-bold text-slate-500">Les questions sont générées par du code : votre correction est la consigne précise que le développeur appliquera au générateur. L'aperçu à gauche se met à jour pendant que vous tapez.</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex rounded-lg bg-slate-100 p-0.5">
+          <button type="button" class="rounded-md px-3 py-1 text-xs font-black" :class="elang === 'fr' ? 'bg-white shadow' : 'text-slate-500'" @click="elang = 'fr'">FR</button>
+          <button type="button" class="rounded-md px-3 py-1 text-xs font-black" :class="elang === 'en' ? 'bg-white shadow' : 'text-slate-500'" @click="elang = 'en'">EN</button>
+        </div>
+        <select class="field !w-auto" x-model="p.format_type">
+          <option value="PLAIN_TEXT">Texte simple</option>
+          <option value="MARKDOWN_TABLE">Tableau</option>
+          <option value="BULLET_LIST">Liste à puces</option>
+          <option value="IMAGE_PROMPT" disabled>Illustration (générée)</option>
+        </select>
+        <span class="text-[11px] font-black text-slate-400">Corrections en un clic :</span>
+        <button type="button" class="btn !py-1 bg-sky-50 text-sky-800 hover:bg-sky-100" @click="toTable()" title="Extrait les « libellé : valeur » du texte vers un tableau">▦ Données → tableau</button>
+        <button type="button" class="btn !py-1 bg-sky-50 text-sky-800 hover:bg-sky-100" @click="toList()">• Données → liste</button>
+        <button type="button" class="btn !py-1 bg-sky-50 text-sky-800 hover:bg-sky-100" @click="simplify()" title="Retire les phrases répétées et les restes de tableau">✂ Simplifier</button>
+      </div>
+
+      <label class="block"><span class="text-[11px] font-black text-slate-500">Énoncé (<span x-text="elang.toUpperCase()"></span>) — <code>**gras**</code> accepté</span>
+        <textarea rows="3" class="field mt-1" x-model="p['prompt_' + elang]"></textarea></label>
+
+      <div x-show="p.format_type === 'MARKDOWN_TABLE'" class="space-y-1">
+        <span class="text-[11px] font-black text-slate-500">Tableau (<span x-text="elang.toUpperCase()"></span>)</span>
+        <div class="grid grid-cols-[1fr_1fr_auto] gap-1">
+          <template x-for="(h, i) in p.table.headers" :key="'h' + i">
+            <input class="field !bg-slate-50 font-black" :value="h[li()]" @input="h[li()] = $event.target.value; touch()">
+          </template>
+          <span></span>
+          <template x-for="(row, r) in p.table.rows" :key="'r' + r">
+            <div class="contents">
+              <template x-for="(cell, c) in row" :key="'c' + r + '-' + c">
+                <input class="field" :value="cell[li()]" @input="cell[li()] = $event.target.value; touch()">
+              </template>
+              <button type="button" class="px-2 text-rose-500 font-black" @click="p.table.rows.splice(r, 1); touch()">✕</button>
+            </div>
+          </template>
+        </div>
+        <button type="button" class="text-xs font-black text-brand" @click="addRow()">+ ligne</button>
+      </div>
+
+      <div x-show="p.format_type === 'BULLET_LIST'" class="space-y-1">
+        <span class="text-[11px] font-black text-slate-500">Liste (<span x-text="elang.toUpperCase()"></span>) — une puce par ligne</span>
+        <textarea rows="4" class="field" :value="p.bullets.map(b => b[li()]).join('\n')" @input="setBullets($event.target.value)"></textarea>
+      </div>
+
+      <div x-show="p.choices.length" class="space-y-1">
+        <span class="text-[11px] font-black text-slate-500">Choix de réponse (<span x-text="elang.toUpperCase()"></span>) — ● = bonne réponse</span>
+        <template x-for="(c, i) in p.choices" :key="'o' + i">
+          <div class="flex items-center gap-2">
+            <input type="radio" name="correct_choice" class="accent-emerald-600" :checked="c.correct" @change="p.choices.forEach((x, j) => x.correct = j === i); touch()">
+            <input class="field" :value="c['label_' + elang]" @input="c['label_' + elang] = $event.target.value; touch()">
+          </div>
+        </template>
+        <p class="text-[10px] font-bold text-rose-600" x-show="dupChoices()">Deux choix sont identiques.</p>
+      </div>
+
+      <label class="block"><span class="text-[11px] font-black text-slate-500">Indice (<span x-text="elang.toUpperCase()"></span>)</span>
+        <textarea rows="2" class="field mt-1" x-model="p['hint_' + elang]"></textarea></label>
+
+      <div class="flex flex-wrap items-center gap-2">
+        {% if can_act %}
+        <form method="post" action="{% url 'qastudio:proposal' sample.pk %}">{% csrf_token %}
+          <input type="hidden" name="qs" value="{{ sample_qs }}">
+          <input type="hidden" name="proposal" :value="JSON.stringify(p)">
+          <button class="btn bg-ink text-white hover:bg-slate-800" :disabled="!changed()">💾 Enregistrer la correction</button>
+        </form>
+        {% if has_proposal %}
+        <form method="post" action="{% url 'qastudio:proposal' sample.pk %}">{% csrf_token %}
+          <input type="hidden" name="qs" value="{{ sample_qs }}"><input type="hidden" name="clear" value="1">
+          <button class="btn bg-white ring-1 ring-slate-200 hover:bg-slate-50">Annuler la correction</button>
+        </form>
+        {% endif %}
+        {% endif %}
+        <button type="button" class="btn bg-white ring-1 ring-slate-200 hover:bg-slate-50" @click="reset()">↺ Repartir de l'original</button>
+        <label class="ml-auto flex items-center gap-1.5 text-[11px] font-black text-slate-500">
+          <input type="checkbox" x-model="showOriginal" @change="pushDraft()"> Voir l'original dans l'aperçu</label>
+      </div>
+    </div>
+  </div>
+
+  {# Audit trail & comments #}
+  <div class="space-y-2">
+    <p class="text-xs font-black uppercase tracking-wider text-slate-400">Historique & commentaires</p>
+    {% if can_act or is_master %}
+    <form method="post" action="{% url 'qastudio:comment' sample.pk %}" class="flex gap-2">{% csrf_token %}
+      <input type="hidden" name="qs" value="{{ sample_qs }}">
+      <input name="text" class="field" placeholder="Ajouter un commentaire pour l'équipe…">
+      <button class="btn bg-slate-100 hover:bg-slate-200">Envoyer</button>
+    </form>
+    {% endif %}
+    <ol class="space-y-1.5">
+      {% for a in audit %}
+      <li class="rounded-lg bg-slate-50 px-3 py-2">
+        <div class="flex items-center justify-between text-[11px] font-black text-slate-500">
+          <span>{{ a.action|action_label }} · {{ a.actor }}</span><span>{{ a.created_at|date:"Y-m-d H:i" }}</span>
+        </div>
+        {% if a.note %}<p class="mt-0.5 whitespace-pre-line text-xs font-bold text-slate-700">{{ a.note }}</p>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+</section>
+
+{% else %}
+<section class="panel flex items-center justify-center p-10 text-center lg:col-span-2">
+  <div class="max-w-md space-y-2">
+    <p class="text-4xl">🧪</p>
+    <p class="font-display text-xl font-extrabold">Aucune question à afficher</p>
+    <p class="font-bold text-slate-500">Choisissez une compétence à gauche{% if is_master %}, puis « Générer des échantillons » pour créer sa file de revue. En ligne de commande : <code>python manage.py qa_ingest --per-skill 12</code>{% endif %}.</p>
+  </div>
+</section>
+{% endif %}
+</main>
+
+{# ── TEAM MODAL (master) ────────────────────────────────────────────────── #}
+{% if is_master %}
+<div x-show="teamOpen" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-6" @keydown.escape.window="teamOpen = false">
+  <div class="panel w-full max-w-3xl p-5 shadow-2xl" @click.outside="teamOpen = false">
+    <div class="flex items-center justify-between">
+      <h2 class="font-display text-xl font-extrabold">👥 Équipe de révision</h2>
+      <button class="text-slate-400 font-black" @click="teamOpen = false">✕</button>
+    </div>
+    <table class="mt-3 w-full text-xs">
+      <thead><tr class="text-left text-slate-400"><th class="py-1">Réviseur</th><th>Rôle</th><th>Périmètre</th></tr></thead>
+      <tbody>
+        {% for r in reviewers %}
+        <tr class="border-t border-slate-100">
+          <td class="py-1.5 font-black">{{ r.user.get_full_name|default:r.user.username }} <span class="font-bold text-slate-400">{{ r.user.username }} {{ r.user.email }}</span></td>
+          <td class="font-bold">{{ r.get_role_display }}</td>
+          <td class="font-bold text-slate-600">
+            {% if r.is_master or r.all_skills %}Tout (ALL){% else %}
+            {% if r.grades %}années {{ r.grades|join:", " }} · {% endif %}
+            {% for d in r.domains.all %}{{ d.name_fr }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            {% if r.skills.count %} · {{ r.skills.count }} compétence(s){% endif %}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <form method="post" action="{% url 'qastudio:team' %}" class="mt-4 grid gap-2 rounded-xl bg-slate-50 p-3 sm:grid-cols-2">{% csrf_token %}
+      <input type="hidden" name="qs" value="{{ qs }}">
+      <p class="sm:col-span-2 text-xs font-black uppercase tracking-wider text-slate-500">Inviter / modifier un réviseur (même nom d'utilisateur = mise à jour)</p>
+      <input name="username" class="field" placeholder="Nom d'utilisateur" required>
+      <input name="full_name" class="field" placeholder="Nom complet">
+      <input name="email" type="email" class="field" placeholder="Courriel">
+      <input name="password" type="password" class="field" placeholder="Mot de passe (8+ car., requis si nouveau)" autocomplete="new-password">
+      <select name="role" class="field">
+        <option value="ROLE_REVIEWER">Réviseur pédagogique</option>
+        <option value="ROLE_MASTER">Réviseur maître</option>
+      </select>
+      <label class="flex items-center gap-2 text-xs font-black"><input type="checkbox" name="all_skills"> Tout le programme (ALL)</label>
+      <div class="sm:col-span-2 flex flex-wrap gap-3 text-xs font-black">
+        <span class="text-slate-500">Années :</span>
+        {% for g in "123456" %}<label class="flex items-center gap-1"><input type="checkbox" name="grades" value="{{ g }}"> {{ g }}{% if g == "1" %}re{% else %}e{% endif %}</label>{% endfor %}
+      </div>
+      <label class="text-xs font-black text-slate-500">Catégories
+        <select name="domains" multiple size="6" class="field mt-1">
+          {% for d in all_domains %}<option value="{{ d.pk }}">{{ d.name_fr|default:d.name_en }}</option>{% endfor %}
+        </select></label>
+      <label class="text-xs font-black text-slate-500">Compétences
+        <select name="skills" multiple size="6" class="field mt-1">
+          {% for s in all_skills %}<option value="{{ s.pk }}">{{ s.domain.grade|default:"—" }} · {{ s.name_fr|default:s.name_en }}</option>{% endfor %}
+        </select></label>
+      <button class="btn sm:col-span-2 bg-brand text-white hover:bg-brand-dark">Enregistrer le réviseur</button>
+    </form>
+    {% if events %}
+    <p class="mt-4 text-xs font-black uppercase tracking-wider text-slate-400">Derniers événements de certification</p>
+    <ul class="mt-1 space-y-1 text-xs font-bold text-slate-600">
+      {% for e in events %}<li>{{ e.created_at|date:"Y-m-d H:i" }} · <b>{{ e.event }}</b> · {{ e.skill.slug }} {{ e.from_state }}→{{ e.to_state }} ({{ e.approved }}/{{ e.threshold }}){% if e.webhook_status %} · webhook {{ e.webhook_status }}{% endif %}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if sample %}
+<script>
+const QA = {
+  draftUrl: "{% url 'qastudio:sim_draft' sample.pk %}",
+  csrf: "{{ csrf_token }}",
+  canAct: {{ can_act|yesno:"true,false" }},
+};
+// Next item in the visible queue (J): computed from the list in panel 1
+QA.queue = [{% for s in items %}"{% url 'qastudio:sample' s.pk %}{{ qs|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+QA.current = "{% url 'qastudio:sample' sample.pk %}";
+
+const PAIR_RE = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' ]{1,24}?)\s*[:=]\s*(\d+(?:[.,]\d+)?)/g;
+function extractPairs(text) {
+  const m = [...(text || '').matchAll(PAIR_RE)];
+  if (m.length < 2) return { pairs: [], rest: text };
+  const start = m[0].index, end = m[m.length - 1].index + m[m.length - 1][0].length;
+  let rest = (text.slice(0, start) + ' ' + text.slice(end));
+  rest = rest.replace(/\(\s*(Tableau|Table)\s*:?\s*\)/gi, '')
+             .replace(/(Tableau|Table)( des| of)?[^.:]{0,30}\s*:\s*(?=[.\s]|$)/gi, '')
+             .replace(/\s*\|\s*/g, ' ').replace(/\s+([.,])/g, '$1').replace(/^\s*[.,:]\s*/, '').replace(/\s{2,}/g, ' ').trim();
+  // the same data is often written twice (the bug this tool exists for): keep each row once
+  const seen = new Set(), pairs = [];
+  m.forEach(x => { const p = [x[1].trim(), x[2]], key = p.join('=').toLowerCase(); if (!seen.has(key)) { seen.add(key); pairs.push(p); } });
+  return { pairs, rest };
+}
+function tokens(s) { return new Set((s.toLowerCase().match(/[\wÀ-ÿ]+/g) || [])); }
+function similar(a, b) {
+  const A = tokens(a), B = tokens(b); if (A.size < 3 || B.size < 3) return false;
+  let inter = 0; A.forEach(t => { if (B.has(t)) inter++; });
+  return inter / (A.size + B.size - inter) > 0.7;
+}
+
+function workstation(checklist, proposal, original, hasProposal) {
+  const CRIT = ['rendering', 'clarity', 'structure', 'accuracy', 'ambiguity', 'hint_quality'];
+  return {
+    check: Object.fromEntries(CRIT.map(k => [k, checklist[k] === undefined ? null : checklist[k]])),
+    p: proposal, orig: JSON.parse(JSON.stringify(original)), elang: '{{ lang }}', hasProposal,
+    showOriginal: false, timer: null,
+    init() { this.$watch('p', () => this.touch(), { deep: true }); },
+    get allChecked() { return CRIT.every(k => this.check[k] === true); },
+    li() { return this.elang === 'fr' ? 0 : 1; },
+    changed() { return JSON.stringify(this.p) !== JSON.stringify(this.orig); },
+    dupChoices() { const l = this.p.choices.map(c => (c['label_' + this.elang] || '').trim().toLowerCase()); return new Set(l).size !== l.length; },
+    touch() { clearTimeout(this.timer); this.timer = setTimeout(() => this.pushDraft(), 250); },
+    async pushDraft() {
+      const useDraft = !this.showOriginal && (this.changed() || this.hasProposal);
+      if (useDraft) {
+        await fetch(QA.draftUrl, { method: 'POST', headers: { 'X-CSRFToken': QA.csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(this.p) });
+      }
+      const f = document.getElementById('sim');
+      if (f && f.contentWindow && f.contentWindow.qaReload) f.contentWindow.qaReload(useDraft);
+      const mode = document.getElementById('sim-mode');
+      if (mode) mode.textContent = useDraft ? 'Aperçu de la correction' : 'Question générée';
+    },
+    reset() { this.p = JSON.parse(JSON.stringify(this.orig)); },
+    addRow() { const n = Math.max(2, this.p.table.headers.length); this.p.table.rows.push(Array.from({ length: n }, () => ['', ''])); },
+    setBullets(text) {
+      const lines = text.split('\n'); const i = this.li();
+      while (this.p.bullets.length < lines.length) this.p.bullets.push(['', '']);
+      this.p.bullets = this.p.bullets.slice(0, lines.length);
+      lines.forEach((l, k) => { this.p.bullets[k][i] = l; });
+    },
+    _extractBoth() {
+      const fr = extractPairs(this.p.prompt_fr), en = extractPairs(this.p.prompt_en);
+      if (!fr.pairs.length && !en.pairs.length) { alertBox('Aucune donnée « libellé : valeur » trouvée dans l\'énoncé.'); return null; }
+      const n = Math.max(fr.pairs.length, en.pairs.length);
+      const rows = Array.from({ length: n }, (_, k) => {
+        const f = fr.pairs[k] || en.pairs[k], e = en.pairs[k] || fr.pairs[k];
+        return [[f[0], e[0]], [f[1], e[1]]];
+      });
+      this.p.prompt_fr = fr.rest; this.p.prompt_en = en.rest;
+      return rows;
+    },
+    toTable() {
+      const rows = this._extractBoth(); if (!rows) return;
+      this.p.table = { headers: this.p.table.headers.length ? this.p.table.headers : [['Catégorie', 'Category'], ['Nombre', 'Number']], rows };
+      this.p.format_type = 'MARKDOWN_TABLE';
+    },
+    toList() {
+      const rows = this._extractBoth(); if (!rows) return;
+      this.p.bullets = rows.map(r => [r[0][0] + ' : ' + r[1][0], r[0][1] + ': ' + r[1][1]]);
+      this.p.format_type = 'BULLET_LIST';
+    },
+    simplify() {
+      for (const k of ['prompt_fr', 'prompt_en']) {
+        const parts = (this.p[k] || '').replace(/\s*\|\s*/g, ' ').split(/(?<=[.?!])\s+/);
+        const kept = [];
+        parts.forEach(s => { if (s.trim() && !kept.some(x => similar(x, s))) kept.push(s.trim()); });
+        this.p[k] = kept.join(' ').replace(/\s{2,}/g, ' ').trim();
+      }
+    },
+    submitVote(action) {
+      if (action === 'approve' && (!this.allChecked || this.hasProposal)) return;
+      this.$refs.action.value = action;
+      document.getElementById('vote-form').submit();
+    },
+    keys(e) {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (QA.canAct && /^[1-6]$/.test(k)) { const c = CRIT[+k - 1]; this.check[c] = !this.check[c]; }
+      else if (QA.canAct && k === 'a') this.submitVote('approve');
+      else if (QA.canAct && (k === 'r' || k === 'x')) {
+        const note = document.querySelector('#vote-form textarea[name=note]');
+        if (!note.value.trim() && !this.hasProposal) { note.focus(); alertBox('Ajoutez un commentaire, puis rappuyez sur ' + k.toUpperCase() + '.'); return; }
+        this.submitVote(k === 'r' ? 'rework' : 'reject');
+      }
+      else if (k === 'p') document.getElementById('sim').src = document.getElementById('sim').src;
+      else if (k === 'j' || k === 'k') {
+        const i = QA.queue.findIndex(u => u.startsWith(QA.current + '?') || u === QA.current);
+        const j = i + (k === 'j' ? 1 : -1);
+        if (QA.queue[j]) window.location = QA.queue[j];
+      }
+    },
+  };
+}
+function alertBox(msg) {
+  const d = document.createElement('div');
+  d.className = 'fixed bottom-4 right-4 z-50 rounded-xl bg-ink px-4 py-3 text-sm font-black text-white shadow-xl';
+  d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 3500);
+}
+</script>
+{% endif %}
+</body>
+</html>
