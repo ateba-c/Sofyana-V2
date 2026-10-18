@@ -34,7 +34,8 @@ def get_client():
     return _client
 
 
-def complete(system: str, user, *, max_tokens: int = 1024, temperature: float = 0.2) -> str:
+def complete(system: str, user, *, max_tokens: int = 1024, temperature: float = 0.2, model: str = '',
+             timeout: float = 0) -> str:
     """
     One-shot completion.  ``user`` is a string or a list of Anthropic content
     blocks (so callers can pass images: see ``image_block``).
@@ -44,27 +45,29 @@ def complete(system: str, user, *, max_tokens: int = 1024, temperature: float = 
         raise RuntimeError('LLM is not configured (LLM_API_KEY missing)')
     content = user if isinstance(user, list) else [{'type': 'text', 'text': user}]
     kwargs = dict(
-        model=settings.LLM_MODEL,
+        model=model or settings.LLM_MODEL,
         max_tokens=max_tokens,
         system=system,
         messages=[{'role': 'user', 'content': content}],
     )
+    client = get_client().with_options(timeout=timeout) if timeout else get_client()
     try:
-        resp = get_client().messages.create(temperature=temperature, **kwargs)
+        resp = client.messages.create(temperature=temperature, **kwargs)
     except TypeError:
         # Newer anthropic SDKs dropped `temperature` as a typed kwarg; send it in the raw body.
-        resp = get_client().messages.create(extra_body={'temperature': temperature}, **kwargs)
+        resp = client.messages.create(extra_body={'temperature': temperature}, **kwargs)
     return ''.join(block.text for block in resp.content if getattr(block, 'type', '') == 'text')
 
 
-def complete_json(system: str, user, *, max_tokens: int = 2048, temperature: float = 0.1):
+def complete_json(system: str, user, *, max_tokens: int = 2048, temperature: float = 0.1, model: str = '',
+                  timeout: float = 0):
     """
     Like ``complete`` but the model is told to answer with JSON only and the
     reply is parsed.  Tolerates ```json fences and leading prose.
     """
     system = (system.rstrip() + '\n\nRespond with a single valid JSON value and nothing else: '
               'no prose, no markdown fences.')
-    text = complete(system, user, max_tokens=max_tokens, temperature=temperature)
+    text = complete(system, user, max_tokens=max_tokens, temperature=temperature, model=model, timeout=timeout)
     return parse_json_reply(text)
 
 

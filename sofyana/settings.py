@@ -59,6 +59,7 @@ QA_DEFAULT_THRESHOLD = int(os.environ.get('QA_DEFAULT_THRESHOLD', '10'))
 QA_GATE_ENABLED      = os.environ.get('SOFYANA_QA_GATE', '0') == '1'
 QA_WEBHOOK_URL       = os.environ.get('QA_WEBHOOK_URL', '')      # receives EVENT_SUBTOPIC_* as JSON
 QA_WEBHOOK_SECRET    = os.environ.get('QA_WEBHOOK_SECRET', '')   # HMAC-SHA256 → X-Sofyana-Signature
+QA_AI_MODEL          = os.environ.get('QA_AI_MODEL', '')         # AI pre-review model; empty = LLM_MODEL
 
 LLM_API_KEY  = (os.environ.get('LLM_API_KEY') or os.environ.get('DEEPSEEK_API_KEY')
                 or os.environ.get('ANTHROPIC_API_KEY', ''))

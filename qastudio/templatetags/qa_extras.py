@@ -19,7 +19,7 @@ _ACTION = {
     'created': 'Échantillon généré', 'lint_flagged': 'Signalé par le linter', 'approve': 'Approuvée',
     'rework': 'Retouche demandée', 'reject': 'Rejetée', 'reopen': 'Remise à faire', 'comment': 'Commentaire',
     'proposal_saved': 'Correction proposée', 'proposal_cleared': 'Correction annulée',
-    'generator_changed': 'Générateur modifié',
+    'generator_changed': 'Générateur modifié', 'ai_review': 'Pré-revue IA',
 }
 
 

@@ -153,3 +153,53 @@ class CertificationEvent(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class AIReview(models.Model):
+    """
+    The AI pre-review of one sample.  Advisory only: it never changes the sample's
+    status and never counts toward certification.  Valid while ``fingerprint``
+    equals the sample's (i.e. the generator still produces what the AI saw).
+    """
+    CLEAN, MINOR, MAJOR, ERROR, PENDING = 'clean', 'minor', 'major', 'error', 'pending'
+    VERDICTS = [(CLEAN, 'Clean'), (MINOR, 'Minor issues'), (MAJOR, 'Major issues'), (ERROR, 'AI call failed'),
+                (PENDING, 'Running')]
+
+    sample       = models.ForeignKey(QuestionSample, on_delete=models.CASCADE, related_name='ai_reviews')
+    fingerprint  = models.CharField(max_length=64)
+    model        = models.CharField(max_length=80)
+    verdict      = models.CharField(max_length=8, choices=VERDICTS)
+    risk         = models.PositiveSmallIntegerField(default=0, db_index=True,
+                                                    help_text='0 = nothing found; higher = review first')
+    criteria     = models.JSONField(default=dict, blank=True, help_text='{criterion: {"ok": bool, "reason": str}}')
+    summary      = models.TextField(blank=True)
+    solver       = models.JSONField(default=dict, blank=True,
+                                    help_text='Independent solution (answer key hidden) and how it compares with the key')
+    suggestion   = models.JSONField(null=True, blank=True, help_text='Proposed rewrite, in proposal format')
+    error        = models.TextField(blank=True)
+    pending      = models.BooleanField(default=False, help_text='Analysis running in the background')
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    @property
+    def is_current(self):
+        return self.fingerprint == self.sample.fingerprint
+
+
+class SkillDiagnosis(models.Model):
+    """Generator-level findings: patterns the AI sees across all samples of a skill, with a fix for the developer."""
+    skill        = models.ForeignKey(Skill, on_delete=models.CASCADE, related_name='ai_diagnoses')
+    model        = models.CharField(max_length=80)
+    sample_ids   = models.JSONField(default=list)
+    fingerprints = models.JSONField(default=list, help_text='Sample fingerprints analysed (stale when they change)')
+    summary      = models.TextField(blank=True)
+    issues       = models.JSONField(default=list, blank=True,
+                                    help_text='[{title, criterion, severity, samples: [Q-…], fix}]')
+    error        = models.TextField(blank=True)
+    pending      = models.BooleanField(default=False, help_text='Analysis running in the background')
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']

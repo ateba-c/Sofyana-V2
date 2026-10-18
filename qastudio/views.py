@@ -14,8 +14,8 @@ from quiz.generators import LEVEL_NAMES
 from quiz.models import Skill, SkillDomain
 from quiz.views import _check_practice, _topic_card_groups
 
-from . import certification, proposals, sampling, services, taxonomy
-from .models import CRITERIA, AuditEntry, CertificationEvent, QuestionSample, ReviewerProfile, SkillCertification
+from . import ai_review, certification, proposals, sampling, services, taxonomy
+from .models import CRITERIA, AIReview, AuditEntry, CertificationEvent, QuestionSample, ReviewerProfile, SkillCertification
 
 
 # ── access ────────────────────────────────────────────────────────────────────
@@ -81,8 +81,11 @@ def studio(request, pk=None):
 
     skill_slug = request.GET.get('skill', '')
     skill = nav_skills.filter(slug=skill_slug).first() if skill_slug else None
+    ai_on = ai_review.is_enabled()
+    if ai_on:
+        ai_review.expire_stale_pending()
     tab = request.GET.get('tab', 'todo')
-    if tab not in services.TABS:
+    if tab not in services.TABS and not (ai_on and tab in ('ai_issues', 'ai_clean')):
         tab = 'todo'
     queue_skills = nav_skills.filter(pk=skill.pk) if skill else nav_skills.filter(slug__in=[r['skill'].slug for r in visible_rows])
     items = list(services.queue(queue_skills, tab)[:200])
@@ -104,7 +107,12 @@ def studio(request, pk=None):
         'metrics': services.global_metrics(in_scope),
         'rows': visible_rows, 'bands': bands, 'band': band, 'cats': cats, 'cat': cat,
         'skill': skill, 'tab': tab, 'items': items, 'sample': sample,
-        'tabs': [('todo', 'À faire'), ('flagged', 'Signalés'), ('approved', 'Validés'), ('all', 'Tous')],
+        'tabs': [('todo', 'À faire')] + ([('ai_issues', 'IA ⚠'), ('ai_clean', 'IA ✓')] if ai_on else [])
+                + [('flagged', 'Signalés'), ('approved', 'Validés'), ('all', 'Tous')],
+        'ai_on': ai_on, 'ai_model': ai_review.model_name() if ai_on else '',
+        'agreement': ai_review.agreement(in_scope) if ai_on else None,
+        'diagnosis': ai_review.latest_diagnosis(skill) if (ai_on and skill) else None,
+        'ai_to_review': len(ai_review.samples_needing_review(skill)) if (ai_on and skill) else 0,
         'lang': request.GET.get('lang', 'fr') if request.GET.get('lang') in ('fr', 'en') else 'fr',
         'criteria': CRITERIA,
         'reviewers': ReviewerProfile.objects.select_related('user').order_by('user__username') if prof.is_master else [],
@@ -132,6 +140,14 @@ def studio(request, pk=None):
             'lint_by_criterion': {k: [f for f in sample.lint if f['criterion'] == k] for k, *_ in CRITERIA},
             'sample_qs': _qs(request, skill=request.GET.get('skill') or sample.skill.slug),
         })
+        if ai_on:
+            ai = ai_review.latest_review(sample)
+            ctx.update({
+                'ai': ai,
+                'ai_current': bool(ai and (ai.pending or ai.fingerprint == sample.fingerprint)),
+                'ai_suggestion_json': json.dumps(ai.suggestion, ensure_ascii=False) if (ai and ai.suggestion) else 'null',
+                'ai_criteria_json': json.dumps(ai.criteria if ai and not ai.pending else {}, ensure_ascii=False),
+            })
     return render(request, 'qastudio/studio.html', ctx)
 
 
@@ -302,6 +318,55 @@ def add_comment(request, pk):
     except services.QAError as exc:
         _flash(request, str(exc), 'error')
     return _back(request, sample)
+
+
+# ── AI pre-review ──────────────────────────────────────────────────────────────
+
+@login_required
+@require_POST
+def ai_sample(request, pk):
+    """Run the AI on this one sample (background; the page polls ai_status)."""
+    prof, sample = _sample(request, pk)
+    if not ai_review.is_enabled():
+        _flash(request, "IA non configurée (clé LLM manquante).", 'error')
+    elif not (prof.is_master or services.can_act(prof, sample)):
+        raise PermissionDenied
+    elif not AIReview.objects.filter(sample=sample, pending=True).exists():
+        ai_review.start_background(sample.skill, [sample], with_diagnosis=False)
+    return _back(request, sample)
+
+
+@login_required
+@require_POST
+def ai_skill(request, slug):
+    """Master: AI review of every sample of the skill not reviewed yet (or all with force=1), then a diagnosis."""
+    _master(request)
+    skill = get_object_or_404(Skill.objects.select_related('domain'), slug=slug)
+    if not ai_review.is_enabled():
+        _flash(request, "IA non configurée (clé LLM manquante).", 'error')
+    elif skill.ai_diagnoses.filter(pending=True).exists():
+        _flash(request, 'Une analyse IA de cette compétence est déjà en cours.', 'warn')
+    else:
+        samples = ai_review.samples_needing_review(skill, force=request.POST.get('force') == '1')
+        ai_review.start_background(skill, samples, with_diagnosis=True)
+        _flash(request, f'Analyse IA lancée : {len(samples)} question(s) + diagnostic du générateur. '
+                        'Les résultats apparaissent dans une à deux minutes.')
+    return redirect(reverse('qastudio:studio') + request.POST.get('qs', ''))
+
+
+@login_required
+def ai_status(request):
+    """Polled by the Studio while an analysis runs: {pending: n}."""
+    _profile(request)
+    ai_review.expire_stale_pending()
+    q = AIReview.objects.filter(pending=True)
+    if request.GET.get('sample'):
+        q = q.filter(sample_id=request.GET['sample'])
+    n = q.count()
+    if request.GET.get('skill'):
+        from .models import SkillDiagnosis
+        n += SkillDiagnosis.objects.filter(skill__slug=request.GET['skill'], pending=True).count()
+    return JsonResponse({'pending': n})
 
 
 # ── master tools ──────────────────────────────────────────────────────────────

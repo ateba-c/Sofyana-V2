@@ -200,11 +200,32 @@ TABS = {
 }
 
 
+def with_ai(qs):
+    """Annotate samples with their current AI verdict / risk (latest finished review of the current output)."""
+    from django.db.models import OuterRef, Subquery
+
+    from .models import AIReview
+    latest = (AIReview.objects.filter(sample=OuterRef('pk'), fingerprint=OuterRef('fingerprint'), pending=False)
+              .order_by('-created_at', '-id'))
+    return qs.annotate(ai_verdict=Subquery(latest.values('verdict')[:1]),
+                       ai_risk=Subquery(latest.values('risk')[:1]))
+
+
 def queue(skills, tab='todo'):
-    qs = QuestionSample.objects.filter(skill__in=skills).select_related('skill', 'skill__domain')
+    qs = with_ai(QuestionSample.objects.filter(skill__in=skills).select_related('skill', 'skill__domain'))
+    if tab == 'ai_issues':        # unreviewed, the AI found something: most risky first
+        return (qs.filter(status=QuestionSample.UNREVIEWED, ai_verdict__in=['minor', 'major'])
+                .order_by('-ai_risk', 'id'))
+    if tab == 'ai_clean':         # unreviewed, the AI found nothing: quick human confirmation
+        return qs.filter(status=QuestionSample.UNREVIEWED, ai_verdict='clean').order_by(
+            'skill__domain__grade', 'skill__order', 'id')
     statuses = TABS.get(tab)
     if statuses:
         qs = qs.filter(status__in=statuses)
+    if tab == 'todo':
+        # review the riskiest first; samples the AI hasn't seen yet come after the risky ones
+        from django.db.models import F
+        return qs.order_by(F('ai_risk').desc(nulls_last=True), 'skill__domain__grade', 'skill__order', 'id')
     return qs.order_by('skill__domain__grade', 'skill__domain__order', 'skill__order', 'level', 'id')
 
 
@@ -215,12 +236,14 @@ def next_sample(skills, current=None, skill=None):
         base = base.filter(skill=skill)
     if current is not None:
         base = base.exclude(pk=current.pk)
+    from django.db.models import F
+    base = with_ai(base)
     for statuses in ([QuestionSample.UNREVIEWED], [QuestionSample.APPROVED]):
         qs = base.filter(status__in=statuses)
         if statuses == [QuestionSample.APPROVED]:
             qs = qs.order_by('reviewed_at', 'id')            # least recently reviewed first
         else:
-            qs = qs.order_by('skill__domain__grade', 'skill__order', 'id')
+            qs = qs.order_by(F('ai_risk').desc(nulls_last=True), 'skill__domain__grade', 'skill__order', 'id')
         s = qs.first()
         if s:
             return s

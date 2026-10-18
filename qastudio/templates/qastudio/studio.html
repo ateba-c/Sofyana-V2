@@ -29,7 +29,7 @@
     kbd { font-family: ui-monospace, monospace; font-size: .65rem; border: 1px solid #CBD5E1; border-bottom-width: 2px; border-radius: .3rem; padding: 0 .3rem; background: #fff; color: #475569; }
   </style>
 </head>
-<body class="font-sans antialiased text-sm" x-data="{ teamOpen: false }">
+<body class="font-sans antialiased text-sm" x-data="{ teamOpen: false, aiOpen: false }">
 
 {# ── HEADER ─────────────────────────────────────────────────────────────── #}
 <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -47,6 +47,11 @@
       <span class="chip bg-amber-50 text-amber-700">🚩 {{ metrics.flagged }} signalées</span>
       <span class="chip bg-emerald-50 text-emerald-700">✔ {{ metrics.approved }} validées</span>
       <span class="chip bg-rose-50 text-rose-700">✕ {{ metrics.rejected }} rejetées</span>
+      {% if ai_on %}
+      <button type="button" class="chip bg-violet-50 text-violet-700 hover:bg-violet-100" @click="aiOpen = true"
+              title="Accord entre l'IA et les décisions humaines ({{ ai_model }})">
+        🧠 Fiabilité IA : {% if agreement.overall.pct is not None %}{{ agreement.overall.pct }} % ({{ agreement.overall.n }}){% else %}à mesurer{% endif %}</button>
+      {% endif %}
       <span class="chip {% if gate_enabled %}bg-ink text-white{% else %}bg-slate-100 text-slate-500{% endif %}"
             title="QA_GATE_ENABLED : les compétences non certifiées sont cachées aux élèves">
         {% if gate_enabled %}🔐 Verrou élèves actif{% else %}🔓 Verrou élèves inactif{% endif %}</span>
@@ -160,13 +165,44 @@
       <button class="btn bg-white ring-1 ring-slate-200 hover:bg-slate-100">OK</button>
     </form>
     {% endwith %}
+    {% if ai_on %}
+    <form method="post" action="{% url 'qastudio:ai_skill' skill.slug %}" class="flex items-center gap-2">{% csrf_token %}
+      <input type="hidden" name="qs" value="{{ qs }}">
+      <button class="btn flex-1 bg-violet-600 text-white hover:bg-violet-700" {% if diagnosis.pending %}disabled{% endif %}>
+        🧠 {% if diagnosis.pending %}Analyse IA en cours…{% else %}Analyser avec l'IA ({{ ai_to_review }} à analyser){% endif %}</button>
+      <label class="flex items-center gap-1 text-[10px] font-black text-slate-500" title="Réanalyser aussi les questions déjà vues par l'IA">
+        <input type="checkbox" name="force" value="1"> tout</label>
+    </form>
+    {% endif %}
   </div>
   {% endif %}
 
-  <nav class="flex gap-1 border-b border-slate-100 p-2">
+  {% if skill and diagnosis %}
+  <div class="max-h-[40vh] overflow-y-auto border-b border-slate-100 bg-violet-50/60 p-3 text-xs" x-data="{ more: false }">
+    <p class="font-black uppercase tracking-wider text-violet-700">🧠 Diagnostic du générateur
+      <span class="font-bold normal-case tracking-normal text-violet-400">· {{ diagnosis.created_at|date:"Y-m-d H:i" }} · {{ diagnosis.model }}</span></p>
+    {% if diagnosis.pending %}<p class="mt-1 font-bold text-violet-700">Analyse en cours…</p>
+    {% elif diagnosis.error %}<p class="mt-1 font-bold text-rose-700">Échec : {{ diagnosis.error }}</p>
+    {% else %}
+    <p class="mt-1 font-bold text-slate-700">{{ diagnosis.summary }}</p>
+    {% for i in diagnosis.issues %}
+    <div class="mt-2 rounded-lg bg-white p-2 ring-1 {% if i.severity == 'major' %}ring-rose-200{% else %}ring-amber-200{% endif %}" {% if forloop.counter > 3 %}x-show="more" x-cloak{% endif %}>
+      <p class="font-black {% if i.severity == 'major' %}text-rose-700{% else %}text-amber-700{% endif %}">{% if i.severity == 'major' %}⚠{% else %}·{% endif %} {{ i.title }}</p>
+      <p class="mt-0.5 font-bold text-slate-600">🔧 {{ i.fix }}</p>
+      {% if i.samples %}<p class="mt-0.5 text-[10px] font-bold text-slate-400">{{ i.samples|join:", " }}</p>{% endif %}
+    </div>
+    {% empty %}
+    <p class="mt-1 font-black text-emerald-700">Aucun défaut récurrent détecté.</p>
+    {% endfor %}
+    {% if diagnosis.issues|length > 3 %}<button type="button" class="mt-1 font-black text-violet-700" @click="more = !more" x-text="more ? 'Moins' : 'Voir tout ({{ diagnosis.issues|length }})'"></button>{% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <nav class="flex flex-wrap gap-1 border-b border-slate-100 p-2">
     {% for key, label in tabs %}
     <a href="?tab={{ key }}{% if skill %}&skill={{ skill.slug }}{% endif %}{% if band %}&band={{ band }}{% endif %}{% if cat %}&cat={{ cat }}{% endif %}{% if viewer != prof %}&as={{ viewer.pk }}{% endif %}{% if global_mode %}&global=1{% endif %}"
-       class="flex-1 rounded-lg py-1.5 text-center text-xs font-black {% if tab == key %}bg-ink text-white{% else %}text-slate-500 hover:bg-slate-100{% endif %}">{{ label }}</a>
+       class="flex-1 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-center text-[11px] font-black {% if tab == key %}bg-ink text-white{% else %}text-slate-500 hover:bg-slate-100{% endif %}">{{ label }}</a>
     {% endfor %}
   </nav>
   <div class="scroll lg:flex-[2] min-h-[120px]">
@@ -180,6 +216,9 @@
           {% if s.lint_errors %}<span class="text-rose-600">● {{ s.lint_errors|length }}</span>{% endif %}
           {% if s.proposal %}<span title="Correction proposée">✏️</span>{% endif %}
           {% if s.stale %}<span title="Générateur modifié">↻</span>{% endif %}
+          {% if s.ai_verdict == 'major' %}<span class="text-rose-600" title="IA : problème important (risque {{ s.ai_risk }})">🧠⚠</span>
+          {% elif s.ai_verdict == 'minor' %}<span class="text-amber-600" title="IA : détails à revoir (risque {{ s.ai_risk }})">🧠·</span>
+          {% elif s.ai_verdict == 'clean' %}<span class="text-emerald-600" title="IA : rien à signaler">🧠✓</span>{% endif %}
         </span>
         <span class="block truncate font-bold">{{ s.payload.prompt_fr|plain|truncatechars:90 }}</span>
       </span>
@@ -212,7 +251,7 @@
 
 {# ── PANEL 3: AUDIT & REMEDIATION ──────────────────────────────────────── #}
 <section class="scroll panel min-h-0 p-4 space-y-4"
-         x-data="workstation({{ checklist_json }}, {{ editor_json }}, {{ original_json }}, {{ has_proposal|yesno:'true,false' }})"
+         x-data="workstation({{ checklist_json }}, {{ editor_json }}, {{ original_json }}, {{ has_proposal|yesno:'true,false' }}, {{ ai_criteria_json|default:'{}' }}, {{ ai_suggestion_json|default:'null' }})"
          @keydown.window="keys($event)">
 
   {# Breadcrumb + certification meter #}
@@ -254,6 +293,51 @@
   <p class="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-xs font-black text-emerald-700">🤖 Pré-revue automatique : aucun problème détecté.</p>
   {% endif %}
 
+  {# AI pre-review #}
+  {% if ai_on %}
+  <div class="rounded-xl border p-3 {% if not ai or not ai_current %}border-slate-200 bg-slate-50{% elif ai.pending %}border-violet-200 bg-violet-50{% elif ai.verdict == 'major' %}border-rose-200 bg-rose-50{% elif ai.verdict == 'minor' %}border-amber-200 bg-amber-50{% elif ai.verdict == 'clean' %}border-emerald-200 bg-emerald-50{% else %}border-slate-200 bg-slate-50{% endif %}">
+    <div class="flex items-center justify-between gap-2">
+      <p class="text-xs font-black uppercase tracking-wider text-violet-700">🧠 Pré-revue IA
+        {% if ai and not ai.pending %}<span class="font-bold normal-case tracking-normal text-slate-400">· {{ ai.model }} · {{ ai.created_at|date:"m-d H:i" }}</span>{% endif %}</p>
+      {% if can_act or is_master %}
+      <form method="post" action="{% url 'qastudio:ai_sample' sample.pk %}">{% csrf_token %}
+        <input type="hidden" name="qs" value="{{ sample_qs }}">
+        <button class="btn !py-1 bg-white ring-1 ring-violet-200 text-violet-700 hover:bg-violet-50" {% if ai.pending %}disabled{% endif %}>
+          {% if ai.pending %}En cours…{% elif ai %}↻ Relancer{% else %}Analyser{% endif %}</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if not ai %}
+    <p class="mt-1 text-xs font-bold text-slate-500">Pas encore analysée par l'IA.</p>
+    {% elif ai.pending %}
+    <p class="mt-1 text-xs font-bold text-violet-700">L'IA résout la question sans voir le corrigé, puis l'évalue… (15–30 s)</p>
+    {% else %}
+      {% if not ai_current %}<p class="mt-1 text-xs font-black text-sky-700">↻ Analyse d'une version précédente de la question (le générateur a changé) : relancez.</p>{% endif %}
+      {% if ai.verdict == 'error' %}
+      <p class="mt-1 text-xs font-bold text-rose-700">Échec de l'analyse : {{ ai.error }}</p>
+      {% else %}
+      <p class="mt-1 text-sm font-black {% if ai.verdict == 'major' %}text-rose-700{% elif ai.verdict == 'minor' %}text-amber-700{% else %}text-emerald-700{% endif %}">
+        {% if ai.verdict == 'major' %}⚠ Problème important{% elif ai.verdict == 'minor' %}· Détails à revoir{% else %}✓ Rien à signaler{% endif %}
+        <span class="text-[11px] font-bold text-slate-400">risque {{ ai.risk }}/100</span></p>
+      <p class="mt-1 text-xs font-bold text-slate-700">{{ ai.summary }}</p>
+      {% with sv=ai.solver %}{% if sv.status and sv.status != 'none' %}
+      <p class="mt-1.5 text-xs font-bold {% if sv.status == 'match' %}text-emerald-700{% elif sv.status == 'unsure' %}text-amber-700{% else %}text-rose-700{% endif %}">
+        🧮 Résolue sans le corrigé :
+        {% if sv.status == 'match' %}« {{ sv.ai_answer }} » — concorde avec le corrigé.
+        {% elif sv.status == 'multiple' %}plusieurs bonnes réponses possibles (choix {{ sv.ai_choices|join:", " }}) ; corrigé : « {{ sv.key }} ».
+        {% elif sv.status == 'mismatch' %}« {{ sv.ai_answer }} » ≠ corrigé « {{ sv.key }} ».
+        {% else %}l'IA n'est pas sûre (« {{ sv.ai_answer }} »).{% endif %}
+        {% if sv.note %}<span class="block text-slate-500">{{ sv.note }}</span>{% endif %}</p>
+      {% endif %}{% endwith %}
+      {% if ai.suggestion %}
+      <button type="button" class="btn mt-2 !py-1 bg-violet-600 text-white hover:bg-violet-700" @click="loadSuggestion()">🧠 Voir la correction proposée par l'IA</button>
+      {% endif %}
+      {% endif %}
+    {% endif %}
+    <p class="mt-1.5 text-[10px] font-bold text-slate-400">Avis consultatif : seule votre décision compte pour la certification.</p>
+  </div>
+  {% endif %}
+
   {# 6-point rubric + vote #}
   <form method="post" action="{% url 'qastudio:vote' sample.pk %}" id="vote-form" class="space-y-2">{% csrf_token %}
     <input type="hidden" name="qs" value="{{ sample_qs }}">
@@ -269,6 +353,12 @@
           {% with hits=lint_by_criterion|get:key %}{% if hits %}
           <span class="block text-[10px] font-bold text-rose-700">🤖 {{ hits|length }} alerte{{ hits|length|pluralize }} : {{ hits.0.message|truncatechars:70 }}</span>
           {% endif %}{% endwith %}
+          <template x-if="ai['{{ key }}'] && !ai['{{ key }}'].ok">
+            <span class="block text-[10px] font-bold text-violet-700">🧠 <span x-text="ai['{{ key }}'].reason || 'Problème signalé'"></span></span>
+          </template>
+          <template x-if="ai['{{ key }}'] && ai['{{ key }}'].ok">
+            <span class="block text-[10px] font-bold text-violet-400">🧠 OK</span>
+          </template>
         </span>
       </label>
       {% endfor %}
@@ -289,12 +379,12 @@
   </form>
 
   {# Live editor (proposal) #}
-  <div class="rounded-xl border border-slate-200" x-data="{ open: {{ has_proposal|yesno:'true,false' }} }">
-    <button type="button" class="flex w-full items-center justify-between px-3 py-2.5 text-left" @click="open = !open">
+  <div class="rounded-xl border border-slate-200" id="editor">
+    <button type="button" class="flex w-full items-center justify-between px-3 py-2.5 text-left" @click="editorOpen = !editorOpen">
       <span class="text-xs font-black uppercase tracking-wider text-slate-500">✏️ Corriger la question {% if has_proposal %}<span class="text-brand">· correction enregistrée</span>{% endif %}</span>
-      <span x-text="open ? '▲' : '▼'" class="text-slate-400"></span>
+      <span x-text="editorOpen ? '▲' : '▼'" class="text-slate-400"></span>
     </button>
-    <div x-show="open" x-cloak class="space-y-3 border-t border-slate-100 p-3">
+    <div x-show="editorOpen" x-cloak class="space-y-3 border-t border-slate-100 p-3">
       <p class="text-[11px] font-bold text-slate-500">Les questions sont générées par du code : votre correction est la consigne précise que le développeur appliquera au générateur. L'aperçu à gauche se met à jour pendant que vous tapez.</p>
       <div class="flex flex-wrap items-center gap-2">
         <div class="flex rounded-lg bg-slate-100 p-0.5">
@@ -369,6 +459,7 @@
         {% endif %}
         {% endif %}
         <button type="button" class="btn bg-white ring-1 ring-slate-200 hover:bg-slate-50" @click="reset()">↺ Repartir de l'original</button>
+        <button type="button" x-show="aiSuggestion" class="btn bg-violet-50 text-violet-700 hover:bg-violet-100" @click="loadSuggestion()">🧠 Suggestion IA</button>
         <label class="ml-auto flex items-center gap-1.5 text-[11px] font-black text-slate-500">
           <input type="checkbox" x-model="showOriginal" @change="pushDraft()"> Voir l'original dans l'aperçu</label>
       </div>
@@ -470,6 +561,55 @@
 </div>
 {% endif %}
 
+{% if ai_on %}
+<div x-show="aiOpen" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-6" @keydown.escape.window="aiOpen = false">
+  <div class="panel w-full max-w-2xl p-5 shadow-2xl" @click.outside="aiOpen = false">
+    <div class="flex items-center justify-between">
+      <h2 class="font-display text-xl font-extrabold">🧠 Fiabilité de l'IA</h2>
+      <button class="text-slate-400 font-black" @click="aiOpen = false">✕</button>
+    </div>
+    <p class="mt-1 text-xs font-bold text-slate-500">Comparaison entre l'avis de l'IA ({{ ai_model }}) et vos décisions, sur les questions déjà votées par un humain et analysées par l'IA.
+      « Ratés » = l'IA disait OK mais l'humain a trouvé un problème (le chiffre à surveiller avant de faire confiance à l'IA).</p>
+    {% with o=agreement.overall %}
+    <div class="mt-3 grid grid-cols-4 gap-2 text-center">
+      <div class="rounded-xl bg-slate-50 p-2"><p class="text-2xl font-black">{% if o.pct is not None %}{{ o.pct }} %{% else %}—{% endif %}</p><p class="text-[10px] font-black uppercase text-slate-400">accord global</p></div>
+      <div class="rounded-xl bg-slate-50 p-2"><p class="text-2xl font-black">{{ o.n }}</p><p class="text-[10px] font-black uppercase text-slate-400">questions comparées</p></div>
+      <div class="rounded-xl bg-rose-50 p-2"><p class="text-2xl font-black text-rose-700">{{ o.missed }}</p><p class="text-[10px] font-black uppercase text-rose-400">ratés par l'IA</p></div>
+      <div class="rounded-xl bg-amber-50 p-2"><p class="text-2xl font-black text-amber-700">{{ o.false_alarm }}</p><p class="text-[10px] font-black uppercase text-amber-500">fausses alertes</p></div>
+    </div>
+    {% endwith %}
+    <table class="mt-3 w-full text-xs">
+      <thead><tr class="text-left text-slate-400"><th class="py-1">Critère</th><th>Comparés</th><th>Accord</th><th>Ratés</th><th>Fausses alertes</th></tr></thead>
+      <tbody>{% for c in agreement.criteria %}
+        <tr class="border-t border-slate-100 font-bold"><td class="py-1.5">{{ c.label }}</td><td>{{ c.n }}</td>
+          <td>{% if c.pct is not None %}{{ c.pct }} %{% else %}—{% endif %}</td><td class="text-rose-700">{{ c.missed }}</td><td class="text-amber-700">{{ c.false_alarm }}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    {% if agreement.missed_examples %}
+    <p class="mt-3 text-xs font-black uppercase tracking-wider text-slate-400">Exemples ratés par l'IA</p>
+    <p class="mt-1 text-xs font-bold">{% for s in agreement.missed_examples %}<a class="text-brand underline" href="{% url 'qastudio:sample' s.pk %}?skill={{ s.skill.slug }}">{{ s.code }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    {% endif %}
+    {% if agreement.overall.n < 50 %}<p class="mt-3 rounded-lg bg-amber-50 p-2 text-xs font-bold text-amber-800">Moins de 50 comparaisons : trop tôt pour conclure. Continuez à voter normalement ; la mesure se met à jour toute seule.</p>{% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if ai_on and sample and ai.pending or ai_on and diagnosis.pending %}
+<script>
+// An AI analysis is running in the background: reload when it is done.
+(function poll() {
+  setTimeout(async () => {
+    try {
+      const r = await fetch("{% url 'qastudio:ai_status' %}?{% if sample and ai.pending %}sample={{ sample.pk }}{% endif %}{% if diagnosis.pending %}&skill={{ skill.slug }}{% endif %}");
+      const d = await r.json();
+      if (d.pending === 0) { window.location.reload(); return; }
+    } catch (e) {}
+    poll();
+  }, 4000);
+})();
+</script>
+{% endif %}
+
 {% if sample %}
 <script>
 const QA = {
@@ -502,12 +642,23 @@ function similar(a, b) {
   return inter / (A.size + B.size - inter) > 0.7;
 }
 
-function workstation(checklist, proposal, original, hasProposal) {
+function workstation(checklist, proposal, original, hasProposal, aiCriteria, aiSuggestion) {
   const CRIT = ['rendering', 'clarity', 'structure', 'accuracy', 'ambiguity', 'hint_quality'];
   return {
     check: Object.fromEntries(CRIT.map(k => [k, checklist[k] === undefined ? null : checklist[k]])),
     p: proposal, orig: JSON.parse(JSON.stringify(original)), elang: '{{ lang }}', hasProposal,
-    showOriginal: false, timer: null,
+    showOriginal: false, timer: null, ai: aiCriteria || {}, aiSuggestion, editorOpen: hasProposal,
+    loadSuggestion() {
+      const base = JSON.parse(JSON.stringify(this.orig));
+      const s = JSON.parse(JSON.stringify(this.aiSuggestion));
+      if (!s.choices || !s.choices.length) delete s.choices;
+      if (!s.table || !(s.table.rows || []).length) delete s.table;
+      if (!s.bullets || !s.bullets.length) delete s.bullets;
+      this.p = Object.assign(base, s);
+      this.editorOpen = true;
+      this.$nextTick(() => document.getElementById('editor').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      alertBox("Correction de l'IA chargée dans l'éditeur : vérifiez-la, modifiez-la, puis enregistrez.");
+    },
     init() { this.$watch('p', () => this.touch(), { deep: true }); },
     get allChecked() { return CRIT.every(k => this.check[k] === true); },
     li() { return this.elang === 'fr' ? 0 : 1; },

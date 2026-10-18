@@ -246,7 +246,16 @@ def rule_language(q, lang):
                 other = 'French' if lang == 'en' else 'English'
                 found.append(_f('LINT-07', ERROR, f'{where}: {other} words in the {lang.upper()} version ({", ".join(sorted(words))}) — « {text[:70]} »', lang))
                 break
+    # explanations are built separately and often keep English answer words (« 35 → Odd »)
+    expl = str(q.get(f'explanation_{lang}') or '')
+    m = (_EN_SCHOOL if lang == 'fr' else _FR_SCHOOL).search(expl)
+    if m:
+        found.append(_f('LINT-07', WARN, f'explanation: « {m.group(0)} » in the {lang.upper()} version — « {expl[:70]} »', lang))
     return found
+
+
+_EN_SCHOOL = re.compile(r'\b(Odd|Even|Prime|Composite|Step|Answer|Yes|No|True|False|times)\b')
+_FR_SCHOOL = re.compile(r'\b(Impair|Pair|Premier|Composé|Étape|Réponse|Oui|Non|Vrai|Faux|fois)\b')
 
 
 _GENERIC_EXPL = ['type de question', "applique l'opération correcte", 'identify the question type',
