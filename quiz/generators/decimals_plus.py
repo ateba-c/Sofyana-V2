@@ -68,7 +68,8 @@ def g4_decimal_grid_gen(level='medium'):
                    'The whole strip is 1. Which decimal number shows the coloured part?'),
                   correct, distr,
                   ('La bande a 10 cases : chaque case vaut 0,1.', 'The strip has 10 parts: each part is 0.1.'),
-                  ([f'{k} cases sur 10 = {k}/10 = {correct[0]}'], [f'{k} parts out of 10 = {k}/10 = {correct[1]}']),
+                  ([f'{k} case{"s" if k > 1 else ""} sur 10 = {k}/10 = {correct[0]}'],
+                   [f'{k} part{"s" if k > 1 else ""} out of 10 = {k}/10 = {correct[1]}']),
                   shape=shape, pad=_pad(k, 1, 4))
     if variant == 'hundredths':
         k = random.randint(1, 99)
@@ -114,8 +115,11 @@ def _equiv_pair():
         h = random.randint(101, 499)
         return (f'{h} centièmes', f'{h} hundredths'), D(h, 2)
     u, t, h = random.randint(1, 9), random.randint(0, 9), random.randint(1, 9)
-    return (f'{u} unités {h} centièmes' if t == 0 else f'{u} unités {t} dixièmes {h} centièmes',
-            f'{u} ones {h} hundredths' if t == 0 else f'{u} ones {t} tenths {h} hundredths'), D(u * 100 + t * 10 + h, 2)
+
+    def w(n, fr, en):
+        return f'{n} {fr}' + ('s' if n > 1 else ''), f'{n} {en}' + ('s' if n > 1 else '')
+    parts = [w(u, 'unité', 'one')] + ([w(t, 'dixième', 'tenth')] if t else []) + [w(h, 'centième', 'hundredth')]
+    return (' '.join(x[0] for x in parts), ' '.join(x[1] for x in parts)), D(u * 100 + t * 10 + h, 2)
 
 
 def g4_decimal_equivalence_gen(level='medium'):
@@ -126,7 +130,8 @@ def g4_decimal_equivalence_gen(level='medium'):
         correct = D(w * 100 + k * 10, 2)
         distr = [(D(w * 100 + k, 2), 'zero_inside', f'A zero in the tenths place changes the value: {D(w * 100 + k, 2)[1]} ≠ {target[1]}.', f'Un zéro aux dixièmes change la valeur : {D(w * 100 + k, 2)[0]} ≠ {target[0]}.'),
                  (D(w * 1000 + k, 3), 'zero_inside', 'Only zeros added at the END keep the value.', 'Seuls les zéros ajoutés à la FIN gardent la valeur.'),
-                 (D(k * 10 + w, 1) if k != w else D(w * 10 + k + 1, 1), 'swapped', 'Keep each digit in its place.', 'Garde chaque chiffre à sa place.'),
+                 # with w = 0 the swap « k,0 » equals the no-point distractor « k »: skip it
+                 ((D(k * 10 + w, 1) if k != w else D(w * 10 + k + 1, 1), 'swapped', 'Keep each digit in its place.', 'Garde chaque chiffre à sa place.') if w else None),
                  ((f'{w}{k}', f'{w}{k}') if w else (f'{k}', f'{k}'), 'no_point', 'Removing the decimal point changes the value.', 'Enlever la virgule change la valeur.'),
                  (D(w * 10 + k, 2), 'shift', 'Compare tenths with tenths.', 'Compare les dixièmes avec les dixièmes.')]
         return mc((f'Quel nombre est égal à **{target[0]}** ?', f'Which number is equal to **{target[1]}**?'),
@@ -163,7 +168,8 @@ def g4_decimal_number_line_gen(level='medium'):
     distr = [(D(k + 1, 1) if t < 9 else D(k - 2, 1), 'miscount', 'Count the small ticks from the whole number again.', 'Recompte les petites graduations à partir de l’entier.'),
              (D(k - 1, 1) if t > 1 else D(k + 2, 1), 'miscount', 'Count the small ticks from the whole number again.', 'Recompte les petites graduations à partir de l’entier.'),
              (D(a * 100 + t, 2), 'place', 'Each small tick is one tenth (0.1).', 'Chaque petite graduation vaut un dixième (0,1).'),
-             (D((a + 1) * 10 - t, 1) if 10 - t != t else D(k + 3, 1), 'from_right', 'Count from the left whole number.', 'Compte à partir de l’entier de gauche.'),
+             ((D((a + 1) * 10 - t, 1), 'from_right', 'Count from the left whole number.', 'Compte à partir de l’entier de gauche.') if 10 - t != t else
+              (D(k + 3, 1), 'miscount', 'Count the small ticks from the whole number again.', 'Recompte les petites graduations à partir de l’entier.')),
              ((str(t), str(t)), 'whole', f'The point is between {a} and {a + 1}.', f'Le point est entre {a} et {a + 1}.')]
     return mc(('Quel nombre décimal se trouve au point « ? » ?', 'Which decimal number is at the “?” point?'),
               correct, distr,
@@ -188,21 +194,29 @@ def g6_decimal_number_line_gen(level='medium'):
             step = ('0,001', '0.001')
         else:
             start = random.randint(1, 98)
-            h = random.randint(1, 19)
+            h = random.choice([i for i in range(1, 20) if i != 10])     # tick 10 carries a label
             shape = ill.number_line([D(start, 1), D(start + 1, 1), D(start + 2, 1)], minor=10, point=h)
             k, p = start * 10 + h, 2
             step = ('0,01', '0.01')
     correct = D(k, p)
+    m = k % 10                                   # small ticks after the nearest label on the left
+    left = D((k - m) // 10, p - 1)               # exactly as written on the line
     distr = [(D(k + 1, p), 'miscount', 'Count the small ticks again.', 'Recompte les petites graduations.'),
              (D(k - 1, p), 'miscount', 'Count the small ticks again.', 'Recompte les petites graduations.'),
              (D(k, p + 1) if p < 3 else D(k * 10 + 1, p + 1), 'place', f'Each small tick is {step[1]}.', f'Chaque petite graduation vaut {step[0]}.'),
-             (D(k // 10 * 10 + 10 - (k % 10), p) if k % 10 != 5 else D(k + 2, p), 'from_right', 'Count from the left mark.', 'Compte à partir du repère de gauche.'),
+             ((D(k // 10 * 10 + 10 - (k % 10), p), 'from_right', 'Count from the left mark.', 'Compte à partir du repère de gauche.') if k % 10 != 5 else
+              (D(k + 2, p), 'miscount', 'Count the small ticks again.', 'Recompte les petites graduations.')),
              (D(k + 10, p), 'big_step', 'A small tick is ten times smaller than the gap between labels.', 'Une petite graduation est dix fois plus petite que l’écart entre les nombres écrits.')]
     return mc(('Quel nombre décimal se trouve au point « ? » ?', 'Which decimal number is at the “?” point?'),
               correct, distr,
               (f'Entre deux nombres écrits, il y a 10 petites graduations : chacune vaut {step[0]}.',
                f'Between two labelled numbers there are 10 small ticks: each is {step[1]}.'),
-              ([f'Chaque graduation vaut {step[0]}', f'Réponse : {correct[0]}'], [f'Each tick is {step[1]}', f'Answer: {correct[1]}']),
+              ([f'Chaque petite graduation vaut {step[0]}.',
+                f'De {left[0]} au point « ? », il y a {m} graduation{"s" if m > 1 else ""} : {left[0]} + {m} × {step[0]} = {correct[0]}',
+                f'Réponse : {correct[0]}'],
+               [f'Each small tick is {step[1]}.',
+                f'From {left[1]} to the “?” point there {"are" if m > 1 else "is"} {m} tick{"s" if m > 1 else ""}: {left[1]} + {m} × {step[1]} = {correct[1]}',
+                f'Answer: {correct[1]}']),
               shape=shape, pad=_pad(k, p, 5))
 
 
@@ -210,6 +224,11 @@ def g6_decimal_number_line_gen(level='medium'):
 
 _PLACE = {0: ("à l'unité près", 'to the nearest whole number'), 1: ('au dixième près', 'to the nearest tenth'),
           2: ('au centième près', 'to the nearest hundredth')}
+# Truncating keeps digits up to a place — no « près », which suggests rounding.
+_TRUNC = {1: ('au dixième (garde un chiffre après la virgule, sans arrondir)',
+              'at the tenths place (keep one digit after the decimal point; do not round)'),
+          2: ('au centième (garde deux chiffres après la virgule, sans arrondir)',
+              'at the hundredths place (keep two digits after the decimal point; do not round)')}
 
 
 def g4_round_decimal_gen(level='medium'):
@@ -228,13 +247,19 @@ def g4_round_decimal_gen(level='medium'):
     up = down + 1
     res = down if truncate or (k % f) * 2 < f else up
     verb = ('Tronque', 'Truncate') if truncate else ('Arrondis', 'Round')
+    place = _TRUNC[to] if truncate else _PLACE[to]
     ans = D(res, to)
-    return typed((f'{verb[0]} **{Dfr(k, p)}** {_PLACE[to][0]}.', f'{verb[1]} **{D(k, p)[1]}** {_PLACE[to][1]}.'),
-                 [ans[0], ans[1]], 'decimal',
+    if truncate:
+        expl = ([f'On garde {to} chiffre{"s" if to > 1 else ""} après la virgule et on coupe le reste : {Dfr(k, p)} → {ans[0]}'],
+                [f'Keep {to} digit{"s" if to > 1 else ""} after the decimal point and cut off the rest: {D(k, p)[1]} → {ans[1]}'])
+    else:
+        expl = ([f'{Dfr(k, p)} est entre {Dfr(down, to)} et {Dfr(up, to)}', f'→ {ans[0]}'],
+                [f'{D(k, p)[1]} is between {D(down, to)[1]} and {D(up, to)[1]}', f'→ {ans[1]}'])
+    return typed((f'{verb[0]} **{Dfr(k, p)}** {place[0]}.', f'{verb[1]} **{D(k, p)[1]}** {place[1]}.'),
+                 list(dict.fromkeys(ans)), 'decimal',
                  (('Tronquer : on coupe simplement les chiffres après la position demandée.', 'Truncate: just cut off the digits after that place.') if truncate else
                   ('Regarde le chiffre juste à droite de la position : 5 ou plus → on arrondit vers le haut.', 'Look at the digit just to the right: 5 or more → round up.')),
-                 ([f'{Dfr(k, p)} est entre {Dfr(down, to)} et {Dfr(up, to)}', f'→ {ans[0]}'],
-                  [f'{D(k, p)[1]} is between {D(down, to)[1]} and {D(up, to)[1]}', f'→ {ans[1]}']))
+                 expl)
 
 
 # ── G5 · × and ÷ by 10, 100, 1000 ────────────────────────────────────────────
@@ -260,8 +285,8 @@ def g5_times_power_of_ten_gen(level='medium'):
         op = '÷'
     ans = Dtrim(res_k, res_p)
     return typed((f'Calcule : **{Dfr(k, p)} {op} {factor}**', f'Calculate: **{D(k, p)[1]} {op} {factor}**'),
-                 [ans[0], ans[1]], 'decimal',
-                 ((f'× {factor} : chaque chiffre prend une valeur {factor} fois plus grande (la virgule « recule » de {e} rang{"s" if e > 1 else ""}).',
+                 list(dict.fromkeys(ans)), 'decimal',
+                 ((f'× {factor} : chaque chiffre prend une valeur {factor} fois plus grande (la virgule se déplace de {e} rang{"s" if e > 1 else ""} vers la droite).',
                    f'× {factor}: every digit becomes {factor} times bigger (the point moves {e} place{"s" if e > 1 else ""} right).') if times else
                   (f'÷ {factor} : chaque chiffre prend une valeur {factor} fois plus petite (la virgule avance de {e} rang{"s" if e > 1 else ""} vers la gauche).',
                    f'÷ {factor}: every digit becomes {factor} times smaller (the point moves {e} place{"s" if e > 1 else ""} left).')),
@@ -270,6 +295,25 @@ def g5_times_power_of_ten_gen(level='medium'):
 
 # ── G5 · Estimate decimal results ────────────────────────────────────────────
 
+def _round_half_up(num, den):
+    """num / den rounded to the nearest whole, halves up (school rounding, not banker's)."""
+    return (2 * num + den) // (2 * den)
+
+
+def _far_pad(est, exact, gap):
+    def pad():
+        while True:
+            v = est + random.choice([-6, -5, 5, 6, 7, 8, 9, 10])
+            if v > 0 and abs(v - exact) > gap:
+                return str(v)
+    return pad
+
+
+def _value(label):
+    fr = label[0] if isinstance(label, tuple) else label
+    return Fraction(fr.replace(',', '.'))
+
+
 def g5_estimate_decimal_gen(level='medium'):
     ops = ['+', '−'] if level == 'easy' else ['+', '−', '×'] if level == 'medium' else ['×', '÷', '+']
     op = random.choice(ops)
@@ -277,34 +321,46 @@ def g5_estimate_decimal_gen(level='medium'):
         a, b = random.randint(110, 980), random.randint(110, 980)      # hundredths: 1,10 … 9,80
         if op == '−' and a < b:
             a, b = b, a
-        ra, rb = round(a / 100), round(b / 100)
+        ra, rb = _round_half_up(a, 100), _round_half_up(b, 100)
         est = ra + rb if op == '+' else ra - rb
         if est <= 0:
-            a, ra, est = a + 300, round((a + 300) / 100), round((a + 300) / 100) - rb
+            a += 300
+            ra = _round_half_up(a, 100)
+            est = ra - rb
         prompt_nums = (Dfr(a, 2), Dfr(b, 2), D(a, 2)[1], D(b, 2)[1])
+        exact = Fraction(a + b if op == '+' else a - b, 100)
     elif op == '×':
         a, b = random.randint(15, 99), random.randint(2, 9)            # a in tenths: 1,5 … 9,9 × whole
-        ra, rb = round(a / 10), b
+        ra, rb = _round_half_up(a, 10), b
         est = ra * rb
         prompt_nums = (Dfr(a, 1), str(b), D(a, 1)[1], str(b))
+        exact = Fraction(a * b, 10)
     else:
         q, b = random.randint(2, 12), random.randint(2, 9)
         a = q * b * 10 + random.choice([-3, -2, 2, 3])                  # tenths, close to a multiple of b
-        ra, rb = round(a / 10), b
-        est = round(ra / rb)
+        ra, rb = _round_half_up(a, 10), b
+        est = _round_half_up(ra, rb)
         prompt_nums = (Dfr(a, 1), str(b), D(a, 1)[1], str(b))
+        exact = Fraction(a, 10 * b)
     distr = [(str(est * 10), 'decimal_place', 'Check where the decimal point goes: is that a sensible size?', 'Vérifie la place de la virgule : est-ce une grandeur raisonnable ?'),
-             (Dfr(est, 1), 'decimal_place', 'Check where the decimal point goes: is that a sensible size?', 'Vérifie la place de la virgule : est-ce une grandeur raisonnable ?'),
+             (D(est, 1), 'decimal_place', 'Check where the decimal point goes: is that a sensible size?', 'Vérifie la place de la virgule : est-ce une grandeur raisonnable ?'),
              (str(est + 2), 'far', 'Round each number to the nearest whole first.', 'Arrondis d’abord chaque nombre à l’unité.'),
              (str(max(1, est - 2)) if est > 2 else str(est + 3), 'far', 'Round each number to the nearest whole first.', 'Arrondis d’abord chaque nombre à l’unité.'),
-             (str(est + 1), 'close', 'Round to the NEAREST whole number.', 'Arrondis à l’unité la PLUS PROCHE.')]
+             (str(est + 1), 'close', 'Round to the NEAREST whole number.', 'Arrondis à l’unité la PLUS PROCHE.'),
+             (str(est - 1) if est > 1 else None, 'close', 'Round to the NEAREST whole number.', 'Arrondis à l’unité la PLUS PROCHE.'),
+             (str(est + 3), 'far', 'Round each number to the nearest whole first.', 'Arrondis d’abord chaque nombre à l’unité.'),
+             (str(est + 4), 'far', 'Round each number to the nearest whole first.', 'Arrondis d’abord chaque nombre à l’unité.')]
+    # The key must be the choice closest to the exact result: drop any distractor that is as close or closer.
+    gap = abs(est - exact)
+    distr = [t for t in distr if t[0] is not None and abs(_value(t[0]) - exact) > gap]
+    lines = ([f'{prompt_nums[0]} ≈ {ra}'] + ([f'{prompt_nums[1]} ≈ {rb}'] if op in '+−' else []),
+             [f'{prompt_nums[2]} ≈ {ra}'] + ([f'{prompt_nums[3]} ≈ {rb}'] if op in '+−' else []))
     return mc((f'Sans calculer exactement, quelle est la meilleure **estimation** de **{prompt_nums[0]} {op} {prompt_nums[1]}** ?',
                f'Without calculating exactly, what is the best **estimate** of **{prompt_nums[2]} {op} {prompt_nums[3]}**?'),
               str(est), distr,
               ('Arrondis chaque nombre décimal à l’unité, puis calcule mentalement.', 'Round each decimal to the nearest whole number, then calculate mentally.'),
-              ([f'{prompt_nums[0]} ≈ {ra}', f'{prompt_nums[1]} ≈ {rb}', f'{ra} {op} {rb} ≈ {est}'],
-               [f'{prompt_nums[2]} ≈ {ra}', f'{prompt_nums[3]} ≈ {rb}', f'{ra} {op} {rb} ≈ {est}']),
-              pad=lambda: str(max(1, est + random.choice([-4, -3, 3, 4, 5]))))
+              (lines[0] + [f'{ra} {op} {rb} ≈ {est}'], lines[1] + [f'{ra} {op} {rb} ≈ {est}']),
+              pad=_far_pad(est, exact, gap))
 
 
 # ── G5 · Decimal word problems ───────────────────────────────────────────────
@@ -368,6 +424,15 @@ def g5_decimal_story_gen(level='medium'):
 _NICE = [(1, 2), (1, 4), (3, 4), (1, 5), (2, 5), (3, 5), (4, 5), (1, 10), (3, 10), (7, 10), (9, 10), (1, 20), (1, 25)]
 
 
+def _pct_pad(n, d):
+    def pad():
+        while True:
+            a, b = random.randint(1, 9), random.choice([3, 6, 8, 10, 20])
+            if Fraction(a, b) != Fraction(n, d) and a < b:
+                return frac(a, b)
+    return pad
+
+
 def g6_percent_gen(level='medium'):
     variant = random.choice(['grid', 'from_frac', 'from_dec'] if level == 'easy'
                             else ['from_frac', 'from_dec', 'to_dec', 'to_frac', 'grid'] if level == 'medium'
@@ -391,11 +456,12 @@ def g6_percent_gen(level='medium'):
                  (frac(1, pct) if pct > 1 else frac(1, 3), 'inverted', f'{pct}% = {pct}/100, then simplify.', f'{pct} % = {pct}/100, puis simplifie.'),
                  (frac(d - n, d) if d - n != n else frac(n, d + 1), 'complement', 'That is the part that is left.', 'C’est la partie qui reste.'),
                  (frac(n, d * 10), 'scale', 'Per cent means out of 100.', 'Pour cent veut dire sur 100.'),
-                 (frac(pct, 1000), 'scale', 'Per cent means out of 100.', 'Pour cent veut dire sur 100.')]
+                 (frac(pct, 1000), 'scale', 'Per cent means out of 100.', 'Pour cent veut dire sur 100.') if Fraction(pct, 1000) != Fraction(n, d * 10) else None]
         return mc((f'Quelle fraction est égale à **{pct} %** ?', f'Which fraction is equal to **{pct}%**?'),
                   frac(n, d), distr,
                   (f'{pct} % = {pct}/100 : simplifie cette fraction.', f'{pct}% = {pct}/100: simplify this fraction.'),
-                  ([f'{pct} % = {frac(pct, 100)} = {frac(n, d)}'], [f'{pct}% = {frac(pct, 100)} = {frac(n, d)}']))
+                  ([f'{pct} % = {frac(pct, 100)} = {frac(n, d)}'], [f'{pct}% = {frac(pct, 100)} = {frac(n, d)}']),
+                  pad=_pct_pad(n, d))
     if variant in ('from_dec', 'to_dec'):
         k = random.choice([random.randint(1, 99), random.choice([5, 25, 50, 75, 10, 20])])
         if variant == 'from_dec':
@@ -425,9 +491,9 @@ _CONTEXTS = [
     (('la masse d’un colis', 'the mass of a parcel'), 'dec'),
     (('la taille d’un élève en mètres', 'a student’s height in metres'), 'dec'),
     (('la part d’une pizza mangée', 'the part of a pizza eaten'), 'frac'),
-    (('la portion d’une recette (tasse)', 'a recipe amount (cup)'), 'frac'),
+    (('la quantité de lait dans une recette, en tasses', 'the amount of milk in a recipe, in cups'), 'frac'),
     (('le rabais dans un magasin', 'a discount in a shop'), 'pct'),
-    (('la note d’un examen', 'an exam score'), 'pct'),
+    (('le taux de réussite à un examen', 'the pass rate on an exam'), 'pct'),
     (('la charge d’une batterie de téléphone', 'a phone battery level'), 'pct'),
 ]
 
@@ -437,7 +503,8 @@ def g6_choose_notation_gen(level='medium'):
     for ctx, kind in random.sample(_CONTEXTS, len(_CONTEXTS)):
         picks.setdefault(kind, ctx)
     pairs = []
-    for kind, ctx in picks.items():
+    frac_val = None
+    for kind, ctx in sorted(picks.items(), key=lambda kv: kv[0] == 'pct'):   # fraction before percent
         if kind == 'dec':
             if 'prix' in ctx[0]:
                 k = random.randint(105, 950)
@@ -450,16 +517,18 @@ def g6_choose_notation_gen(level='medium'):
                 val = (Dfr(k, 2) + ' m', D(k, 2)[1] + ' m')
         elif kind == 'frac':
             n, d = random.choice([(3, 8), (1, 4), (2, 3), (3, 4), (1, 3)])
+            frac_val = Fraction(n, d)
             val = (frac(n, d), frac(n, d))
         else:
-            p = random.choice([15, 20, 25, 30, 40, 75, 85, 90])
+            # never the same value as the fraction (1/4 and 25 % would both fit)
+            p = random.choice([q for q in [15, 20, 25, 30, 40, 75, 85, 90] if Fraction(q, 100) != frac_val])
             val = (f'{p} %', f'{p}%')
         pairs.append((ctx, val))
     random.shuffle(pairs)
     return match(('Associe chaque situation à l’écriture la plus appropriée.', 'Match each situation with the most suitable way of writing the number.'),
                  pairs,
-                 ('Argent et mesures → nombre décimal ; parts d’un tout partagé → fraction ; comparaison sur 100 → pourcentage.',
-                  'Money and measures → decimal; parts of a shared whole → fraction; comparing out of 100 → percentage.'),
+                 ('Prix, masse, longueur → nombre décimal ; part d’un tout partagé ou d’une tasse → fraction ; proportion sur 100 → pourcentage.',
+                  'Price, mass, length → decimal; part of a shared whole or of a cup → fraction; proportion out of 100 → percentage.'),
                  ([f'{c[0]} → {v[0]}' for c, v in pairs], [f'{c[1]} → {v[1]}' for c, v in pairs]))
 
 
@@ -478,13 +547,36 @@ def fraction_to_decimal_gen(level='easy'):
     else:
         k100 = n * 100 // d
     correct = Dtrim(k100, 2)
-    distr = [(D(n, 3) if d == 100 else D(n, 2), 'place', 'Tenths: 1 digit after the comma; hundredths: 2 digits.', 'Dixièmes : 1 chiffre après la virgule ; centièmes : 2 chiffres.'),
-             (D(n, 1) if d == 100 and n < 100 and n % 10 else D(n * 10 + 1, 2), 'place', 'Tenths: 1 digit after the comma; hundredths: 2 digits.', 'Dixièmes : 1 chiffre après la virgule ; centièmes : 2 chiffres.'),
+    if d == 10:
+        second = ((str(n), str(n)), 'no_point', 'Tenths are smaller than 1: write them after the decimal point.', 'Les dixièmes sont plus petits que 1 : écris-les après la virgule.')
+    elif d == 100:
+        second = (D(n, 1), 'place', 'Tenths: 1 digit after the decimal point; hundredths: 2 digits.', 'Dixièmes : 1 chiffre après la virgule ; centièmes : 2 chiffres.')
+    else:
+        second = (D(d, 1), 'denominator', 'The denominator is not the decimal part: rewrite the fraction over 10 or 100.', 'Le dénominateur n’est pas la partie décimale : réécris la fraction sur 10 ou sur 100.')
+    distr = [(D(n, 3) if d == 100 else D(n, 2), 'place', 'Tenths: 1 digit after the decimal point; hundredths: 2 digits.', 'Dixièmes : 1 chiffre après la virgule ; centièmes : 2 chiffres.'),
+             second,
              ((f'{n},{d}', f'{n}.{d}'), 'concat', 'The fraction bar is not a decimal point.', 'La barre de fraction n’est pas une virgule.'),
              ((f'{d},{n}', f'{d}.{n}'), 'concat', 'The fraction bar is not a decimal point.', 'La barre de fraction n’est pas une virgule.'),
              (Dtrim(k100 + 10, 2), 'close', 'Check the tenths digit.', 'Vérifie le chiffre des dixièmes.')]
     return mc((f'La fraction **{frac(n, d)}** s’écrit aussi :', f'The fraction **{frac(n, d)}** can also be written as:'),
               correct, distr,
               ('Écris la fraction sur 10 ou sur 100, puis lis les dixièmes ou les centièmes.', 'Write the fraction over 10 or 100, then read the tenths or hundredths.'),
-              ([f'{frac(n, d)} = {frac(k100, 100)} = {correct[0]}'], [f'{frac(n, d)} = {frac(k100, 100)} = {correct[1]}']),
+              _f2d_explanation(n, d, k100, correct),
               pad=_pad(k100, 2, 20))
+
+
+def _f2d_explanation(n, d, k100, correct):
+    """148/100 → « 148 centièmes = 1 unité et 48 centièmes = 1,48 » (no « 148/100 = 148/100 »)."""
+    if d == 10:
+        return ([f'{frac(n, d)} = {n} dixième{"s" if n > 1 else ""} = {correct[0]}'],
+                [f'{frac(n, d)} = {n} tenth{"s" if n > 1 else ""} = {correct[1]}'])
+    head_fr = [] if d == 100 else [f'{frac(n, d)} = {frac(k100, 100)}']
+    head_en = [] if d == 100 else [f'{frac(n, d)} = {frac(k100, 100)}']
+    u, c = divmod(k100, 100)
+    if u:
+        body_fr = f'{k100} centièmes = {u} unité{"s" if u > 1 else ""} et {c} centième{"s" if c > 1 else ""} = {correct[0]}'
+        body_en = f'{k100} hundredths = {u} one{"s" if u > 1 else ""} and {c} hundredth{"s" if c != 1 else ""} = {correct[1]}'
+    else:
+        body_fr = f'{k100} centième{"s" if k100 > 1 else ""} = {correct[0]}'
+        body_en = f'{k100} hundredth{"s" if k100 != 1 else ""} = {correct[1]}'
+    return head_fr + [body_fr], head_en + [body_en]

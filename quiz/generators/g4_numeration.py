@@ -209,6 +209,15 @@ def g4_arabic_to_roman_gen(level='easy'):
 # g4_roman_match_gen
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _roman_line(n):
+    """'XIV = 10 + 4 = 14', or just 'L = 50' for a single-symbol numeral."""
+    r = to_roman(n)
+    terms = _roman_terms(r)
+    if len(terms) == 1:
+        return f'{r} = {sc.fmt_n(n)}'
+    return f'{r} = {" + ".join(terms)} = {sc.fmt_n(n)}'
+
+
 def g4_roman_match_gen(level='easy'):
     count = 3 if level == 'easy' else 4
     nums = set()
@@ -227,8 +236,8 @@ def g4_roman_match_gen(level='easy'):
         'shape_data':       [],
         'choices':          [],
         'pairs':            pairs,
-        'explanation_en':   '\n'.join(f'{to_roman(n)} = {" + ".join(_roman_terms(to_roman(n)))} = {sc.fmt_n(n)}' for n in sorted(nums)),
-        'explanation_fr':   '\n'.join(f'{to_roman(n)} = {" + ".join(_roman_terms(to_roman(n)))} = {sc.fmt_n(n)}' for n in sorted(nums)),
+        'explanation_en':   '\n'.join(_roman_line(n) for n in nums),
+        'explanation_fr':   '\n'.join(_roman_line(n) for n in nums),
         'correct_answers':  [p['right'] for p in pairs],
     }
 
@@ -380,11 +389,17 @@ def _wrong_expansions(n):
                     'Two digits are in the wrong order.', 'Deux chiffres ont été inversés.'))
     # 3. a term missing
     plist = _mult_expansion(n).split(' + ')
-    if len(plist) > 2:
+    if len(plist) > 1:
         drop = random.randrange(len(plist))
         out.append((' + '.join(p for q, p in enumerate(plist) if q != drop), 'missing_term',
                     'One place value is missing.', 'Une position a été oubliée.'))
-    # 4. digits used as raw values (8 + 7 + 1 + 5 + 6 style) — mimic "digit × wrong place"
+    # 4. every multiplier shifted one place up (8 × 100 000 instead of 8 × 10 000)
+    if k <= 4:                          # stays within the grade-4 range (< 100 000)
+        up = [f'({int(ch)} × {sc.fmt_n(10 ** (k - idx))})' for idx, ch in enumerate(s) if ch != '0']
+        out.append((' + '.join(up), 'place_shift',
+                    'Each digit was matched to the place value one step too big.',
+                    'Chaque chiffre a été associé à une position trop grande.'))
+    # 5. digits used as raw values (8 + 7 + 1 + 5 + 6 style) — mimic "digit × wrong place"
     alt = [f'({int(ch)} × {sc.fmt_n(10 ** idx)})' for idx, ch in enumerate(s) if ch != '0']
     out.append((' + '.join(alt), 'reversed_places',
                 'The place values are reversed (ones on the left).',
@@ -401,6 +416,12 @@ def g4_expanded_form_gen(level='easy'):
         prompt_fr = f"Quelle est la décomposition du nombre **{sc.fmt_n(n)}** ?"
         prompt_en = f"Which is the expanded form of **{sc.fmt_n(n)}**?"
         answers = [correct]
+        expl_en = [f'Step 1: Write each non-zero digit of {sc.fmt_n(n)} with its place value.',
+                   f'Step 2: {sc.fmt_n(n)} = {_mult_expansion(n)}',
+                   f'Answer: {correct}']
+        expl_fr = [f'Étape 1 : Écris chaque chiffre non nul de {sc.fmt_n(n)} avec la valeur de sa position.',
+                   f'Étape 2 : {sc.fmt_n(n)} = {_mult_expansion(n)}',
+                   f'Réponse : {correct}']
     else:
         # Decomposition → number
         correct = sc.fmt_n(n)
@@ -417,12 +438,25 @@ def g4_expanded_form_gen(level='easy'):
                 cands.add(v)
         cands.add(n // 10)
         cands.add(n + 10 ** (k - 2))
+        if n * 10 < 100_000:
+            cands.add(n * 10)                   # one place too far left
+        if n + 10 ** (k - 1) < 100_000:
+            cands.add(n + 10 ** (k - 1))        # leading place miscounted
         tagged = [(sc.fmt_n(c), 'wrong_recompose',
                    'Add the value of every term carefully.',
                    'Additionne soigneusement la valeur de chaque terme.') for c in cands if c != n]
         prompt_fr = f"Quel nombre est décomposé ainsi : **{_mult_expansion(n)}** ?"
         prompt_en = f"Which number has this expanded form: **{_mult_expansion(n)}**?"
         answers = [str(n)]
+        prods = [(int(ch), 10 ** (k - 1 - idx)) for idx, ch in enumerate(s) if ch != '0']
+        products = '; '.join(f'{d} × {sc.fmt_n(pl)} = {sc.fmt_n(d * pl)}' for d, pl in prods)
+        total = ' + '.join(sc.fmt_n(d * pl) for d, pl in prods)
+        expl_en = [f'Step 1: Work out each product: {products}.',
+                   f'Step 2: Add them: {total} = {sc.fmt_n(n)}',
+                   f'Answer: {correct}']
+        expl_fr = [f'Étape 1 : Calcule chaque produit : {products}.',
+                   f'Étape 2 : Additionne-les : {total} = {sc.fmt_n(n)}',
+                   f'Réponse : {correct}']
 
     return {
         'q_type':           'multiple_choice',
@@ -434,16 +468,8 @@ def g4_expanded_form_gen(level='easy'):
         'shape_data':       [],
         'choices':          _tagged_shuffle_mc(correct, tagged),
         'pairs':            [],
-        'explanation_en': (
-            f'Step 1: Write each non-zero digit of {sc.fmt_n(n)} with its place value.\n'
-            f'Step 2: {sc.fmt_n(n)} = {_mult_expansion(n)}\n'
-            f'Answer: {correct}'
-        ),
-        'explanation_fr': (
-            f'Étape 1 : Écris chaque chiffre non nul de {sc.fmt_n(n)} avec la valeur de sa position.\n'
-            f'Étape 2 : {sc.fmt_n(n)} = {_mult_expansion(n)}\n'
-            f'Réponse : {correct}'
-        ),
+        'explanation_en':   '\n'.join(expl_en),
+        'explanation_fr':   '\n'.join(expl_fr),
         'correct_answers':  answers,
     }
 
@@ -454,6 +480,12 @@ def g4_expanded_form_gen(level='easy'):
 
 _GROUP_FR = {1: 'dizaines', 2: 'centaines', 3: 'unités de mille', 4: 'dizaines de mille'}
 _GROUP_EN = {1: 'tens', 2: 'hundreds', 3: 'thousands', 4: 'ten thousands'}
+
+
+def _de(word, bold=False):
+    """« de dizaines » / « d'unités de mille »."""
+    w = f'**{word}**' if bold else word
+    return f"d'{w}" if word[0] in 'aeiouhéè' else f'de {w}'
 
 
 def g4_count_groups_gen(level='easy'):
@@ -484,17 +516,19 @@ def g4_count_groups_gen(level='easy'):
         hint_en = 'The "digit" is a single symbol; the "number of" counts all the groups.'
     else:
         answer = n // 10 ** i
-        prompt_fr = f"Combien y a-t-il de **{_GROUP_FR[i]}** dans **{sc.fmt_n(n)}** ?"
+        cover_fr = 'le chiffre' if i == 1 else f'les {i} chiffres'
+        cover_en = 'the digit' if i == 1 else f'the {i} digits'
+        prompt_fr = f"Combien y a-t-il {_de(_GROUP_FR[i], bold=True)} dans **{sc.fmt_n(n)}** ?"
         prompt_en = f"How many **{_GROUP_EN[i]}** are there in **{sc.fmt_n(n)}**?"
         expl_en = (f'Step 1: "How many {_GROUP_EN[i]}" means: count ALL the groups of {sc.fmt_n(10 ** i)} in {sc.fmt_n(n)}.\n'
-                   f'Step 2: Cover the {i} digit(s) to the right of the {_GROUP_EN[i]} position: what remains is {sc.fmt_n(answer)}.\n'
-                   f'Check: {sc.fmt_n(answer)} × {sc.fmt_n(10 ** i)} = {sc.fmt_n(answer * 10 ** i)} and {sc.fmt_n(n)} − {sc.fmt_n(answer * 10 ** i)} = {n - answer * 10 ** i}.\n'
+                   f'Step 2: Cover {cover_en} to the right of the {_GROUP_EN[i]} position: what remains is {sc.fmt_n(answer)}.\n'
+                   f'Check: {sc.fmt_n(answer)} × {sc.fmt_n(10 ** i)} = {sc.fmt_n(answer * 10 ** i)} and {sc.fmt_n(n)} − {sc.fmt_n(answer * 10 ** i)} = {sc.fmt_n(n - answer * 10 ** i)}.\n'
                    f'Answer: {sc.fmt_n(answer)}')
-        expl_fr = (f'Étape 1 : « Combien de {_GROUP_FR[i]} » veut dire : compte TOUS les groupes de {sc.fmt_n(10 ** i)} dans {sc.fmt_n(n)}.\n'
-                   f'Étape 2 : Cache le(s) {i} chiffre(s) à droite de la position des {_GROUP_FR[i]} : il reste {sc.fmt_n(answer)}.\n'
-                   f'Vérification : {sc.fmt_n(answer)} × {sc.fmt_n(10 ** i)} = {sc.fmt_n(answer * 10 ** i)} et {sc.fmt_n(n)} − {sc.fmt_n(answer * 10 ** i)} = {n - answer * 10 ** i}.\n'
+        expl_fr = (f'Étape 1 : « Combien {_de(_GROUP_FR[i])} » veut dire : compte TOUS les groupes de {sc.fmt_n(10 ** i)} dans {sc.fmt_n(n)}.\n'
+                   f'Étape 2 : Cache {cover_fr} à droite de la position des {_GROUP_FR[i]} : il reste {sc.fmt_n(answer)}.\n'
+                   f'Vérification : {sc.fmt_n(answer)} × {sc.fmt_n(10 ** i)} = {sc.fmt_n(answer * 10 ** i)} et {sc.fmt_n(n)} − {sc.fmt_n(answer * 10 ** i)} = {sc.fmt_n(n - answer * 10 ** i)}.\n'
                    f'Réponse : {sc.fmt_n(answer)}')
-        hint_fr = f'Attention : on demande le NOMBRE de {_GROUP_FR[i]}, pas seulement le chiffre. Cache les chiffres à droite de cette position.'
+        hint_fr = f'Attention : on demande le NOMBRE {_de(_GROUP_FR[i])}, pas seulement le chiffre. Cache les chiffres à droite de cette position.'
         hint_en = f'Careful: it asks for the NUMBER of {_GROUP_EN[i]}, not just the digit. Cover the digits to the right of that position.'
 
     return {
@@ -524,13 +558,9 @@ def g4_grouping_problem_gen(level='easy'):
     cat = thing[5]
     cont = sc.pick_container(cat)
     verb_fr, verb_en, _ = sc.pick_verb(cat)
-    if random.random() < 0.6:
-        who_fr, gender = sc.pick_actor()
-        who_en = who_fr
-    else:
-        who_fr, who_en, gender = sc.pick_role()
-        who_fr = who_fr[0].upper() + who_fr[1:]
-        who_en = who_en[0].upper() + who_en[1:]
+    # A child actor: role + object pairs (« un libraire achète des biscuits ») read oddly.
+    who_fr, gender = sc.pick_actor()
+    who_en = who_fr
 
     # groups: list of (count_of_containers, size_per_container)
     if level == 'easy':

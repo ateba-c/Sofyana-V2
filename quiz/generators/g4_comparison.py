@@ -122,29 +122,59 @@ def _close_pair(level):
     return a, b
 
 
+_PLACE_FR = ['unités', 'dizaines', 'centaines', 'unités de mille', 'dizaines de mille', 'centaines de mille']
+_PLACE_EN = ['ones', 'tens', 'hundreds', 'thousands', 'ten thousands', 'hundred thousands']
+
+
+def compare_steps(a, b):
+    """(fr, en) first explanation step for comparing two whole numbers ≥ 0.
+
+    Different lengths → the longer number is larger (no digit-by-digit talk).
+    Same length → name the first place where the digits differ."""
+    sa, sb = str(a), str(b)
+    if len(sa) != len(sb):
+        big, small = (a, b) if len(sa) > len(sb) else (b, a)
+        lb, ls = len(str(big)), len(str(small))
+        return (f'{sc.fmt_n(big)} a {lb} chiffres et {sc.fmt_n(small)} en a {ls} : '
+                f'le nombre qui a le plus de chiffres est le plus grand.',
+                f'{sc.fmt_n(big)} has {lb} digits and {sc.fmt_n(small)} has {ls}: '
+                f'the number with more digits is larger.')
+    if a == b:
+        return (f'Les deux nombres ont {len(sa)} chiffres et tous leurs chiffres sont identiques.',
+                f'Both numbers have {len(sa)} digits and all their digits are the same.')
+    i = next(k for k in range(len(sa)) if sa[k] != sb[k])
+    place = len(sa) - 1 - i
+    rel = '>' if sa[i] > sb[i] else '<'
+    lead_fr = 'Les chiffres à gauche sont les mêmes ; au' if i else 'Au'
+    lead_en = 'The digits to the left are the same; in' if i else 'In'
+    return (f'Les deux nombres ont {len(sa)} chiffres. {lead_fr} rang des {_PLACE_FR[place]}, {sa[i]} {rel} {sb[i]}.',
+            f'Both numbers have {len(sa)} digits. {lead_en} the {_PLACE_EN[place]} place, {sa[i]} {rel} {sb[i]}.')
+
+
 def g4_compare_gen(level='easy'):
     a, b = _close_pair(level)
     sym = '<' if a < b else '>' if a > b else '='
     word_fr = {'<': 'plus petit que', '>': 'plus grand que', '=': 'égal à'}[sym]
     word_en = {'<': 'less than', '>': 'greater than', '=': 'equal to'}[sym]
+    step_fr, step_en = compare_steps(a, b)
     return {
         'q_type':           'text_input',
         'answer_type':      'symbol',
         'prompt_fr':        f"Compare : **{sc.fmt_n(a)}** ⬜ **{sc.fmt_n(b)}**. Écris <, > ou =.",
         'prompt_en':        f"Compare: **{sc.fmt_n(a)}** ⬜ **{sc.fmt_n(b)}**. Type <, > or =.",
-        'hint_fr':          'Compare d\'abord le nombre de chiffres, puis les chiffres de gauche à droite. La pointe du symbole vise le plus petit nombre.',
+        'hint_fr':          "Compare d'abord le nombre de chiffres, puis les chiffres de gauche à droite. La pointe du symbole vise le plus petit nombre.",
         'hint_en':          'Compare the number of digits first, then the digits from left to right. The small end of the symbol points to the smaller number.',
         'show_illustration': False,
         'shape_data':       [],
         'choices':          [],
         'pairs':            [],
         'explanation_en': (
-            f'Step 1: Both numbers have {len(str(a))} and {len(str(b))} digits — compare from the left.\n'
+            f'Step 1: {step_en}\n'
             f'Step 2: {sc.fmt_n(a)} is {word_en} {sc.fmt_n(b)}.\n'
             f'Answer: {sc.fmt_n(a)} {sym} {sc.fmt_n(b)}'
         ),
         'explanation_fr': (
-            f'Étape 1 : Les nombres ont {len(str(a))} et {len(str(b))} chiffres — compare à partir de la gauche.\n'
+            f'Étape 1 : {step_fr}\n'
             f'Étape 2 : {sc.fmt_n(a)} est {word_fr} {sc.fmt_n(b)}.\n'
             f'Réponse : {sc.fmt_n(a)} {sym} {sc.fmt_n(b)}'
         ),
@@ -181,10 +211,10 @@ def g4_order_numbers_gen(level='easy'):
 
     return {
         'q_type':           'ordering',
-        'prompt_fr':        f"{who} mesure {count} {things_fr}. Range les mesures en ordre **{order_fr}**.",
-        'prompt_en':        f"{who} measures {count} {things_en}. Sort the measurements in **{order_en}**.",
-        'hint_fr':          'Compare d\'abord les chiffres de gauche (les plus grandes positions), puis avance vers la droite.',
-        'hint_en':          'Compare the leftmost digits first (biggest place values), then move right.',
+        'prompt_fr':        f"{who} compare les mesures de {count} {things_fr}. Range les mesures en ordre **{order_fr}**.",
+        'prompt_en':        f"{who} compares the measurements of {count} {things_en}. Sort the measurements in **{order_en}**.",
+        'hint_fr':          "Le nombre qui a le plus de chiffres est le plus grand. À nombre de chiffres égal, compare d'abord les chiffres de gauche, puis avance vers la droite.",
+        'hint_en':          'The number with more digits is larger. With the same number of digits, compare the leftmost digits first, then move right.',
         'show_illustration': False,
         'shape_data':       [],
         'choices':          [],
@@ -231,6 +261,10 @@ def g4_skip_sequence_gen(level='easy'):
     j = 0 if hide != 0 and hide != 1 else 2
     prev_vis = terms[hide - 1] if hide > 0 else terms[hide + 1]
     op = '+' if ascending else '−'
+    # Always a positive difference: bigger neighbour − smaller neighbour.
+    big, small = max(terms[j], terms[j + 1]), min(terms[j], terms[j + 1])
+    # From the left neighbour we apply the sequence's direction; from the right one, the opposite.
+    apply_op = op if hide > 0 else ('−' if ascending else '+')
 
     return {
         'q_type':           'text_input',
@@ -244,15 +278,19 @@ def g4_skip_sequence_gen(level='easy'):
         'choices':          [],
         'pairs':            [],
         'explanation_en': (
-            f'Step 1: Two neighbours differ by {sc.fmt_n(terms[j + 1])} − {sc.fmt_n(terms[j])} = {"" if ascending else "−"}{step}, so the step is {op}{step}.\n'
-            f'Step 2: {"Add" if (ascending and hide > 0) or (not ascending and hide == 0) else "Subtract"} the step to the neighbour: '
-            f'{sc.fmt_n(prev_vis)} {op if hide > 0 else ("−" if ascending else "+")} {step} = {sc.fmt_n(answer)}\n'
+            f'Step 1: Two neighbours differ by {sc.fmt_n(big)} − {sc.fmt_n(small)} = {step}, '
+            f'so the sequence {"increases" if ascending else "decreases"} by {step}.\n'
+            f'Step 2: {"Add" if apply_op == "+" else "Subtract"} {step} '
+            f'{"to" if apply_op == "+" else "from"} the neighbour: '
+            f'{sc.fmt_n(prev_vis)} {apply_op} {step} = {sc.fmt_n(answer)}\n'
             f'Answer: {sc.fmt_n(answer)}'
         ),
         'explanation_fr': (
-            f'Étape 1 : Deux voisins diffèrent de {sc.fmt_n(terms[j + 1])} − {sc.fmt_n(terms[j])} = {"" if ascending else "−"}{step}, donc le pas est {op}{step}.\n'
-            f'Étape 2 : Applique le pas au voisin : '
-            f'{sc.fmt_n(prev_vis)} {op if hide > 0 else ("−" if ascending else "+")} {step} = {sc.fmt_n(answer)}\n'
+            f'Étape 1 : Deux voisins diffèrent de {sc.fmt_n(big)} − {sc.fmt_n(small)} = {step}, '
+            f'donc la suite {"augmente" if ascending else "diminue"} de {step}.\n'
+            f'Étape 2 : {"Ajoute" if apply_op == "+" else "Soustrais"} {step} '
+            f'{"au" if apply_op == "+" else "du"} voisin : '
+            f'{sc.fmt_n(prev_vis)} {apply_op} {step} = {sc.fmt_n(answer)}\n'
             f'Réponse : {sc.fmt_n(answer)}'
         ),
         'correct_answers':  [str(answer)],
@@ -300,7 +338,7 @@ def g4_number_line_step_gen(level='easy'):
          'You counted the intervals; the step is the value of ONE interval.',
          "Tu as compté les intervalles ; le pas est la valeur d'UN intervalle."),
         (str(step * 2), 'double_step', 'Divide the span by the number of intervals.', "Divise l'écart par le nombre d'intervalles."),
-        (str(max(1, step // 2)), 'half_step', 'Divide the span by the number of intervals.', "Divise l'écart par le nombre d'intervalles."),
+        (str(step // 2) if step % 2 == 0 else None, 'half_step', 'Divide the span by the number of intervals.', "Divise l'écart par le nombre d'intervalles."),
         (str(step + 1), 'off_by_one', 'Check the division.', 'Vérifie la division.'),
         (str(n_ticks - 1), 'counted_ticks', 'You counted the intervals of the whole line.', 'Tu as compté les intervalles de toute la droite.'),
         (str(step * 5), 'wrong_step', 'Divide the span by the number of intervals.', "Divise l'écart par le nombre d'intervalles."),
@@ -308,7 +346,7 @@ def g4_number_line_step_gen(level='easy'):
         (str(step * 10), 'wrong_step', 'Divide the span by the number of intervals.', "Divise l'écart par le nombre d'intervalles."),
     ]
     seen = {correct}
-    tagged = [t for t in tagged if t[0] not in seen and not seen.add(t[0])]
+    tagged = [t for t in tagged if t[0] is not None and t[0] not in seen and not seen.add(t[0])]
     return {
         'q_type':           'multiple_choice',
         'prompt_fr':        "Quel est le pas de graduation de cette droite numérique ?",
@@ -345,14 +383,20 @@ def g4_number_line_step_gen(level='easy'):
 def g4_number_line_point_gen(level='easy'):
     start, step, n_ticks = _number_line(level)
     end = start + step * (n_ticks - 1)
-    idx = random.randint(1, n_ticks - 2)
+    # The "?" tick never carries its own label.
+    if level == 'medium':
+        idx = random.randint(2, n_ticks - 2)                     # tick 1 is labelled
+    else:
+        idx = random.randint(1, n_ticks - 2)
     target = start + idx * step
     if level == 'easy':
-        labels = [start + i * step for i in range(n_ticks)]     # everything labelled
+        labels = [start + i * step for i in range(n_ticks) if i != idx]   # every tick but the "?"
     elif level == 'medium':
         labels = [start, start + step, end]                      # first two + last
     else:
         labels = [start, end]                                    # only the ends
+    grad_fr = 'graduation' if idx == 1 else 'graduations'
+    grad_en = 'graduation' if idx == 1 else 'graduations'
     return {
         'q_type':           'text_input',
         'answer_type':      'integer',
@@ -370,13 +414,13 @@ def g4_number_line_point_gen(level='easy'):
         'explanation_en': (
             f'Step 1: From {sc.fmt_n(start)} to {sc.fmt_n(end)} there are {n_ticks - 1} intervals, so the step is '
             f'({sc.fmt_n(end)} − {sc.fmt_n(start)}) ÷ {n_ticks - 1} = {step}.\n'
-            f'Step 2: The point is {idx} graduation(s) after {sc.fmt_n(start)}: {sc.fmt_n(start)} + {idx} × {step} = {sc.fmt_n(target)}.\n'
+            f'Step 2: The point is {idx} {grad_en} after {sc.fmt_n(start)}: {sc.fmt_n(start)} + {idx} × {step} = {sc.fmt_n(target)}.\n'
             f'Answer: {sc.fmt_n(target)}'
         ),
         'explanation_fr': (
             f'Étape 1 : De {sc.fmt_n(start)} à {sc.fmt_n(end)} il y a {n_ticks - 1} intervalles, donc le pas est '
             f'({sc.fmt_n(end)} − {sc.fmt_n(start)}) ÷ {n_ticks - 1} = {step}.\n'
-            f'Étape 2 : Le point est {idx} graduation(s) après {sc.fmt_n(start)} : {sc.fmt_n(start)} + {idx} × {step} = {sc.fmt_n(target)}.\n'
+            f'Étape 2 : Le point est {idx} {grad_fr} après {sc.fmt_n(start)} : {sc.fmt_n(start)} + {idx} × {step} = {sc.fmt_n(target)}.\n'
             f'Réponse : {sc.fmt_n(target)}'
         ),
         'correct_answers':  [str(target)],

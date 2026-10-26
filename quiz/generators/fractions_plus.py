@@ -24,11 +24,42 @@ from .kit import mc, typed, ordering, frac, simplest, frac_words, N
 from . import scenarios as sc
 
 
-def _frac_pad(d_max):
+def _frac_pad(d_max, avoid=None):
+    """Random proper fraction for padding; never equal in value to ``avoid`` (the key, or a list of values)."""
+    avoid = set(avoid) if isinstance(avoid, (list, set, tuple)) else {avoid} if avoid is not None else set()
+
     def pad():
-        d = random.randint(2, d_max)
-        return frac(random.randint(1, d), d)
+        while True:
+            d = random.randint(2, d_max)
+            f = (random.randint(1, d - 1), d)
+            # irreducible only, so a pad never repeats the value of another choice (1/4 vs 2/8)
+            if Fraction(*f).denominator == d and Fraction(*f) not in avoid:
+                return frac(*f)
     return pad
+
+
+def _distinct_values(key, distractors):
+    """Drop distractors equal in value to the key or to an earlier distractor (2/4 vs 1/2)."""
+    def val(label):
+        text = label[0] if isinstance(label, tuple) else label
+        return Fraction(text.split(' ')[0])
+    seen, out = {val(key)}, []
+    for t in distractors:
+        if t is None:
+            continue
+        v = val(t[0])
+        if v not in seen:
+            seen.add(v)
+            out.append(t)
+    return out
+
+
+def _parts(n, fr_adj='', en_adj=''):
+    """« 1 part coloriée » / « 3 parts coloriées » and the English twin."""
+    pl = n > 1
+    fr = f'{n} part{"s" if pl else ""}' + (f' {fr_adj}{"s" if pl else ""}' if fr_adj else '')
+    en = f'{n}' + (f' {en_adj}' if en_adj else '') + f' part{"s" if pl else ""}'
+    return fr, en
 
 
 # ── G3 · Fraction of a shape (rewrite) ───────────────────────────────────────
@@ -59,13 +90,15 @@ def fraction_shape_gen(level='medium'):
         (frac(n + 1, d) if n + 1 < d else frac(n - 1, d) if n > 1 else frac(n, d + 2), 'miscount', 'Count the coloured parts again.', 'Recompte les parts coloriées.'),
         (frac(n, d + 1), 'miscount', 'Count all the parts again.', 'Recompte toutes les parts.'),
     ]
+    distractors = _distinct_values(correct, distractors)
+    taken = [Fraction(n, d)] + [Fraction(t[0]) for t in distractors]
     return mc((f'Quelle fraction {what[0]} est coloriée ?', f'What fraction {what[1]} is coloured?'),
               correct, distractors,
               ('Compte toutes les parts égales (dénominateur), puis les parts coloriées (numérateur).',
                'Count all the equal parts (denominator), then the coloured parts (numerator).'),
-              ([f'{d} parts égales en tout → dénominateur {d}', f'{n} parts coloriées → numérateur {n}', f'Réponse : {correct}'],
-               [f'{d} equal parts in all → denominator {d}', f'{n} coloured parts → numerator {n}', f'Answer: {correct}']),
-              shape=shape, pad=_frac_pad(10))
+              ([f'{d} parts égales en tout → dénominateur {d}', f'{_parts(n, "coloriée")[0]} → numérateur {n}', f'Réponse : {correct}'],
+               [f'{d} equal parts in all → denominator {d}', f'{_parts(n, en_adj="coloured")[1]} → numerator {n}', f'Answer: {correct}']),
+              shape=shape, pad=_frac_pad(10, taken))
 
 
 # ── G3 · Fraction words ──────────────────────────────────────────────────────
@@ -80,7 +113,7 @@ def g3_fraction_words_gen(level='medium'):
                      [frac(n, d)], 'fraction',
                      ('Le mot du nombre de parts (tiers, quarts…) donne le dénominateur.',
                       'The part word (thirds, quarters…) gives the denominator.'),
-                     ([f'« {words[0]} » : {n} parts de {d}', f'= {frac(n, d)}'], [f'"{words[1]}": {n} parts out of {d}', f'= {frac(n, d)}']))
+                     ([f'« {words[0]} » : {_parts(n)[0]} sur {d}', f'= {frac(n, d)}'], [f'"{words[1]}": {_parts(n)[1]} out of {d}', f'= {frac(n, d)}']))
     others = []
     for nn, dd in [(d - n, d), (n, d + 1 if d + 1 <= 12 else d - 1), (min(n + 1, 12), d), (d, n)]:
         if 0 < nn < 13 and dd in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) and (nn, dd) != (n, d):
@@ -98,7 +131,7 @@ def g3_fraction_words_gen(level='medium'):
               words, others,
               ('Le numérateur se lit d’abord, puis le nom des parts donné par le dénominateur.',
                'Read the numerator first, then the name of the parts given by the denominator.'),
-              ([f'{frac(n, d)} : {n} parts sur {d} → {words[0]}'], [f'{frac(n, d)}: {n} parts out of {d} → {words[1]}']),
+              ([f'{frac(n, d)} : {_parts(n)[0]} sur {d} → {words[0]}'], [f'{frac(n, d)}: {_parts(n)[1]} out of {d} → {words[1]}']),
               pad=pad)
 
 
@@ -140,14 +173,15 @@ def g3_numerator_denominator_gen(level='medium'):
     return typed(('Quel est le **numérateur** de la fraction coloriée ?', 'What is the **numerator** of the coloured fraction?'),
                  [n], 'integer',
                  ('Le numérateur = le nombre de parts coloriées.', 'The numerator = the number of coloured parts.'),
-                 ([f'{n} parts sont coloriées → numérateur {n}.'], [f'{n} parts are coloured → numerator {n}.']),
+                 ([f'{_parts(n)[0]} {"sont coloriées" if n > 1 else "est coloriée"} → numérateur {n}.'],
+                  [f'{_parts(n)[1]} {"are" if n > 1 else "is"} coloured → numerator {n}.']),
                  shape=shape)
 
 
 # ── G4 · Compare to 0, ½ and 1 ───────────────────────────────────────────────
 
-_BENCH = [('plus petite que ½', 'less than ½'), ('égale à ½', 'equal to ½'), ('entre ½ et 1', 'between ½ and 1'),
-          ('égale à 1', 'equal to 1'), ('plus grande que 1', 'greater than 1')]
+_BENCH = [('égale à 0', 'equal to 0'), ('entre 0 et ½', 'between 0 and ½'), ('égale à ½', 'equal to ½'),
+          ('entre ½ et 1', 'between ½ and 1'), ('égale à 1', 'equal to 1'), ('plus grande que 1', 'greater than 1')]
 
 
 def g4_fraction_benchmark_gen(level='medium'):
@@ -160,20 +194,29 @@ def g4_fraction_benchmark_gen(level='medium'):
     else:
         d = random.randint(3, 12)
         n = random.randint(1, 2 * d)
+    if level != 'hard' and random.random() < 0.1:
+        n = 0
     f = Fraction(n, d)
-    idx = 0 if f < Fraction(1, 2) else 1 if f == Fraction(1, 2) else 2 if f < 1 else 3 if f == 1 else 4
-    shape = ill.fraction_bars([(n, d)]) if level == 'easy' else None
-    half = Fraction(d, 2)
-    steps_fr = [f'La moitié de {d} est {half if half.denominator == 1 else float(half)}.',
-                f'{n} {"<" if n < half else "=" if n == half else ">"} {half if half.denominator == 1 else float(half)}',
-                f'{frac(n, d)} est {_BENCH[idx][0]}.']
-    steps_en = [f'Half of {d} is {half if half.denominator == 1 else float(half)}.',
-                f'{n} {"<" if n < half else "=" if n == half else ">"} {half if half.denominator == 1 else float(half)}',
-                f'{frac(n, d)} is {_BENCH[idx][1]}.']
+    idx = 0 if n == 0 else 1 if f < Fraction(1, 2) else 2 if f == Fraction(1, 2) else 3 if f < 1 else 4 if f == 1 else 5
+    shape = ill.fraction_bars([(n, d)]) if level == 'easy' and n <= d else None
+
+    def cmp(x, y):
+        return '<' if x < y else '=' if x == y else '>'
+    if n == 0:
+        steps_fr = [f'Le numérateur est 0 : on ne prend aucune part, donc {frac(n, d)} = 0.']
+        steps_en = [f'The numerator is 0: no part is taken, so {frac(n, d)} = 0.']
+    else:
+        # ½ test without decimals: compare 2 × numerator with the denominator
+        steps_fr = [f'Comparer à ½ : 2 × {n} = {2 * n} et {2 * n} {cmp(2 * n, d)} {d}, donc {frac(n, d)} {cmp(2 * n, d)} ½.',
+                    f'Comparer à 1 : {n} {cmp(n, d)} {d}, donc {frac(n, d)} {cmp(n, d)} 1.']
+        steps_en = [f'Compare with ½: 2 × {n} = {2 * n} and {2 * n} {cmp(2 * n, d)} {d}, so {frac(n, d)} {cmp(2 * n, d)} ½.',
+                    f'Compare with 1: {n} {cmp(n, d)} {d}, so {frac(n, d)} {cmp(n, d)} 1.']
+    steps_fr.append(f'{frac(n, d)} est {_BENCH[idx][0]}.')
+    steps_en.append(f'{frac(n, d)} is {_BENCH[idx][1]}.')
     return mc((f'La fraction **{frac(n, d)}** est…', f'The fraction **{frac(n, d)}** is…'),
-              _BENCH[idx], [b for i, b in enumerate(_BENCH) if i != idx],
-              ('Compare le numérateur à la moitié du dénominateur, puis au dénominateur.',
-               'Compare the numerator with half the denominator, then with the denominator.'),
+              _BENCH[idx], random.sample([b for i, b in enumerate(_BENCH) if i != idx], len(_BENCH) - 1),
+              ('Compare le double du numérateur au dénominateur (pour ½), puis le numérateur au dénominateur (pour 1).',
+               'Compare twice the numerator with the denominator (for ½), then the numerator with the denominator (for 1).'),
               (steps_fr, steps_en), shape=shape)
 
 
@@ -192,11 +235,11 @@ def g4_equivalent_fractions_gen(level='medium'):
                        (frac(d2 - n2, d2), 'complement', 'Count the coloured parts, not the white ones.', 'Compte les parts coloriées, pas les blanches.')]
         return mc((f'La bande A montre **{frac(n, d)}**. Quelle fraction la bande B montre-t-elle ? Elles sont équivalentes.',
                    f'Strip A shows **{frac(n, d)}**. What fraction does strip B show? They are equivalent.'),
-                  frac(n2, d2), distractors,
+                  frac(n2, d2), _distinct_values(frac(n2, d2), distractors),
                   ('Compte les parts de la bande B : toutes, puis les coloriées.', 'Count the parts of strip B: all of them, then the coloured ones.'),
                   ([f'B : {n2} parts coloriées sur {d2}', f'{frac(n, d)} = {frac(n2, d2)} (× {k} en haut et en bas)'],
                    [f'B: {n2} coloured parts out of {d2}', f'{frac(n, d)} = {frac(n2, d2)} (× {k} top and bottom)']),
-                  shape=shape, pad=_frac_pad(12))
+                  shape=shape, pad=_frac_pad(12, Fraction(n, d)))
     if level == 'medium' or random.random() < 0.5:
         missing_top = random.random() < 0.6
         prompt = ((f'Complète : **{frac(n, d)} = ?/{d2}**', f'Fill in: **{frac(n, d)} = ?/{d2}**') if missing_top
@@ -231,18 +274,29 @@ def g5_fraction_meanings_gen(level='medium'):
         n = random.randint(2, d - 1) if level == 'easy' else random.randint(2, d + 3)
         if n == d:
             n += 1
-        item = random.choice([('pizzas', 'pizzas'), ('tartes', 'pies'), ('tablettes de chocolat', 'chocolate bars')])
+        # (plural fr, plural en, « de … » after a fraction, "of a …")
+        item = random.choice([('pizzas', 'pizzas', 'pizza', 'pizza'), ('tartes', 'pies', 'tarte', 'pie'),
+                              ('tablettes de chocolat', 'chocolate bars', 'tablette de chocolat', 'chocolate bar')])
+
+        def lab(a, b):
+            return f'{frac(a, b)} de {item[2]}', f'{frac(a, b)} of a {item[3]}'
+
+        def pad():
+            while True:
+                a, b = random.randint(1, 9), random.randint(2, 9)
+                if Fraction(a, b) != Fraction(n, d):
+                    return lab(a, b)
+        distr = [(lab(d, n), 'swapped', 'The number shared goes on top.', 'Ce qu’on partage va en haut.'),
+                 (lab(1, d), 'one_item', f'There are {n} items to share, not one.', f'Il y a {n} objets à partager, pas un seul.'),
+                 (lab(1, n), 'swapped', 'Divide by the number of friends.', 'Divise par le nombre d’amis.'),
+                 (lab(n, d + 1), 'off_by_one', 'Count the friends again.', 'Recompte les amis.'),
+                 (lab(n, d - 1) if d - 1 > 1 else None, 'off_by_one', 'Count the friends again.', 'Recompte les amis.')]
         return mc((f'{who} partage **{n}** {item[0]} également entre **{d}** amis. Quelle part reçoit chaque ami ?',
                    f'{who} shares **{n}** {item[1]} equally among **{d}** friends. How much does each friend get?'),
-                  (f'{frac(n, d)} de {item[0][:-1] if item[0].endswith("s") else item[0]}', f'{frac(n, d)} of a {item[1][:-1]}'),
-                  [((f'{frac(d, n)} de {item[0][:-1]}', f'{frac(d, n)} of a {item[1][:-1]}'), 'swapped', 'The number shared goes on top.', 'Ce qu’on partage va en haut.'),
-                   ((f'{frac(1, d)} de {item[0][:-1]}', f'{frac(1, d)} of a {item[1][:-1]}'), 'one_item', f'There are {n} items to share, not one.', f'Il y a {n} objets à partager, pas un seul.'),
-                   ((f'{frac(1, n)} de {item[0][:-1]}', f'{frac(1, n)} of a {item[1][:-1]}'), 'swapped', 'Divide by the number of friends.', 'Divise par le nombre d’amis.'),
-                   ((f'{frac(n, d + 1)} de {item[0][:-1]}', f'{frac(n, d + 1)} of a {item[1][:-1]}'), 'off_by_one', 'Count the friends again.', 'Recompte les amis.')],
+                  lab(n, d), _distinct_values(lab(n, d), distr),
                   ('Partager n objets entre d personnes donne n/d à chacun.', 'Sharing n things among d people gives n/d each.'),
                   ([f'{n} ÷ {d} = {frac(n, d)}'], [f'{n} ÷ {d} = {frac(n, d)}']),
-                  pad=lambda: (lambda a, b: (f'{frac(a, b)} de {item[0][:-1]}', f'{frac(a, b)} of a {item[1][:-1]}'))(
-                      random.randint(1, 9), random.randint(2, 9)))
+                  pad=pad)
     if variant == 'division':
         d = random.randint(2, 9)
         n = random.randint(1, 12)
@@ -330,22 +384,30 @@ def g6_simplify_fraction_gen(level='medium'):
     k = random.choice([2, 3, 5]) if level == 'easy' else random.choice([2, 3, 4, 6]) if level == 'medium' else random.choice([4, 6, 8, 9, 12])
     n, d = n0 * k, d0 * k
     if level == 'hard' and random.random() < 0.35:
-        cands = [(n0, d0)] + [(n0 * j, d0 * j) for j in (2, 3, 4) if n0 * j < 100]
-        wrong = [frac(a, b) for a, b in cands[1:]]
+        # Reducible fractions of DIFFERENT values and factors, so the key is not just « the one with numerator 1 ».
+        wrong, why_fr, why_en, vals = [], [], [], {Fraction(n0, d0)}
         while len(wrong) < 4:
-            j = random.randint(5, 9)
-            wrong.append(frac(n0 * j, d0 * j))
+            b = random.randint(3, 12)
+            a = random.randint(1, b - 1)
+            j = random.choice([2, 3, 5])
+            if Fraction(a, b).denominator != b or Fraction(a, b) in vals or a * j >= 100:
+                continue
+            vals.add(Fraction(a, b))
+            wrong.append(frac(a * j, b * j))
+            why_fr.append(f'{frac(a * j, b * j)} : {a * j} et {b * j} se divisent par {j}.')
+            why_en.append(f'{frac(a * j, b * j)}: {a * j} and {b * j} are both divisible by {j}.')
         return mc(('Laquelle de ces fractions est **irréductible** (déjà à sa plus simple expression) ?',
                    'Which of these fractions is in **simplest form**?'),
                   frac(n0, d0), wrong,
                   ('Irréductible : le numérateur et le dénominateur n’ont aucun diviseur commun sauf 1.',
                    'Simplest form: top and bottom share no factor except 1.'),
-                  ([f'{frac(n0, d0)} : seul diviseur commun 1'], [f'{frac(n0, d0)}: only common factor is 1']))
+                  (why_fr + [f'{frac(n0, d0)} : seul diviseur commun 1'], why_en + [f'{frac(n0, d0)}: only common factor is 1']))
     half_k = next((j for j in (2, 3, 5) if k % j == 0 and j < k), None)
     distractors = [
         (frac(n // half_k, d // half_k), 'not_finished', 'You can still simplify: keep dividing.', 'Tu peux encore simplifier : continue de diviser.') if half_k else None,
-        (frac(n0 + 1, d0) if n0 + 1 < d0 else frac(n0, d0 + 1), 'wrong_division', 'Divide top and bottom by the SAME number.', 'Divise le haut et le bas par le MÊME nombre.'),
-        (frac(n - k, d - k) if n > k else frac(n0 * 2, d0 * 2 + 1), 'subtracted', 'Simplifying means dividing, not subtracting.', 'Simplifier, c’est diviser, pas soustraire.'),
+        (frac(n0, d), 'one_term', 'Divide the top AND the bottom by the same number.', 'Divise le haut ET le bas par le même nombre.'),
+        (frac(n, d0), 'one_term', 'Divide the top AND the bottom by the same number.', 'Divise le haut ET le bas par le même nombre.'),
+        (frac(n - k, d - k), 'subtracted', 'Simplifying means dividing, not subtracting.', 'Simplifier, c’est diviser, pas soustraire.') if n > k else None,
         (frac(d0, n0) if n0 > 0 else None, 'swapped', 'Keep the numerator on top.', 'Garde le numérateur en haut.'),
         (frac(n0 * 2, d0 * 2), 'not_finished', 'You can still simplify: keep dividing.', 'Tu peux encore simplifier : continue de diviser.') if k > 2 else None,
     ]
@@ -354,7 +416,8 @@ def g6_simplify_fraction_gen(level='medium'):
               (f'Cherche le plus grand nombre qui divise {n} et {d}.', f'Find the greatest number that divides both {n} and {d}.'),
               ([f'{n} ÷ {k} = {n0} et {d} ÷ {k} = {d0}', f'{frac(n, d)} = {frac(n0, d0)}'],
                [f'{n} ÷ {k} = {n0} and {d} ÷ {k} = {d0}', f'{frac(n, d)} = {frac(n0, d0)}']),
-              pad=lambda: frac(n0 * random.randint(2, 4), d0 * random.randint(2, 4)))
+              pad=lambda: random.choice([frac(n0 + 1, d0), frac(n0, d0 + 1), frac(n0 + 1, d0 + 1), frac(n0 * 2, d0),
+                                         frac(n // 2, d) if n % 2 == 0 else frac(n, d // 2 + 1)]))
 
 
 # ── G6 · Add / subtract with related denominators ────────────────────────────
@@ -380,15 +443,15 @@ def g6_fraction_add_related_gen(level='medium'):
     ln, ld = left[0] * (d2 // left[1]), d2
     rn = right[0] * (d2 // right[1])
     raw = frac(ln - rn if sub else ln + rn, d2)
-    answers = [simplest(res.numerator, res.denominator), raw]
+    answers = list(dict.fromkeys([simplest(res.numerator, res.denominator), raw]))
     return typed((f'Calcule : **{frac(*left)} {op} {frac(*right)}**', f'Calculate: **{frac(*left)} {op} {frac(*right)}**'),
                  answers, 'fraction',
                  (f'{d2} est un multiple de {d1} : écris les deux fractions en {d2}es.',
                   f'{d2} is a multiple of {d1}: write both fractions in {d2}ths.'),
-                 ([f'{frac(*left)} = {frac(ln, ld)}', f'{frac(*right)} = {frac(rn, d2)}', f'{frac(ln, ld)} {op} {frac(rn, d2)} = {raw}',
-                   f'= {answers[0]}' if answers[0] != raw else 'Réponse : ' + raw],
-                  [f'{frac(*left)} = {frac(ln, ld)}', f'{frac(*right)} = {frac(rn, d2)}', f'{frac(ln, ld)} {op} {frac(rn, d2)} = {raw}',
-                   f'= {answers[0]}' if answers[0] != raw else 'Answer: ' + raw]))
+                 ([f'{frac(*left)} = {frac(ln, ld)}', f'{frac(*right)} = {frac(rn, d2)}', f'{frac(ln, ld)} {op} {frac(rn, d2)} = {raw}']
+                  + ([f'{raw} = {answers[0]} (simplifiée)'] if answers[0] != raw else []) + [f'Réponse : {answers[0]}'],
+                  [f'{frac(*left)} = {frac(ln, ld)}', f'{frac(*right)} = {frac(rn, d2)}', f'{frac(ln, ld)} {op} {frac(rn, d2)} = {raw}']
+                  + ([f'{raw} = {answers[0]} (simplified)'] if answers[0] != raw else []) + [f'Answer: {answers[0]}']))
 
 
 # ── G6 · Whole number × fraction ─────────────────────────────────────────────
@@ -400,12 +463,14 @@ def g6_whole_times_fraction_gen(level='medium'):
     if variant == 'times':
         w = random.randint(2, 6)
         res = Fraction(w * n, d)
+        simp = simplest(res.numerator, res.denominator)
+        tail = [f'{frac(w * n, d)} = {simp}'] if simp != frac(w * n, d) else []
         return typed((f'Calcule : **{w} × {frac(n, d)}**', f'Calculate: **{w} × {frac(n, d)}**'),
-                     [frac(w * n, d), simplest(res.numerator, res.denominator)], 'fraction',
+                     list(dict.fromkeys([frac(w * n, d), simp])), 'fraction',
                      (f'{w} × {frac(n, d)} = {frac(n, d)} + {frac(n, d)} + … ({w} fois) : multiplie seulement le numérateur.',
                       f'{w} × {frac(n, d)} = {frac(n, d)} + {frac(n, d)} + … ({w} times): multiply only the numerator.'),
-                     ([f'{w} × {n} = {w * n}', f'{w} × {frac(n, d)} = {frac(w * n, d)}'],
-                      [f'{w} × {n} = {w * n}', f'{w} × {frac(n, d)} = {frac(w * n, d)}']))
+                     ([f'{w} × {n} = {w * n}', f'{w} × {frac(n, d)} = {frac(w * n, d)}'] + tail,
+                      [f'{w} × {n} = {w * n}', f'{w} × {frac(n, d)} = {frac(w * n, d)}'] + tail))
     k = random.randint(2, 6 if level == 'easy' else 9)
     total = d * k
     part = n * k

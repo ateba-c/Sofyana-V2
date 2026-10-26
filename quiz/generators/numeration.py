@@ -105,6 +105,41 @@ def _to_en(n: int) -> str:
     return s
 
 
+# ─── place names that actually occur (hints never mention absent places) ─────
+
+_PLACES_FR = ['milliers', 'centaines', 'dizaines', 'unités']
+_PLACES_EN = ['thousands', 'hundreds', 'tens', 'ones']
+
+
+def _places(max_n):
+    """(fr list, en list) of place names, biggest first, for numbers up to max_n."""
+    k = 4 if max_n >= 1000 else 3 if max_n >= 100 else 2
+    return _PLACES_FR[4 - k:], _PLACES_EN[4 - k:]
+
+
+def _join(words, last):
+    return words[0] if len(words) == 1 else ', '.join(words[:-1]) + f' {last} ' + words[-1]
+
+
+def _places_text(max_n):
+    """('centaines, dizaines et unités', 'hundreds, tens and ones')."""
+    fr, en = _places(max_n)
+    return _join(fr, 'et'), _join(en, 'and')
+
+
+def _expand_parts(n):
+    parts = []
+    if n >= 1000:
+        parts.append(f'{(n // 1000) * 1000}')
+    if (n // 100) % 10:
+        parts.append(f'{((n // 100) % 10) * 100}')
+    if (n // 10) % 10:
+        parts.append(f'{((n // 10) % 10) * 10}')
+    if n % 10:
+        parts.append(f'{n % 10}')
+    return parts or ['0']
+
+
 # ─── level ranges ──────────────────────────────────────────────────────────────
 
 def _pick_n(level: str) -> int:
@@ -215,8 +250,8 @@ def read_number_gen(level: str = 'medium') -> dict:
         'q_type': 'multiple_choice',
         'prompt_fr': f'Comment lit-on le nombre **{n}** ?',
         'prompt_en': f'How do you read the number **{n}**?',
-        'hint_fr': 'Lis chaque groupe : milliers, centaines, dizaines, unités.',
-        'hint_en': 'Read each group: thousands, hundreds, tens, units.',
+        'hint_fr': f'Lis chaque groupe : {", ".join(_places(n)[0])}.',
+        'hint_en': f'Read each group: {", ".join(_places(n)[1])}.',
         'shape_data': [],
         'choices': choices,
         'correct_answers': [correct_fr],
@@ -224,11 +259,11 @@ def read_number_gen(level: str = 'medium') -> dict:
         'points': 1,
         'explanation_fr': (
             f'Le nombre {n} se lit : {correct_fr}.\n'
-            f'Lis de gauche à droite : milliers → centaines → dizaines → unités.'
+            f'Lis de gauche à droite : {" → ".join(_places(n)[0])}.'
         ),
         'explanation_en': (
             f'The number {n} is read: {correct_en}.\n'
-            f'Read left to right: thousands → hundreds → tens → units.'
+            f'Read left to right: {" → ".join(_places(n)[1])}.'
         ),
     }
 
@@ -247,22 +282,22 @@ def write_number_gen(level: str = 'medium') -> dict:
         'q_type': 'text_input',
         'prompt_fr': f'Écris en chiffres : **{words_fr}**',
         'prompt_en': f'Write in digits: **{words_en}**',
-        'hint_fr': 'Identifie les milliers, centaines, dizaines et unités.',
-        'hint_en': 'Identify the thousands, hundreds, tens, and units.',
+        'hint_fr': f'Identifie les {_places_text(n)[0]}.',
+        'hint_en': f'Identify the {_places_text(n)[1]}.',
         'shape_data': [],
         'choices': [],
         'correct_answers': [str(n)],
         'time_limit': 30,
         'points': 1,
-        'explanation_fr': f'"{words_fr}" s\'écrit {n} en chiffres.',
-        'explanation_en': f'"{words_en}" is written {n} in digits.',
+        'explanation_fr': f'« {words_fr} » = {" + ".join(_expand_parts(n))} = **{n}**.',
+        'explanation_en': f'"{words_en}" = {" + ".join(_expand_parts(n))} = **{n}**.',
     }
 
 
 # ─── 3. digit_position_gen ────────────────────────────────────────────────────
 
 _POSITIONS_FR = {0: 'unités', 1: 'dizaines', 2: 'centaines', 3: 'milliers'}
-_POSITIONS_EN = {0: 'units', 1: 'tens', 2: 'hundreds', 3: 'thousands'}
+_POSITIONS_EN = {0: 'ones', 1: 'tens', 2: 'hundreds', 3: 'thousands'}
 
 
 def digit_position_gen(level: str = 'medium') -> dict:
@@ -290,13 +325,13 @@ def digit_position_gen(level: str = 'medium') -> dict:
     random.shuffle(other_pos)
     distractors = [
         (_POSITIONS_FR[p], 'wrong_position',
-         f"Count from the right: units=0, tens=1, hundreds=2, thousands=3.",
-         f"Compte depuis la droite : unités=0, dizaines=1, centaines=2, milliers=3.")
+         "Count from the right: ones, tens, hundreds, thousands.",
+         "Compte depuis la droite : unités, dizaines, centaines, milliers.")
         for p in other_pos[:3]
     ]
     # 4th distractor: "mille" confuse
-    distractors.append(('dizaine de milliers', 'wrong_position',
-                        'There are no ten-thousands here.', 'Il n\'y a pas de dizaine de milliers ici.'))
+    distractors.append(('dizaines de mille', 'wrong_position',
+                        'There are no ten thousands here.', 'Il n\'y a pas de dizaines de mille ici.'))
 
     seen = {correct_fr}
     pool = []
@@ -317,8 +352,8 @@ def digit_position_gen(level: str = 'medium') -> dict:
         'q_type': 'multiple_choice',
         'prompt_fr': f'Dans le nombre {n}, quelle est la position du chiffre {d} ?',
         'prompt_en': f'In the number {n}, what is the position of the digit {d}?',
-        'hint_fr': 'Lis de droite à gauche : unités, dizaines, centaines, milliers.',
-        'hint_en': 'Read right to left: units, tens, hundreds, thousands.',
+        'hint_fr': f'Lis de droite à gauche : {", ".join(reversed(_places(n)[0]))}.',
+        'hint_en': f'Read right to left: {", ".join(reversed(_places(n)[1]))}.',
         'shape_data': [],
         'choices': choices,
         'correct_answers': [correct_fr],
@@ -326,13 +361,13 @@ def digit_position_gen(level: str = 'medium') -> dict:
         'points': 1,
         'explanation_fr': (
             f'Dans {n}, le chiffre {d} est en position des **{correct_fr}**.\n'
-            f'Compte de droite à gauche : unités (pos 0), dizaines (pos 1), '
-            f'centaines (pos 2), milliers (pos 3).'
+            f'Compte de droite à gauche : 1re position = unités, 2e = dizaines, 3e = centaines'
+            f'{", 4e = milliers" if n >= 1000 else ""}.'
         ),
         'explanation_en': (
             f'In {n}, the digit {d} is in the **{correct_en}** position.\n'
-            f'Count from the right: units (pos 0), tens (pos 1), '
-            f'hundreds (pos 2), thousands (pos 3).'
+            f'Count from the right: 1st place = ones, 2nd = tens, 3rd = hundreds'
+            f'{", 4th = thousands" if n >= 1000 else ""}.'
         ),
     }
 
@@ -390,27 +425,14 @@ def expanded_form_gen(level: str = 'medium') -> dict:
     """
     n = _pick_n(level)
 
-    # Build expanded form parts (skip zero positions)
-    parts = []
-    if n >= 1000:
-        parts.append(f'{(n // 1000) * 1000}')
-    if (n // 100) % 10:
-        parts.append(f'{((n // 100) % 10) * 100}')
-    if (n // 10) % 10:
-        parts.append(f'{((n // 10) % 10) * 10}')
-    if n % 10:
-        parts.append(f'{n % 10}')
-    if not parts:
-        parts = ['0']
-
-    expanded = ' + '.join(parts)
+    expanded = ' + '.join(_expand_parts(n))   # zero places are skipped
 
     return {
         'q_type': 'text_input',
         'prompt_fr': f'Calcule : **{expanded}**',
         'prompt_en': f'Calculate: **{expanded}**',
-        'hint_fr': 'Additionne les milliers, centaines, dizaines et unités séparément.',
-        'hint_en': 'Add the thousands, hundreds, tens and units separately.',
+        'hint_fr': "Chaque terme donne la valeur d'une position : place chaque chiffre à son rang, puis additionne.",
+        'hint_en': 'Each term gives the value of one place: put each digit in its place, then add.',
         'shape_data': [],
         'choices': [],
         'correct_answers': [str(n)],
@@ -456,8 +478,8 @@ def decomposition_match_gen(level: str = 'medium') -> dict:
         'q_type': 'mix_match',
         'prompt_fr': 'Relie chaque nombre à sa décomposition.',
         'prompt_en': 'Match each number to its decomposition.',
-        'hint_fr': 'Décompose chaque nombre en milliers, centaines, dizaines et unités.',
-        'hint_en': 'Break each number into thousands, hundreds, tens and units.',
+        'hint_fr': f'Décompose chaque nombre en {_places_text(max(numbers))[0]}.',
+        'hint_en': f'Break each number into {_places_text(max(numbers))[1]}.',
         'shape_data': [],
         'choices': [],
         'pairs': pairs,
@@ -517,8 +539,8 @@ def base10_match_gen(level: str = 'medium') -> dict:
         'q_type': 'mix_match',
         'prompt_fr': 'Associe chaque nombre à sa représentation en base 10.',
         'prompt_en': 'Match each number to its base-10 representation.',
-        'hint_fr': 'Compte les milliers, centaines, dizaines et unités de chaque nombre.',
-        'hint_en': 'Count the thousands, hundreds, tens and units of each number.',
+        'hint_fr': f'Compte les {_places_text(max(numbers))[0]} de chaque nombre.',
+        'hint_en': f'Count the {_places_text(max(numbers))[1]} of each number.',
         'shape_data': [],
         'choices': [],
         'pairs': pairs,
@@ -565,8 +587,8 @@ def build_number_gen(level: str = 'medium') -> dict:
         'q_type': 'ordering',
         'prompt_fr': f'Range ces blocs du plus petit au plus grand pour former {n}.',
         'prompt_en': f'Sort these blocks from smallest to largest to build {n}.',
-        'hint_fr': 'Les milliers ont la plus grande valeur, les unités la plus petite.',
-        'hint_en': 'Thousands have the highest value, units the lowest.',
+        'hint_fr': f'Les {_places(n)[0][0]} ont la plus grande valeur, les unités la plus petite.',
+        'hint_en': f'{_places(n)[1][0].capitalize()} have the highest value, ones the lowest.',
         'shape_data': [],
         'choices': [],
         'items': items,
@@ -604,13 +626,22 @@ def order_numbers_gen(level: str = 'medium') -> dict:
     # Ensure uniqueness and sort
     nums = sorted(list(set(nums)))[:count]
     items = [{'label': str(n), 'order': i + 1} for i, n in enumerate(nums)]
+    fr_places, en_places = _places(max(nums))
+    if len({len(str(n)) for n in nums}) > 1:
+        hint_fr = ('Le nombre qui a le plus de chiffres est le plus grand. '
+                   f'À nombre de chiffres égal, compare les {fr_places[0]}, puis les {fr_places[1]}…')
+        hint_en = ('The number with more digits is larger. '
+                   f'With the same number of digits, compare the {en_places[0]}, then the {en_places[1]}…')
+    else:
+        hint_fr = f"Compare d'abord les {fr_places[0]}, puis les {fr_places[1]}, et ainsi de suite."
+        hint_en = f'Compare the {en_places[0]} first, then the {en_places[1]}, and so on.'
 
     return {
         'q_type': 'ordering',
         'prompt_fr': 'Range ces nombres du plus petit au plus grand.',
         'prompt_en': 'Sort these numbers from smallest to largest.',
-        'hint_fr': 'Compare d\'abord les chiffres des milliers, puis des centaines.',
-        'hint_en': 'Compare the thousands digit first, then the hundreds digit.',
+        'hint_fr': hint_fr,
+        'hint_en': hint_en,
         'shape_data': [],
         'choices': [],
         'items': items,
