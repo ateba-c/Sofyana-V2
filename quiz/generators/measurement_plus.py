@@ -14,6 +14,17 @@ from .kit import mc, typed, ordering, pick, N
 L5 = list('ABCDE')
 
 
+def _de(np):
+    """French « de » + noun phrase with contraction / elision: du plancher, d’un timbre, de la couverture."""
+    if np.startswith('le '):
+        return 'du ' + np[3:]
+    if np.startswith('les '):
+        return 'des ' + np[4:]
+    if np[:1] in 'aeiouéèêh' or np.startswith(('un ', 'une ')):
+        return 'd’' + np
+    return 'de ' + np
+
+
 def _letters(prompt, i, hint, explanation, shape):
     return mc(prompt, L5[i], [x for x in L5 if x != L5[i]], hint, explanation, shape=shape)
 
@@ -74,7 +85,7 @@ LENGTHS = [  # (fr, en, value, unit)
     ('la longueur d’une gomme à effacer', 'the length of an eraser', 4, 'cm'),
     ('la hauteur d’une table', 'the height of a table', 7, 'dm'),
     ('la longueur d’une piscine olympique', 'the length of an Olympic pool', 50, 'm'),
-    ('la longueur d’une trombone', 'the length of a paper clip', 3, 'cm'),
+    ('la longueur d’un trombone', 'the length of a paper clip', 3, 'cm'),
 ]
 UNITS = ['mm', 'cm', 'dm', 'm', 'km']
 MM = {'mm': 1, 'cm': 10, 'dm': 100, 'm': 1000, 'km': 1_000_000}
@@ -162,7 +173,12 @@ def g3_area_count_squares_gen(level='easy'):
     return typed(('Quelle est l’**aire** de la figure colorée, en carrés ?' + (' (Deux demi-carrés font un carré.)' if halves else ''),
                   'What is the **area** of the coloured shape, in squares?' + (' (Two half squares make one square.)' if halves else '')),
                  [total], 'integer',
-                 ('L’aire, c’est le nombre de carrés qui recouvrent la surface.', 'Area is the number of squares that cover the surface.'),
+                 (('Compte les carrés entiers, puis regroupe les demi-carrés deux par deux.',
+                   'Count the whole squares, then pair up the half squares two by two.') if halves else
+                  ('Compte les carrés rangée par rangée : combien de rangées, combien de carrés dans chacune ?',
+                   'Count the squares row by row: how many rows, how many squares in each?') if level == 'easy' else
+                  ('L’aire, c’est le nombre de carrés qui recouvrent la surface. Compte-les sans en oublier.',
+                   'Area is the number of squares that cover the surface. Count them all, without missing any.')),
                  expl, shape=c.shape())
 
 
@@ -184,7 +200,7 @@ def g5_area_units_gen(level='easy'):
     """Area with units: choose the unit, compute in cm²/m², convert m² ↔ dm² ↔ cm² (185, 187)."""
     if level == 'easy':
         fr, en, u = pick(AREAS)
-        return mc((f'Quelle unité choisirais-tu pour mesurer l’aire de {fr} ?', f'Which unit would you use to measure the area of {en}?'),
+        return mc((f'Quelle unité choisirais-tu pour mesurer l’aire {_de(fr)} ?', f'Which unit would you use to measure the area of {en}?'),
                   u, [x for x in ['cm²', 'dm²', 'm²', 'cm', 'm'] if x != u],
                   ('Une aire se mesure en unités carrées. cm² : tout petit, dm² : la taille d’une main, m² : un grand carré au sol.',
                    'Area is measured in square units. cm²: tiny, dm²: about a hand, m²: a big square on the floor.'),
@@ -198,7 +214,7 @@ def g5_area_units_gen(level='easy'):
         pic.rect(x0, y0, a * k, b * k, fill=I.SHADES[I.TEAL][1], stroke=I.INK, sw=2)
         pic.text(x0 + a * k / 2, y0 + b * k + 16, f'{a} {u}', size=13, bold=True)
         pic.text(x0 + a * k + 6, y0 + b * k / 2 + 4, f'{b} {u}', size=13, bold=True, anchor='start')
-        return typed((f'Quelle est l’aire de ce rectangle ? Écris l’unité ({u}²).', f'What is the area of this rectangle? Write the unit ({u}²).'),
+        return typed((f'Quelle est l’aire de ce rectangle, en {u}² ?', f'What is the area of this rectangle, in {u}²?'),
                      [f'{a * b} {u}²', f'{a * b} {u}2', str(a * b)], 'integer',
                      ('Aire d’un rectangle = longueur × largeur, en unités carrées.', 'Area of a rectangle = length × width, in square units.'),
                      (f'{a} × {b} = {a * b} {u}²', f'{a} × {b} = {a * b} {u}²'), shape=pic.shape())
@@ -212,9 +228,10 @@ def g5_area_units_gen(level='easy'):
         q, ans, why = (f'{n * 100} dm² = ? m²', f'{n * 100} dm² = ? m²'), n, (f'100 dm² = 1 m² → {n * 100} ÷ 100 = {n} m²',) * 2
     else:
         q, ans, why = (f'{n * 100} cm² = ? dm²', f'{n * 100} cm² = ? dm²'), n, (f'100 cm² = 1 dm² → {n * 100} ÷ 100 = {n} dm²',) * 2
+    big, small = ('m', 'dm') if kind in ('m2-dm2', 'dm2-m2') else ('dm', 'cm')
     return typed((f'Complète : **{q[0]}**', f'Fill in: **{q[1]}**'), [ans], 'integer',
-                 ('Un carré de 1 dm de côté contient 10 × 10 = 100 carrés de 1 cm de côté.',
-                  'A square 1 dm wide holds 10 × 10 = 100 squares 1 cm wide.'),
+                 (f'Un carré de 1 {big} de côté contient 10 × 10 = 100 carrés de 1 {small} de côté.',
+                  f'A square 1 {big} wide holds 10 × 10 = 100 squares 1 {small} wide.'),
                  why)
 
 
@@ -255,15 +272,17 @@ def g3_volume_count_cubes_gen(level='easy'):
 def g6_volume_units_gen(level='easy'):
     """cm³, dm³, m³; 1 dm³ = 1 L = 1000 cm³; volume of a box (189, 191)."""
     if level == 'easy':
-        items = [('un dé à jouer', 'a dice', 'cm³'), ('une boîte à chaussures', 'a shoebox', 'dm³'),
+        items = [('un dé à jouer', 'a die', 'cm³'), ('une boîte à chaussures', 'a shoebox', 'dm³'),
                  ('une salle de classe', 'a classroom', 'm³'), ('un morceau de sucre', 'a sugar cube', 'cm³'),
                  ('un carton de lait de 1 L', 'a 1 L milk carton', 'dm³'), ('un camion de déménagement', 'a moving truck', 'm³')]
         fr, en, u = pick(items)
-        return mc((f'Quelle unité convient le mieux pour mesurer le volume de {fr} ?',
+        return mc((f'Quelle unité convient le mieux pour mesurer le volume {_de(fr)} ?',
                    f'Which unit best fits the volume of {en}?'),
                   u, [x for x in ['cm³', 'dm³', 'm³', 'cm²', 'm'] if x != u],
-                  ('Un volume se mesure en unités cubes : cm³ (un petit dé), dm³ (un litre), m³ (un très grand cube).',
-                   'Volume is measured in cubic units: cm³ (a small dice), dm³ (a litre), m³ (a very big cube).'),
+                  ('Élimine d’abord les unités qui ne sont pas des volumes (sans le petit ³). Puis compare la taille de l’objet '
+                   'à un cube de 1 cm, de 1 dm (10 cm) et de 1 m de côté.',
+                   'First rule out the units that are not volumes (no little ³). Then compare the size of the object '
+                   'with a cube 1 cm, 1 dm (10 cm) and 1 m wide.'),
                   (f'Pour {fr}, on utilise le {u}.', f'For {en}, use {u}.'))
     if level == 'medium':
         a, b, h = random.randint(2, 10), random.randint(2, 6), random.randint(2, 5)
@@ -363,10 +382,14 @@ def g6_protractor_gen(level='easy'):
     near = sorted(pairs, key=lambda p: abs(int(p[0].split()[1][:-1]) - d))
     return mc(('Sans rapporteur, estime cet angle.', 'Without a protractor, estimate this angle.'),
               correct, [p for p in near if p != correct][:6],
-              ('Compare avec un angle droit (90°) : plus petit ou plus grand ? La moitié d’un angle droit fait 45°.',
-               'Compare with a right angle (90°): smaller or bigger? Half a right angle is 45°.'),
-              (f'L’angle mesure environ {d}°' + (' : c’est un angle droit.' if d == 90 else '.'),
-               f'The angle is about {d}°' + (': a right angle.' if d == 90 else '.')),
+              ('Compare avec le coin d’une feuille (un angle droit) : l’angle est-il plus petit, pareil ou plus grand ? '
+               'Puis compare avec une ligne droite (un angle plat).',
+               'Compare with the corner of a sheet of paper (a right angle): is the angle smaller, the same or bigger? '
+               'Then compare with a straight line (a straight angle).'),
+              ((f'L’angle est {"plus petit qu’un angle droit (aigu)" if d < 90 else "plus grand qu’un angle droit (obtus)" if d > 90 else "un angle droit"}'
+                + (f' : il mesure environ {d}°.' if d != 90 else ' : 90°.')),
+               (f'The angle is {"smaller than a right angle (acute)" if d < 90 else "bigger than a right angle (obtuse)" if d > 90 else "a right angle"}'
+                + (f': it is about {d}°.' if d != 90 else ': 90°.'))),
               shape=c.shape())
 
 
@@ -400,12 +423,19 @@ def g3_balance_scale_gen(level='easy'):
         icon, fr, en, m = pick(FRUITS)
         ws = _weights(m)
         de = 'du ' + fr if FRUIT_FR[fr][3] else 'de ' + FRUIT_FR[fr][0]
+        if len(ws) == 1:
+            hint = ('En équilibre : les deux plateaux ont la même masse. Lis la masse posée sur l’autre plateau.',
+                    'Balanced: both pans have the same mass. Read the weight on the other pan.')
+            expl = (f'La balance est en équilibre avec une masse de {m} g, donc {FRUIT_FR[fr][0]} pèse {m} g.',
+                    f'The scale balances one {m} g weight, so the {en} weighs {m} g.')
+        else:
+            hint = ('En équilibre : les deux plateaux ont la même masse. Additionne les masses marquées.',
+                    'Balanced: both pans have the same mass. Add up the weights.')
+            expl = (f'Les masses font {" + ".join(map(str, ws))} = {m} g, donc {FRUIT_FR[fr][0]} pèse {m} g.',
+                    f'The weights make {" + ".join(map(str, ws))} = {m} g, so the {en} weighs {m} g.')
         return typed((f'La balance est en équilibre. Quelle est la masse {de} {icon} ?',
                       f'The scale is balanced. What is the mass of the {en} {icon}?'),
-                     [f'{m} g', str(m)], 'integer',
-                     ('En équilibre : les deux plateaux ont la même masse. Additionne les masses marquées.',
-                      'Balanced: both pans have the same mass. Add up the weights.'),
-                     (f'{" + ".join(map(str, ws))} = {m} g', f'{" + ".join(map(str, ws))} = {m} g'),
+                     [f'{m} g', str(m)], 'integer', hint, expl,
                      shape=I.balance([icon], [f'{w} g' for w in ws]))
     if level == 'medium':
         if random.random() < 0.5:
@@ -413,7 +443,7 @@ def g3_balance_scale_gen(level='easy'):
             wrong_u = 'kg' if u == 'g' else 'g'
             correct = f'{v} {u}'
             alts = [f'{v} {wrong_u}', f'{v * 10} {u}', f'{v * 100} {u}', f'{v * 1000} {u}' if u == 'g' else f'{v * 100} g']
-            return mc((f'Quelle est la masse la plus probable de {fr} ?', f'What is the most likely mass of {en}?'),
+            return mc((f'Quelle est la masse la plus probable {_de(fr)} ?', f'What is the most likely mass of {en}?'),
                       correct, alts,
                       ('Repères : un trombone ≈ 1 g, une pomme ≈ 150 g, un litre d’eau ≈ 1 kg.',
                        'Benchmarks: a paper clip ≈ 1 g, an apple ≈ 150 g, a litre of water ≈ 1 kg.'),
@@ -449,7 +479,8 @@ def g3_balance_scale_gen(level='easy'):
         return typed((f'La balance est en équilibre. Les {pl} ont {"tous" if masc else "toutes"} la même masse. Quelle est la masse {"d’un" if masc else "d’une"} {fr} ?',
                       f'The scale is balanced. All the {FRUIT_EN_PL[en]} have the same mass. What is the mass of one {en}?'),
                      [f'{m} g', str(m)], 'integer',
-                     ('Trouve d’abord la masse totale, puis partage-la entre les fruits.', 'First find the total mass, then share it among the fruit.'),
+                     (f'Trouve d’abord la masse totale, puis partage-la entre les {k} {pl}.',
+                      f'First find the total mass, then share it among the {k} {FRUIT_EN_PL[en]}.'),
                      ([f'Total : {" + ".join(map(str, ws))} = {total} g', f'{total} ÷ {k} = {m} g'],
                       [f'Total: {" + ".join(map(str, ws))} = {total} g', f'{total} ÷ {k} = {m} g']),
                      shape=I.balance([icon] * k, [f'{w} g' for w in ws]))
@@ -465,6 +496,10 @@ CAPACITIES = [('une cuillère à thé', 'a teaspoon', 5, 'mL'), ('un verre', 'a 
               ('une bouteille d’eau', 'a water bottle', 1, 'L'), ('une baignoire', 'a bathtub', 150, 'L'),
               ('un seau', 'a bucket', 10, 'L'), ('une canette de jus', 'a juice can', 355, 'mL'),
               ('un arrosoir', 'a watering can', 5, 'L'), ('un compte-gouttes', 'an eye dropper', 1, 'mL')]
+
+
+BENCHMARKS = [('cuillère', 'une cuillère ≈ 5 mL', 'a spoon ≈ 5 mL'), ('verre', 'un verre ≈ 250 mL', 'a glass ≈ 250 mL'),
+              ('bouteille', 'une grande bouteille ≈ 1 L', 'a big bottle ≈ 1 L'), ('seau', 'un seau ≈ 10 L', 'a bucket ≈ 10 L')]
 
 
 def g3_capacity_estimate_gen(level='easy'):
@@ -491,10 +526,12 @@ def g3_capacity_estimate_gen(level='easy'):
                      shape=I.jug(cap, level_ml, step, label))
     fr, en, v, u = pick(CAPACITIES)
     other = 'mL' if u == 'L' else 'L'
-    return mc((f'Quelle est la capacité la plus probable de {fr} ?', f'What is the most likely capacity of {en}?'),
+    # benchmarks, minus the one that is the very thing asked about
+    marks = [(f, e) for key, f, e in BENCHMARKS if key not in fr]
+    return mc((f'Quelle est la capacité la plus probable {_de(fr)} ?', f'What is the most likely capacity of {en}?'),
               f'{v} {u}', [f'{v} {other}', f'{N(v * 10)} {u}', f'{N(v * 100)} {u}', f'{N(v * 1000)} {u}' if u == 'L' else f'{N(v * 10)} L'],
-              ('Repères : une cuillère ≈ 5 mL, un verre ≈ 250 mL, une grande bouteille ≈ 1 L.',
-               'Benchmarks: a spoon ≈ 5 mL, a glass ≈ 250 mL, a big bottle ≈ 1 L.'),
+              ('Repères : ' + ', '.join(f for f, _ in marks) + '. Compare avec l’objet.',
+               'Benchmarks: ' + ', '.join(e for _, e in marks) + '. Compare with the object.'),
               (f'{fr.capitalize()} contient environ {v} {u}.', f'{en.capitalize()} holds about {v} {u}.'))
 
 
@@ -503,10 +540,10 @@ def g3_capacity_estimate_gen(level='easy'):
 def g3_thermometer_gen(level='easy'):
     """Read a thermometer and reason about temperatures, 0 °C and above (208, 209)."""
     if level == 'easy':
-        t = random.choice(range(0, 41, 5))
+        t = random.choice(range(0, 40, 5))          # below the top mark, so the reading is never ambiguous
         shape = {'type': 'thermometer', 'temp': t, 'min_temp': 0, 'max_temp': 40, 'step': 5}
     elif level == 'medium':
-        t = random.choice(range(0, 41, 2))
+        t = random.choice(range(0, 40, 2))
         shape = {'type': 'thermometer', 'temp': t, 'min_temp': 0, 'max_temp': 40, 'step': 10, 'minor': 2}
     else:
         a = random.randint(3, 25)

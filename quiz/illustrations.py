@@ -828,8 +828,9 @@ def balance(left, right, tilt=0):
     Two-pan balance. left/right: lists of labels (emoji or « 100 g »). tilt: −1 left pan down,
     0 level, 1 right pan down.
     """
-    c = Canvas(300, 170, max_h=180, css_w='max-w-sm')
-    cx, top = 150, 40
+    # 344 wide: up to 5 weights (spread over 120 px) stay inside the canvas on either pan
+    c = Canvas(344, 170, max_h=180, css_w='max-w-sm')
+    cx, top = 172, 40
     d = 16 * tilt                      # right end goes down when tilt = 1
     c.poly([(cx - 30, 160), (cx + 30, 160), (cx + 6, 150), (cx - 6, 150)], fill=SOFT, stroke=INK, sw=1.5)
     c.line(cx, 150, cx, top, color=INK, sw=4)
