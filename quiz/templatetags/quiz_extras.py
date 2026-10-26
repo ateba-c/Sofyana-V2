@@ -75,3 +75,17 @@ def ordinal_fr(n):
     except (TypeError, ValueError):
         return n
     return '1re' if n == 1 else f'{n}e'
+
+
+@register.filter
+def bars_layout(spec, lang='fr'):
+    """Geometry of the tap-to-build bar chart (quiz/widgets.py)."""
+    from quiz.widgets import bars_layout as _bars
+    return _bars(spec or {}, lang)
+
+
+@register.filter
+def plane_layout(spec):
+    """Geometry of the tap-to-place point grid (quiz/widgets.py)."""
+    from quiz.widgets import plane_layout as _plane
+    return _plane(spec or {})

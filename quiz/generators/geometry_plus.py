@@ -1058,6 +1058,14 @@ def cartesian_place_point_gen(level='easy'):
         x, y = random.randint(1, size - 1), random.randint(1, size - 1)
         if level == 'easy' or x != y:
             break
+    if level == 'hard' or (level == 'medium' and random.random() < 0.5):
+        # tap-to-place: the child puts the point on the grid themselves
+        from ..widgets import place_point
+        return place_point((f'Place le point ({x}, {y}) sur le quadrillage.', f'Place the point ({x}, {y}) on the grid.'), (x, y),
+                           ('Pars de l’origine (0, 0) : avance d’abord sur l’axe horizontal (x), puis monte (y).',
+                            'Start at the origin (0, 0): first move along the horizontal axis (x), then go up (y).'),
+                           (f'Avance de {x} vers la droite, puis monte de {y}.', f'Go {x} to the right, then {y} up.'),
+                           xmax=size, ymax=size)
     cands = [(y, x), (x + 1, y), (x, y - 1), (x - 1, y + 1), (x, y + 1), (x + 1, y + 1), (x - 1, y),
              (x - 1, y - 1), (x + 1, y - 1), (x + 2, y), (x, y + 2), (x - 2, y), (x, y - 2)]
     others = []

@@ -29,6 +29,7 @@ from django.db import close_old_connections
 from django.utils import timezone
 
 from quiz.ai import client as llm
+from quiz import widgets
 from quiz.answers import check_answer
 
 from . import proposals, sampling
@@ -138,6 +139,12 @@ def describe(sample, with_key):
             v['right_options'] = sorted({p['right'] for p in q['pairs']})
         if q.get('q_type') == 'text_input':
             v['answer_format'] = (q.get('input') or {}).get('hint', '') or q.get('answer_type', '')
+        if q.get('bars'):                 # tap-to-build bar chart: the child sets one height per category
+            b = q['bars']
+            v['build_bar_chart'] = {'categories': b.get(f'cats_{lang}') or b.get('cats_fr'), 'max': b.get('top'), 'step': b.get('step'),
+                                    'answer_format': 'list of bar heights in category order, e.g. [4, 7, 3]'}
+        if q.get('plane'):                # tap-to-place point: the child taps one grid node
+            v['place_point_on_grid'] = dict(q['plane'], answer_format='(x, y)')
         if with_key:
             v['hint'] = q.get(f'hint_{lang}', '')
             v['explanation'] = q.get(f'explanation_{lang}', '')
@@ -174,6 +181,7 @@ For each problem return:
 - "answer": your final answer as short text (for choices: the label of the correct choice)
 - "correct_choices": for multiple choice, the NUMBERS of every choice that is a correct answer to the question as
   written. List more than one if several choices are defensible. Empty for other types.
+- for "build_bars" problems, "answer" is the list of bar heights, e.g. [4, 7, 3]; for "place_point", "answer" is "(x, y)"
 - "order": for ordering problems, the items in the correct order (exact labels)
 - "matches": for matching problems, an object {left label: right option}
 - "confident": true/false
@@ -270,13 +278,15 @@ def compare(q, res):
             status = 'multiple'
         else:
             status = 'match'
-    elif qt == 'text_input':
+    elif qt in ('text_input', 'place_point', 'build_bars'):
         answers = [str(a) for a in q.get('correct_answers') or []]
         out['key'] = answers[0] if answers else ''
         if not out['ai_answer']:
             status = 'unsure'
         else:
-            status = 'match' if check_answer(out['ai_answer'], answers, q.get('answer_type')) else 'mismatch'
+            ok = (widgets.check(q, out['ai_answer']) if qt != 'text_input'
+                  else check_answer(out['ai_answer'], answers, q.get('answer_type')))
+            status = 'match' if ok else 'mismatch'
     elif qt in ('ordering', 'sorting'):
         key = [it['label'] for it in sorted(q.get('items') or [], key=lambda x: x['order'])]
         out['key'] = ' < '.join(key)

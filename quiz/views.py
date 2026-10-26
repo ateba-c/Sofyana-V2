@@ -16,7 +16,7 @@ from .generators import GENERATORS, LEVEL_NAMES, generator_for
 from .taxonomy import topic_groups, topic_meta, skill_map, answer_type_for, available_grades
 from .answers import check_answer, infer_answer_type, input_spec
 from .labels import resolve_lang, localize_problem
-from . import facts
+from . import facts, widgets
 
 
 # ── Error-type human-readable labels (bilingual) ──────────────────────────────
@@ -824,6 +824,7 @@ def practice_check(request, topic):
         'suggested_level_name':  LEVEL_NAMES.get(suggested_level, (suggested_level, suggested_level))[1 if lang == 'fr' else 0],
         'level_name':            LEVEL_NAMES.get(level, (level, level))[1 if lang == 'fr' else 0],
         'suggested_topic':       suggested_topic,
+        'widget_shape':          [widgets.feedback_shape(q_data, answer, lang)] if q_type in ('build_bars', 'place_point') else None,
         'facts_to_review':       [facts.label(k) for k in facts.weak_facts(request.user, topic)[:8]]
                                  if topic in facts.FACT_SKILLS else [],
     })
@@ -848,6 +849,8 @@ def _check_practice(q_data, answer):
             return submitted == correct
         except (ValueError, KeyError, TypeError):
             return False
+    elif qt in ('build_bars', 'place_point'):
+        return widgets.check(q_data, answer)
     elif qt == 'mix_match':
         try:
             submitted = json.loads(answer)

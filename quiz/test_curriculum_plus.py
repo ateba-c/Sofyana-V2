@@ -417,6 +417,9 @@ class GeometryPlusTests(SimpleTestCase):
             for _ in range(40):
                 q = _q('cartesian-place-point', level)
                 x, y = map(int, re.search(r'\((\d+), (\d+)\)', q['prompt_fr']).groups())
+                if q['q_type'] == 'place_point':          # tap-to-place variant: the key is the coordinate itself
+                    self.assertIn(f'({x}, {y})', q['correct_answers'])
+                    continue
                 shape = q['shape_data'][0]
                 nums = {}
                 for l in shape['labels']:

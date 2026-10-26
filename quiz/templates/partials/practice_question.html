@@ -292,4 +292,6 @@
   {% endif %}
 
 </div>
+{% elif question.q_type == 'build_bars' or question.q_type == 'place_point' %}
+{% include 'partials/practice_widgets.html' %}
 {% endif %}

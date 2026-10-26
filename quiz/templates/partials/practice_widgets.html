@@ -1,0 +1,129 @@
+{% load quiz_extras %}
+{# Interactive answer widgets (quiz/widgets.py): tap-to-build bar chart, tap-to-place point. #}
+{# The SVG geometry is computed server side, so the template only loops over cells / nodes (no x-for inside SVG). #}
+
+{% if question.q_type == 'build_bars' %}
+{% with lay=question.bars|bars_layout:lang %}
+<div id="practice-area"
+     class="card-glass rounded-2xl p-3 sm:p-4 animate-slide-up"
+     x-data='{
+       values: Array({{ lay.n }}).fill(0),
+       submitted: false, showHint: false,
+       set(i, v) { if (this.submitted) return; this.values[i] = (this.values[i] === v) ? v - {{ lay.step }} : v; },
+       h(i) { return this.values[i] / {{ lay.step }} * {{ lay.cell }}; },
+       submit() {
+         if (this.submitted) return;
+         this.submitted = true;
+         document.querySelector("#pq-widget-answer").value = JSON.stringify(this.values);
+         htmx.trigger("#pq-form", "submit");
+       }
+     }'>
+  <div class="flex items-start gap-2 mb-2">
+    <p class="flex-1 text-base font-extrabold leading-snug text-ink">
+      {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
+    </p>
+    {% if lang == 'fr' %}{% include 'partials/read_aloud.html' with text=question.prompt_fr %}{% else %}{% include 'partials/read_aloud.html' with text=question.prompt_en %}{% endif %}
+  </div>
+  {% include 'partials/data_table.html' with table=question.table bullets=question.bullets %}
+  {% if question.shape_data %}
+  <div class="rounded-xl border border-slate-200 bg-slate-50 p-2 mb-2">{% shape_canvas question.shape_data lang %}</div>
+  {% endif %}
+
+  <p class="text-xs text-[var(--text-soft)] mb-1 font-bold">
+    👆 {% if lang == 'fr' %}Touche une case pour monter la bande jusque-là (touche le haut de la bande pour la baisser).{% else %}Tap a square to raise the bar to it (tap the top of a bar to lower it).{% endif %}
+  </p>
+  <div class="rounded-xl border border-slate-200 bg-white p-2 mb-2">
+    <svg viewBox="0 0 {{ lay.vw }} {{ lay.vh }}" class="w-full max-w-md mx-auto h-auto select-none" role="img"
+         aria-label="{% if lang == 'fr' %}Diagramme à bandes à construire{% else %}Bar chart to build{% endif %}">
+      {% for g in lay.grid %}
+      <line x1="34" y1="{{ g.y }}" x2="{{ lay.right }}" y2="{{ g.y }}" stroke="#E2E8F0" stroke-width="1"/>
+      {% if g.label %}<text x="28" y="{{ g.y|add:4 }}" text-anchor="end" font-size="10" font-weight="800" fill="#334155">{{ g.v }}</text>{% endif %}
+      {% endfor %}
+      {% for col in lay.cols %}
+      <rect x="{{ col.x }}" :y="{{ lay.base }} - h({{ col.i }})" width="{{ col.w }}" :height="h({{ col.i }})" rx="3" fill="#2563EB" opacity="0.85"/>
+      <text x="{{ col.cx }}" :y="{{ lay.base }} - h({{ col.i }}) - 4" text-anchor="middle" font-size="11" font-weight="800" fill="#2563EB"
+            x-text="values[{{ col.i }}] || ''"></text>
+      {% for cell in col.cells %}
+      <rect x="{{ col.x }}" y="{{ cell.y }}" width="{{ col.w }}" height="{{ cell.h }}" fill="transparent" stroke="#CBD5E1" stroke-width="0.6"
+            class="cursor-pointer" @click="set({{ col.i }}, {{ cell.v }})"/>
+      {% endfor %}
+      <text x="{{ col.cx }}" y="{{ lay.label_y }}" text-anchor="middle" font-size="11" font-weight="800" fill="#334155">{{ col.label }}</text>
+      {% endfor %}
+      <line x1="34" y1="{{ lay.base }}" x2="{{ lay.right }}" y2="{{ lay.base }}" stroke="#334155" stroke-width="2"/>
+    </svg>
+  </div>
+{% endwith %}
+
+{% elif question.q_type == 'place_point' %}
+{% with lay=question.plane|plane_layout %}
+<div id="practice-area"
+     class="card-glass rounded-2xl p-3 sm:p-4 animate-slide-up"
+     x-data='{
+       pick: null, px: 0, py: 0, submitted: false, showHint: false,
+       choose(x, y, px, py) { if (this.submitted) return; this.pick = [x, y]; this.px = px; this.py = py; },
+       submit() {
+         if (this.submitted || !this.pick) return;
+         this.submitted = true;
+         document.querySelector("#pq-widget-answer").value = "(" + this.pick[0] + ", " + this.pick[1] + ")";
+         htmx.trigger("#pq-form", "submit");
+       }
+     }'>
+  <div class="flex items-start gap-2 mb-2">
+    <p class="flex-1 text-base font-extrabold leading-snug text-ink">
+      {% if lang == 'fr' %}{{ question.prompt_fr|md_bold }}{% else %}{{ question.prompt_en|md_bold }}{% endif %}
+    </p>
+    {% if lang == 'fr' %}{% include 'partials/read_aloud.html' with text=question.prompt_fr %}{% else %}{% include 'partials/read_aloud.html' with text=question.prompt_en %}{% endif %}
+  </div>
+  <p class="text-xs text-[var(--text-soft)] mb-1 font-bold">
+    👆 {% if lang == 'fr' %}Touche le croisement des lignes où se trouve le point.{% else %}Tap the crossing of the lines where the point goes.{% endif %}
+    <span x-show="pick" class="ml-1 font-mono text-brand" x-text="pick ? '(' + pick[0] + ', ' + pick[1] + ')' : ''"></span>
+  </p>
+  <div class="rounded-xl border border-slate-200 bg-white p-2 mb-2">
+    <svg viewBox="0 0 {{ lay.vw }} {{ lay.vh }}" class="w-full max-w-sm mx-auto h-auto select-none" role="img"
+         aria-label="{% if lang == 'fr' %}Plan cartésien{% else %}Coordinate plane{% endif %}">
+      {% for ln in lay.vlines %}<line x1="{{ ln.p }}" y1="{{ lay.top }}" x2="{{ ln.p }}" y2="{{ lay.bottom }}" stroke="{% if ln.axis %}#334155{% else %}#CBD5E1{% endif %}" stroke-width="{% if ln.axis %}2{% else %}1{% endif %}"/>{% endfor %}
+      {% for ln in lay.hlines %}<line x1="{{ lay.left }}" y1="{{ ln.p }}" x2="{{ lay.right }}" y2="{{ ln.p }}" stroke="{% if ln.axis %}#334155{% else %}#CBD5E1{% endif %}" stroke-width="{% if ln.axis %}2{% else %}1{% endif %}"/>{% endfor %}
+      {% for t in lay.xlabels %}<text x="{{ t.p }}" y="{{ lay.xl_y }}" text-anchor="middle" font-size="10" font-weight="800" fill="#334155">{{ t.text }}</text>{% endfor %}
+      {% for t in lay.ylabels %}<text x="{{ lay.yl_x }}" y="{{ t.p|add:4 }}" text-anchor="end" font-size="10" font-weight="800" fill="#334155">{{ t.text }}</text>{% endfor %}
+      {% for p in lay.points %}
+      <circle cx="{{ p.px }}" cy="{{ p.py }}" r="5" fill="#9333EA"/>
+      <text x="{{ p.px|add:7 }}" y="{{ p.py|add:-7 }}" font-size="13" font-weight="800" fill="#9333EA">{{ p.label }}</text>
+      {% endfor %}
+      {% for n in lay.nodes %}
+      <circle cx="{{ n.px }}" cy="{{ n.py }}" r="9" fill="transparent" class="cursor-pointer"
+              @click="choose({{ n.x }}, {{ n.y }}, {{ n.px }}, {{ n.py }})"/>
+      {% endfor %}
+      <circle x-show="pick" :cx="px" :cy="py" r="7" fill="#EF4444" stroke="white" stroke-width="2" pointer-events="none"/>
+    </svg>
+  </div>
+{% endwith %}
+{% endif %}
+
+  <form id="pq-form"
+        hx-post="{% url 'quiz:practice_check' topic %}"
+        hx-target="#practice-area" hx-swap="outerHTML"
+        hx-include="[name='csrfmiddlewaretoken'],[name='lang'],[name='level'],[name='answer']">
+    {% csrf_token %}
+    <input type="hidden" name="lang"  value="{{ lang }}">
+    <input type="hidden" name="level" value="{{ level }}">
+    <input type="hidden" name="answer" id="pq-widget-answer">
+  </form>
+
+  <button type="button" @click="submit()" :disabled="submitted{% if question.q_type == 'place_point' %} || !pick{% endif %}"
+          class="w-full py-3.5 rounded-xl font-black text-sm bg-gradient-to-r from-brand to-coral text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-card active:scale-[0.98]">
+    {% if lang == 'fr' %}Valider{% else %}Submit{% endif %}
+  </button>
+
+  {% if question.hint_en %}
+  <div class="mt-2">
+    <button type="button" @click="showHint = !showHint"
+            class="px-4 py-3 rounded-xl font-bold text-xs bg-coral-light text-coral hover:bg-coral/20 border border-coral/30 transition active:scale-[0.98] min-h-[44px]">
+      💡 {% if lang == 'fr' %}Indice{% else %}Hint{% endif %}
+    </button>
+    <div x-show="showHint" x-transition
+         class="mt-2 bg-coral-light rounded-xl p-3 border border-coral/30 text-sm text-coral-dark font-bold">
+      💡 {% if lang == 'fr' %}{{ question.hint_fr }}{% else %}{{ question.hint_en }}{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>

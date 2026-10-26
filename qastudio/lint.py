@@ -171,6 +171,11 @@ def rule_options(q, lang):
             found.append(_f('LINT-03', ERROR, 'no accepted answer', lang))
         elif not check_answer(answers[0], answers, q.get('answer_type')):
             found.append(_f('LINT-13', ERROR, f'the answer key « {answers[0]} » is refused by the answer checker', lang))
+    elif qt in ('build_bars', 'place_point'):
+        from quiz.widgets import check as _widget_check
+        answers = [str(a) for a in q.get('correct_answers') or []]
+        if not answers or not _widget_check(q, answers[0]):
+            found.append(_f('LINT-13', ERROR, f'the widget answer key « {answers[:1]} » is refused by its own checker', lang))
     elif qt in ('ordering', 'sorting'):
         labels = [str(i.get('label', '')) for i in q.get('items') or []]
         if len(labels) < 2 or len(set(labels)) != len(labels):

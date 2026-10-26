@@ -71,7 +71,7 @@ class Grade4RegistryTests(SimpleTestCase):
 
 class Grade4GeneratorTests(SimpleTestCase):
     def _check(self, slug, q):
-        self.assertIn(q['q_type'], ('multiple_choice', 'text_input', 'ordering', 'mix_match'), slug)
+        self.assertIn(q['q_type'], ('multiple_choice', 'text_input', 'ordering', 'mix_match', 'build_bars', 'place_point'), slug)
         for k in ('prompt_fr', 'prompt_en', 'hint_fr', 'hint_en', 'explanation_fr', 'explanation_en'):
             self.assertTrue(q.get(k), f'{slug}: missing {k}')
         self.assertTrue(q.get('correct_answers'), f'{slug}: no correct_answers')
@@ -102,6 +102,12 @@ class Grade4GeneratorTests(SimpleTestCase):
             rights = [p['right'] for p in q['pairs']]
             self.assertEqual(len(lefts), len(set(lefts)), f'{slug}: duplicate left {lefts}')
             self.assertEqual(len(rights), len(set(rights)), f'{slug}: duplicate right {rights}')
+
+        elif q['q_type'] in ('build_bars', 'place_point'):     # interactive widgets (quiz/widgets.py)
+            from .widgets import check, feedback_shape
+            self.assertTrue(check(q, q['correct_answers'][0]), f'{slug}: own key rejected')
+            self.assertFalse(check(q, '[]' if q['q_type'] == 'build_bars' else '(99, 99)'))
+            self.assertTrue(feedback_shape(q, q['correct_answers'][0]))
 
         if q.get('shape_data'):
             rendered = render_shapes(q['shape_data'])

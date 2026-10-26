@@ -120,6 +120,14 @@
       </div>
       {% endfor %}
     </div>
+
+    {% elif widget_shape %}
+    <p class="text-xs font-bold text-[var(--text-soft)] mb-1">
+      {% if lang == 'fr' %}En vert : la bonne réponse{% if not correct %} · en rouge : ta réponse{% endif %}{% else %}Green: the right answer{% if not correct %} · red: your answer{% endif %}{% endif %}
+    </p>
+    <div class="rounded-xl bg-white border border-slate-200 p-2">
+      {% shape_canvas widget_shape lang %}
+    </div>
     {% endif %}
 
   </div><!-- /question card -->

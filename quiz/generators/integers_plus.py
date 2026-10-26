@@ -389,6 +389,15 @@ def g6_cartesian_4q_gen(level='easy'):
                   (f'x est {"négatif" if x < 0 else "positif"} et y est {"négatif" if y < 0 else "positif"} : quadrant {ROMAN[q]}.',
                    f'x is {"negative" if x < 0 else "positive"} and y is {"negative" if y < 0 else "positive"}: quadrant {ROMAN[q]}.'),
                   shape=plane({}))
+    if random.random() < 0.5:
+        from ..widgets import place_point
+        x, y = _pt(size)
+        return place_point((f'Place le point ({s(x)}, {s(y)}) dans le plan cartésien.', f'Place the point ({s(x)}, {s(y)}) on the coordinate plane.'),
+                           (x, y),
+                           ('Pars de l’origine : x négatif → à gauche, y négatif → en bas.', 'Start at the origin: negative x → left, negative y → down.'),
+                           (f'{abs(x)} {"à gauche" if x < 0 else "à droite"}, puis {abs(y)} {"en bas" if y < 0 else "en haut"}.',
+                            f'{abs(x)} to the {"left" if x < 0 else "right"}, then {abs(y)} {"down" if y < 0 else "up"}.'),
+                           xmin=-size, xmax=size, ymin=-size, ymax=size)
     pts = {}
     for lab in 'ABCDE':
         p = _pt(size)
