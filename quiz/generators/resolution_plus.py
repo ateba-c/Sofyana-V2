@@ -243,7 +243,7 @@ def ribbon(grade):
         a, b = random.randint(15, 45), random.randint(15, 45)
         lap = random.choice([2, 3, 5])
         return _problem(
-            f"{who} colle deux bandes de papier de **{a} cm** et **{b} cm** en les faisant chevaucher de **{lap} cm**. Quelle est la longueur de la grande bande ?",
+            f"{who} colle deux bandes de papier de **{a} cm** et **{b} cm** en les faisant chevaucher de **{lap} cm**. Quelle est la longueur de la bande obtenue ?",
             f"{who} glues two paper strips of **{a} cm** and **{b} cm**, overlapping them by **{lap} cm**. How long is the big strip?",
             a + b - lap, [f'{a} + {b} = {a + b}', f'{a + b} − {lap} = {a + b - lap} (le chevauchement compte une seule fois)', f'{a + b - lap} cm'],
             [f'{a} + {b} = {a + b}', f'{a + b} − {lap} = {a + b - lap} (the overlap only counts once)', f'{a + b - lap} cm'],
@@ -254,8 +254,8 @@ def ribbon(grade):
         n = random.randint(3, 9)
         m = n * lap
         return _problem(
-            f"{who} court **{n}** tours d’une piste de **{lap} m**. Combien de kilomètres et de mètres a-t-{sc.pronoun_fr(g)} parcourus ? Donne la réponse en mètres.",
-            f"{who} runs **{n}** laps of a **{lap} m** track. How far did {sc.pronoun_en(g)} run? Give the answer in metres.",
+            f"{who} court **{n}** tours d’une piste de **{lap} m**. Quelle distance a-t-{sc.pronoun_fr(g)} parcourue ? Donne la réponse en mètres.",
+            f"{who} runs **{n}** laps of {'an' if lap == 800 else 'a'} **{lap} m** track. How far did {sc.pronoun_en(g)} run? Give the answer in metres.",
             m, [f'{n} × {lap} = {N(m)} m', f'= {m // 1000} km {m % 1000} m', f'{N(m)} m'], [f'{n} × {lap} = {N(m)} m', f'= {m // 1000} km {m % 1000} m', f'{N(m)} m'],
             'Multiplie la longueur d’un tour par le nombre de tours.', 'Multiply the length of one lap by the number of laps.')
     if variant == 'pieces':
@@ -369,11 +369,12 @@ def cube_boxes(grade):
         'Volume = aire de la base × hauteur.', 'Volume = base area × height.')
 
 
-def balance(grade):
-    variant = random.choice(['same_objects', 'two_sides', 'cups'])
+def balance(grade, kinds=('same_objects', 'two_sides')):
+    """Masses on a balance (g3-balance-scale); kinds=('cups',) gives the capacity stories (g3-capacity-estimate)."""
+    variant = random.choice(kinds)
     if variant == 'same_objects':
         n = random.randint(2, 5)
-        one = random.choice([50, 100, 150, 200, 250])
+        one = random.choice([100, 150, 200])           # an apple weighs 100–200 g, so the melon is 200 g – 1 kg
         return _problem(
             f"Sur une balance, **{n}** pommes identiques font l’équilibre avec un melon de **{N(n * one)} g**. Quelle est la masse d’une pomme ?",
             f"On a balance, **{n}** identical apples balance a melon of **{N(n * one)} g**. What is the mass of one apple?",
@@ -934,7 +935,7 @@ FAMILIES_PLUS = {
     'g3-area-count-squares':   (3, [tiling]),
     'g3-volume-count-cubes':   (3, [cube_boxes]),
     'g3-balance-scale':        (3, [balance]),
-    'g3-capacity-estimate':    (3, [balance]),
+    'g3-capacity-estimate':    (3, [lambda g: balance(g, ('cups',))]),
     'g3-thermometer':          (3, [temperature_change]),
     'g3-list-outcomes':        (3, [outfits]),
     'g3-grid-map':             (3, [grid_walk]),

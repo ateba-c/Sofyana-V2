@@ -42,11 +42,22 @@ def _clock(mins):
     return f'{h} h {m:02d}'
 
 
+def _clock_en(mins):
+    """English time of day: 14:30 (the French '14 h 30' is not English notation)."""
+    h, m = divmod(mins, 60)
+    return f'{h}:{m:02d}'
+
+
 def _dur(mins):
     h, m = divmod(mins, 60)
     if h and m:
         return f'{h} h {m} min'
     return f'{h} h' if h else f'{m} min'
+
+
+def round_half(n, unit):
+    """School rounding of a whole number: a 5 rounds up (Python's round() sends 45 to 40)."""
+    return (n + unit // 2) // unit * unit
 
 
 def _cap(s):
@@ -228,35 +239,38 @@ def money(grade):
 
 def schedule(grade):
     who, g = sc.pick_actor()
-    acts = random.sample(sc.ACTIVITIES, 3)
+    acts = random.sample([a for a in sc.ACTIVITIES if a[1] != 'recess' and 'evening' not in a[1]], 3)   # daytime stories (7 h–15 h); recess never lasts 1 h 30
     start = random.randint(7, 15) * 60 + random.choice([0, 15, 30, 45] if grade <= 4 else range(0, 60, 5))
     step = [15, 30, 45, 60] if grade <= 4 else list(range(10, 125, 5))
     durs = [random.choice(step) for _ in range(3)]
     breaks = [random.choice([0, 10, 15, 20]) for _ in range(2)]
+    p_fr = sc.pronoun_fr(g)
+    C = _clock_en
     variant = random.choice(['end2', 'end3', 'total', 'wait'])
     a1, a2, a3 = [x[0] for x in acts]
-    e1, e2, e3 = [x[1].replace('the ', '') for x in acts]
+    e1, e2, e3 = [x[1] for x in acts]
     if variant == 'end2':
         end = start + durs[0] + breaks[0] + durs[1]
         pause = f", puis attend **{breaks[0]} min**" if breaks[0] else ''
         pause_en = f", then waits **{breaks[0]} min**" if breaks[0] else ''
         return _problem(
-            f"À **{_clock(start)}**, {who} commence {a1} qui dure **{_dur(durs[0])}**{pause}. Ensuite {sc.pronoun_fr(g)} fait {a2} pendant **{_dur(durs[1])}**. À quelle heure {sc.pronoun_fr(g)} termine-t-{sc.pronoun_fr(g)} ?",
-            f"At **{_clock(start)}**, {who} starts {e1}, which lasts **{_dur(durs[0])}**{pause_en}. Then {sc.pronoun_en(g)} does {e2} for **{_dur(durs[1])}**. At what time does {sc.pronoun_en(g)} finish?",
+            f"À **{_clock(start)}**, {who} commence {a1} qui dure **{_dur(durs[0])}**{pause}. Ensuite {sc.pronoun_fr(g)} fait {a2} pendant **{_dur(durs[1])}**. À quelle heure termine-t-{p_fr} ?",
+            f"At **{C(start)}**, {who} starts {e1}, which lasts **{_dur(durs[0])}**{pause_en}. Then {sc.pronoun_en(g)} does {e2} for **{_dur(durs[1])}**. At what time does {sc.pronoun_en(g)} finish?",
             end,
             [f'{_clock(start)} + {_dur(durs[0])} = {_clock(start + durs[0])}'] + ([f'+ {breaks[0]} min = {_clock(start + durs[0] + breaks[0])}'] if breaks[0] else []) + [f'+ {_dur(durs[1])} = {_clock(end)}', _clock(end)],
-            [f'{_clock(start)} + {_dur(durs[0])} = {_clock(start + durs[0])}'] + ([f'+ {breaks[0]} min = {_clock(start + durs[0] + breaks[0])}'] if breaks[0] else []) + [f'+ {_dur(durs[1])} = {_clock(end)}', _clock(end)],
+            [f'{C(start)} + {_dur(durs[0])} = {C(start + durs[0])}'] + ([f'+ {breaks[0]} min = {C(start + durs[0] + breaks[0])}'] if breaks[0] else []) + [f'+ {_dur(durs[1])} = {C(end)}', C(end)],
             "Avance l'heure étape par étape : chaque activité, chaque pause.", 'Move the clock forward step by step: each activity, each break.',
             'duration', [_clock(end), f'{end // 60}:{end % 60:02d}'])
     if variant == 'end3':
+        breaks = [random.choice([5, 10, 15, 20]) for _ in range(2)]     # 'une pause de 0 min' is no pause
         total = sum(durs) + sum(breaks)
         end = start + total
         return _problem(
             f"{who} enchaîne trois activités à partir de **{_clock(start)}** : {a1} (**{_dur(durs[0])}**), {a2} (**{_dur(durs[1])}**) et {a3} (**{_dur(durs[2])}**), avec une pause de **{breaks[0]} min** puis une autre de **{breaks[1]} min** entre elles. À quelle heure tout est-il fini ?",
-            f"{who} does three activities in a row starting at **{_clock(start)}**: {e1} (**{_dur(durs[0])}**), {e2} (**{_dur(durs[1])}**) and {e3} (**{_dur(durs[2])}**), with a **{breaks[0]} min** break and then a **{breaks[1]} min** break between them. At what time is everything over?",
+            f"{who} does three activities in a row starting at **{C(start)}**: {e1} (**{_dur(durs[0])}**), {e2} (**{_dur(durs[1])}**) and {e3} (**{_dur(durs[2])}**), with a **{breaks[0]} min** break and then a **{breaks[1]} min** break between them. At what time is everything over?",
             end,
             [f'Durée totale : {durs[0]} + {breaks[0]} + {durs[1]} + {breaks[1]} + {durs[2]} = {total} min = {_dur(total)}', f'{_clock(start)} + {_dur(total)} = {_clock(end)}', _clock(end)],
-            [f'Total time: {durs[0]} + {breaks[0]} + {durs[1]} + {breaks[1]} + {durs[2]} = {total} min = {_dur(total)}', f'{_clock(start)} + {_dur(total)} = {_clock(end)}', _clock(end)],
+            [f'Total time: {durs[0]} + {breaks[0]} + {durs[1]} + {breaks[1]} + {durs[2]} = {total} min = {_dur(total)}', f'{C(start)} + {_dur(total)} = {C(end)}', C(end)],
             'Additionne toutes les durées en minutes, convertis en h et min, puis ajoute au départ.',
             'Add all the durations in minutes, convert to h and min, then add to the start.',
             'duration', [_clock(end), f'{end // 60}:{end % 60:02d}'])
@@ -275,11 +289,11 @@ def schedule(grade):
     event = end + random.choice([25, 35, 40, 50, 70, 85, 95, 110])
     wait = event - end
     return _problem(
-        f"{a1.capitalize()} de {who} commence à **{_clock(start)}** et dure **{_dur(durs[0])}**. {a2.capitalize()} commence à **{_clock(event)}**. Combien de temps {sc.pronoun_fr(g)} doit-{sc.pronoun_fr(g)} attendre entre les deux ?",
-        f"{who}'s {e1} starts at **{_clock(start)}** and lasts **{_dur(durs[0])}**. {e2.capitalize()} starts at **{_clock(event)}**. How long does {sc.pronoun_en(g)} wait between the two?",
+        f"{_cap(a1)} {sc.de(who)} commence à **{_clock(start)}** et dure **{_dur(durs[0])}**. {_cap(a2)} commence à **{_clock(event)}**. Combien de temps doit-{p_fr} attendre entre les deux ?",
+        f"{who}'s {e1.replace('the ', '')} starts at **{C(start)}** and lasts **{_dur(durs[0])}**. {_cap(e2)} starts at **{C(event)}**. How long does {sc.pronoun_en(g)} wait between the two?",
         wait,
         [f'Fin : {_clock(start)} + {_dur(durs[0])} = {_clock(end)}', f'De {_clock(end)} à {_clock(event)} : {wait} min', _dur(wait)],
-        [f'End: {_clock(start)} + {_dur(durs[0])} = {_clock(end)}', f'From {_clock(end)} to {_clock(event)}: {wait} min', _dur(wait)],
+        [f'End: {C(start)} + {_dur(durs[0])} = {C(end)}', f'From {C(end)} to {C(event)}: {wait} min', _dur(wait)],
         "Trouve d'abord l'heure de fin, puis la durée jusqu'au prochain événement.", 'Find the end time first, then the time until the next event.',
         'duration', [_dur(wait), f'{wait} min'])
 
@@ -428,8 +442,8 @@ def production(grade):
             'Total produit, moins ce qui est utilisé.', 'Total produced, minus what is used.')
     # estimate: round both
     p = 10 ** (len(str(rate)) - 1)
-    ra = round(rate / p) * p
-    rc = round(count / 10) * 10 or count
+    ra = round_half(rate, p)
+    rc = round_half(count, 10) or count
     est = ra * rc
     return _problem(
         f"{story_fr} **Sans calculer exactement**, environ combien de {th_fr} en **{per_fr}** ? Arrondis {N(rate)} et {count} à leur premier chiffre.",

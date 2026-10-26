@@ -18,7 +18,7 @@ Families:
 import random
 from fractions import Fraction
 from . import scenarios as sc
-from .resolution import _problem, _cap, N, inventory, money, schedule, measurements, pattern, production
+from .resolution import _problem, _cap, N, round_half, inventory, money, schedule, measurements, pattern, production
 
 
 def _money_fr(x):
@@ -98,7 +98,7 @@ def rounding_estimate(grade):
     items_en = {'un ballon': 'a ball', 'un livre': 'a book', 'un casse-tête': 'a puzzle', 'une lampe': 'a lamp', 'un sac': 'a bag', 'des écouteurs': 'headphones'}
     if variant == 'sum_tens':
         prices = [random.randint(11, 89) for _ in range(3)]
-        rnd = [round(p / 10) * 10 for p in prices]
+        rnd = [round_half(p, 10) for p in prices]
         est = sum(rnd)
         return _problem(
             f"{who} veut acheter {items[0]} à **{prices[0]} $**, {items[1]} à **{prices[1]} $** et {items[2]} à **{prices[2]} $**. Arrondis chaque prix à la dizaine près, puis estime le total.",
@@ -109,7 +109,7 @@ def rounding_estimate(grade):
             'money', [f'{est} $', str(est)])
     if variant == 'sum_hundreds':
         prices = [random.randint(110, 890) for _ in range(2)]
-        rnd = [round(p / 100) * 100 for p in prices]
+        rnd = [round_half(p, 100) for p in prices]
         est = sum(rnd)
         return _problem(
             f"Une école achète {items[0]} à **{prices[0]} $** et {items[1]} à **{prices[1]} $**. Arrondis chaque prix à la centaine près, puis estime le total.",
@@ -242,14 +242,38 @@ _SHOP = [('cahier', 'cahiers', 'notebook', 'notebooks'), ('crayon', 'crayons', '
          ('gomme', 'gommes', 'eraser', 'erasers'), ('stylo', 'stylos', 'pen', 'pens'), ('carnet', 'carnets', 'notepad', 'notepads')]
 
 
-def decimal_shopping(grade):
+def decimal_shopping(grade, kinds=('total', 'change', 'each', 'ops')):
+    """Prices with cents. ``kinds`` keeps division skills on division stories ('each', 'share', 'cut')."""
     who, g = sc.pick_actor()
     (a_s, a_p, ae_s, ae_p), (b_s, b_p, be_s, be_p) = random.sample(_SHOP, 2)
     qa, qb = random.randint(2, 6), random.randint(1, 4)
     pa = random.randint(105, 495) / 100
     pb = random.randint(80, 350) / 100
     total = round(qa * pa + qb * pb, 2)
-    variant = random.choice(['total', 'change', 'each', 'ops'])
+    variant = random.choice(kinds)
+    if variant == 'share':
+        n = random.choice([2, 3, 4, 5, 6])
+        each_c = random.randint(150, 1250)
+        tot = n * each_c / 100
+        return _problem(
+            f"**{n}** amis partagent également une facture de **{_money_fr(tot)}** au restaurant. Combien chacun paie-t-il ?",
+            f"**{n}** friends share a **{_money_en(tot)}** restaurant bill equally. How much does each one pay?",
+            each_c / 100, [f'{_money_fr(tot)} ÷ {n} = {_money_fr(each_c / 100)}', _money_fr(each_c / 100)],
+            [f'{_money_en(tot)} ÷ {n} = {_money_en(each_c / 100)}', _money_en(each_c / 100)],
+            'Partager également, c’est diviser par le nombre de personnes.', 'Sharing equally means dividing by the number of people.',
+            'money', [_money_fr(each_c / 100), f'{each_c / 100:.2f}'])
+    if variant == 'cut':
+        n = random.choice([2, 4, 5, 8, 10])
+        piece_cm = random.randint(5, 95) if n in (2, 4) else random.randint(10, 60)
+        total_cm = n * piece_cm
+        fr_m = lambda c: f'{c / 100:.2f}'.rstrip('0').rstrip('.').replace('.', ',')
+        en_m = lambda c: f'{c / 100:.2f}'.rstrip('0').rstrip('.')
+        return _problem(
+            f"{who} coupe un ruban de **{fr_m(total_cm)} m** en **{n}** morceaux égaux. Quelle est la longueur d’un morceau, en mètres ?",
+            f"{who} cuts a **{en_m(total_cm)} m** ribbon into **{n}** equal pieces. How long is one piece, in metres?",
+            fr_m(piece_cm), [f'{fr_m(total_cm)} ÷ {n} = {fr_m(piece_cm)}', f'{fr_m(piece_cm)} m'], [f'{en_m(total_cm)} ÷ {n} = {en_m(piece_cm)}', f'{en_m(piece_cm)} m'],
+            'Divise la longueur totale par le nombre de morceaux.', 'Divide the total length by the number of pieces.',
+            'decimal', [fr_m(piece_cm), en_m(piece_cm)])
     if variant == 'total':
         return _problem(
             f"{who} achète **{qa}** {a_p} à **{_money_fr(pa)}** l'unité et **{qb}** {b_p if qb > 1 else b_s} à **{_money_fr(pb)}**{" l'unité" if qb > 1 else ''}. Combien paie-t-{sc.pronoun_fr(g)} en tout ?",
@@ -515,8 +539,8 @@ FAMILIES_G35 = {
     # grade 5
     'g5-order-ops':        (5, [decimal_shopping]),
     'g5-decimal-mult':     (5, [decimal_shopping]),
-    'g5-div-decimal':      (5, [decimal_shopping]),
-    'g5-decimal-div':      (5, [decimal_shopping]),
+    'g5-div-decimal':      (5, [lambda g: decimal_shopping(g, ('each', 'share', 'cut'))]),
+    'g5-decimal-div':      (5, [lambda g: decimal_shopping(g, ('each', 'share', 'cut'))]),
     'g5-volume':           (5, [lambda g: volume_capacity(g, ('aquarium', 'litres'))]),
     'g5-capacity-convert': (5, [lambda g: volume_capacity(g, ('litres', 'bottles'))]),
     'g5-mass-convert':     (5, [mass_story]),

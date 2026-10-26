@@ -167,6 +167,8 @@ class CoordinateTests(SimpleTestCase):
         GP.I.grid = spy
         try:
             for level, q in _samples('cartesian-place-point'):
+                if q['q_type'] == 'place_point':          # tap-to-place variant: no lettered points to check
+                    continue
                 size, points = seen[-1]
                 self.assertEqual(len(points), 5)
                 for (x, y) in points:
