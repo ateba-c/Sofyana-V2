@@ -22,38 +22,24 @@ from .base import _tagged_shuffle_mc
 
 def g5_arithmetic_mean_gen(level='easy'):
     """Typed — calculate the arithmetic mean of a list."""
+    # The key is always computed from the values actually shown (sum ÷ count):
+    # easy/medium → a whole-number mean, hard → a mean ending in ,5.
     if level == 'easy':
-        n = random.randint(3, 4)
-        mean = random.randint(4, 15)
-        # Build list summing to mean*n
-        values = [random.randint(1, mean * 2) for _ in range(n - 1)]
-        last   = mean * n - sum(values)
-        if last < 1:
-            # Retry with smaller values
-            values = [random.randint(1, mean) for _ in range(n - 1)]
-            last   = mean * n - sum(values)
-        values.append(max(1, last))
-        correct_str = str(mean)
+        n, lo, hi = random.randint(3, 4), 1, 20
     elif level == 'medium':
-        n    = random.randint(4, 5)
-        mean = random.randint(5, 20)
-        values = [random.randint(1, mean * 2) for _ in range(n - 1)]
-        last   = mean * n - sum(values)
-        values.append(max(1, last))
-        correct_str = str(mean)
+        n, lo, hi = random.randint(4, 5), 1, 35
     else:
-        # Mean may have 0.5
-        n   = random.randint(4, 6)
-        # Force mean = x.5
-        mean_times_2 = random.randint(10, 40)
-        total = mean_times_2 * n
-        if total % 2 == 1:
-            total += n  # adjust
-        values = [random.randint(2, total // n * 2) for _ in range(n - 1)]
-        last   = total - sum(values)
-        values.append(max(1, last))
-        mean_val = total / n
-        correct_str = str(mean_val).replace('.', ',').rstrip('0').rstrip(',')
+        n, lo, hi = random.choice([4, 6]), 2, 40
+    while True:
+        values = [random.randint(lo, hi) for _ in range(n)]
+        s = sum(values)
+        if level == 'hard':
+            if (2 * s) % n == 0 and s % n != 0:      # mean = k,5
+                break
+        elif s % n == 0:
+            break
+    mean2 = 2 * sum(values) // n                     # twice the mean, an integer
+    correct_str = str(mean2 // 2) if mean2 % 2 == 0 else f'{mean2 // 2},5'
 
     random.shuffle(values)
     values_str = ', '.join(str(v) for v in values)
@@ -71,14 +57,14 @@ def g5_arithmetic_mean_gen(level='easy'):
         'explanation_en': (
             f'Step 1: Add all values: {" + ".join(str(v) for v in values)} = {sum(values)}.\n'
             f'Step 2: Divide the total by the count: {sum(values)} ÷ {len(values)} = {correct_str.replace(",", ".")}.\n'
-            f'Answer: mean = {correct_str}'
+            f'Answer: mean = {correct_str.replace(",", ".")}'
         ),
         'explanation_fr': (
             f'Étape 1 : Additionne toutes les valeurs : {" + ".join(str(v) for v in values)} = {sum(values)}.\n'
             f'Étape 2 : Divise le total par le nombre de valeurs : {sum(values)} ÷ {len(values)} = {correct_str}.\n'
             f'Réponse : moyenne = {correct_str}'
         ),
-        'correct_answers':  [correct_str, correct_str.replace(',', '.')],
+        'correct_answers':  list(dict.fromkeys([correct_str, correct_str.replace(',', '.')])),
     }
 
 
@@ -107,37 +93,35 @@ def g5_probability_forms_gen(level='easy'):
     pool  = _PROB_TRIPLES[:6] if level == 'easy' else _PROB_TRIPLES
     chosen = random.sample(pool, min(count, len(pool)))
 
-    # Alternate left/right representation type
-    pairs = []
+    # Alternate left/right representation type. English uses 0.5 and 50%, French 0,5 and 50 %.
+    pairs, steps_fr, steps_en = [], [], []
     for frac, dec, pct in chosen:
+        dec_en, pct_en = dec.replace(',', '.'), pct.replace(' %', '%')
         kind = random.choice(['frac_dec', 'frac_pct', 'dec_pct'])
         if kind == 'frac_dec':
-            pairs.append({'left': frac, 'right': dec})
+            l, r, l_en, r_en = frac, dec, frac, dec_en
         elif kind == 'frac_pct':
-            pairs.append({'left': frac, 'right': pct})
+            l, r, l_en, r_en = frac, pct, frac, pct_en
         else:
-            pairs.append({'left': dec, 'right': pct})
+            l, r, l_en, r_en = dec, pct, dec_en, pct_en
+        pairs.append({'left': l, 'right': r, 'left_en': l_en, 'right_en': r_en})
+        n, d = frac.split('/')
+        steps_fr.append(f'{frac} = {n} ÷ {d} = {dec} = {pct}')
+        steps_en.append(f'{frac} = {n} ÷ {d} = {dec_en} = {pct_en}')
 
     return {
         'q_type':           'mix_match',
         'prompt_fr':        'Associe les représentations équivalentes (fraction, décimal, pourcentage).',
         'prompt_en':        'Match the equivalent representations (fraction, decimal, percentage).',
-        'hint_fr':          '1/2 = 0,5 = 50 %. Multiplie la fraction par 100 pour obtenir le pourcentage.',
-        'hint_en':          '1/2 = 0.5 = 50%. Multiply the fraction by 100 to get the percentage.',
+        # procedural hint: no value that could give away one of the pairs
+        'hint_fr':          'Fraction → décimal : divise le numérateur par le dénominateur. Décimal → pourcentage : multiplie par 100.',
+        'hint_en':          'Fraction → decimal: divide the numerator by the denominator. Decimal → percentage: multiply by 100.',
         'show_illustration': False,
         'shape_data':       [],
         'choices':          [],
         'pairs':            pairs,
-        'explanation_en': (
-            'Step 1: Fraction → decimal: divide numerator by denominator.\n'
-            'Step 2: Decimal → percentage: multiply by 100 and add %.\n'
-            'Step 3: Key equivalences: 1/2=0.5=50%, 1/4=0.25=25%, 1/5=0.2=20%, 1/10=0.1=10%.'
-        ),
-        'explanation_fr': (
-            'Étape 1 : Fraction → décimal : divise le numérateur par le dénominateur.\n'
-            'Étape 2 : Décimal → pourcentage : multiplie par 100 et ajoute %.\n'
-            'Étape 3 : Équivalences clés : 1/2=0,5=50%, 1/4=0,25=25%, 1/5=0,2=20%, 1/10=0,1=10%.'
-        ),
+        'explanation_en':   '\n'.join(['Divide the numerator by the denominator, then multiply by 100 for the percentage:'] + steps_en),
+        'explanation_fr':   '\n'.join(['Divise le numérateur par le dénominateur, puis multiplie par 100 pour le pourcentage :'] + steps_fr),
         'correct_answers':  [p['right'] for p in pairs],
     }
 
@@ -146,17 +130,17 @@ def g5_probability_forms_gen(level='easy'):
 # g5_probability_frac_gen
 # ─────────────────────────────────────────────────────────────────────────────
 
-_COLORS_FR = ['rouges', 'bleues', 'vertes', 'jaunes', 'oranges', 'violettes']
-_COLORS_EN = ['red',    'blue',   'green',  'yellow', 'orange',  'purple']
+# (singular, plural, English) — « orange » is invariable in French
+_COLORS = [('rouge', 'rouges', 'red'), ('bleue', 'bleues', 'blue'), ('verte', 'vertes', 'green'),
+           ('jaune', 'jaunes', 'yellow'), ('orange', 'orange', 'orange'), ('violette', 'violettes', 'purple')]
 
 
 def g5_probability_frac_gen(level='easy'):
     """QCM — calculate P(event) as fraction, decimal, or percentage."""
     total     = random.randint(4, 10) if level == 'easy' else random.randint(5, 20)
     favorable = random.randint(1, total - 1)
-    ci, cj    = random.sample(range(len(_COLORS_FR)), 2)
-    color_fr  = _COLORS_FR[ci]
-    color_en  = _COLORS_EN[ci]
+    others    = total - favorable
+    color_sg, color_pl, color_en = random.choice(_COLORS)
 
     from math import gcd
     g = gcd(favorable, total)
@@ -164,50 +148,62 @@ def g5_probability_frac_gen(level='easy'):
     correct_frac = f"{favorable}/{total}"
     correct_red  = f"{num_r}/{den_r}"
 
-    # Present as fraction QCM
+    # Present as fraction QCM. Every candidate comes from a real mistake; when the
+    # complement equals the answer (half the marbles), the later ones take its place.
     tagged_candidates = [
-        (f"{total - favorable}/{total}", 'complement',
+        (f"{others}/{total}", 'complement',
          'That is the probability of NOT drawing that colour.',
          "C'est la probabilité de NE PAS piger cette couleur."),
-        (f"{favorable}/{total - favorable}", 'ratio_not_prob',
-         'Probability = favourable ÷ total outcomes.',
-         'Probabilité = cas favorables ÷ total des cas.'),
+        (f"{favorable}/{others}", 'ratio_not_prob',
+         'Probability = favourable ÷ total outcomes, not favourable ÷ the others.',
+         'Probabilité = cas favorables ÷ total des cas, pas cas favorables ÷ les autres.'),
         (f"{total}/{favorable}", 'inverted',
          'The numerator is favourable, denominator is total.',
          'Le numérateur est les cas favorables, le dénominateur est le total.'),
-        (f"{favorable + 1}/{total}", 'off_by_one',
-         'Count carefully.',
-         'Compte bien.'),
+        (f"{favorable}/{total + favorable}", 'counted_twice',
+         'The total already includes the marbles of that colour.',
+         'Le total comprend déjà les billes de cette couleur.'),
+        (f"{others}/{favorable}", 'others_over_favourable',
+         'Probability = favourable ÷ total outcomes.',
+         'Probabilité = cas favorables ÷ total des cas.'),
+        (f"1/{total}", 'one_marble',
+         'There are several marbles of that colour, not just one.',
+         "Il y a plusieurs billes de cette couleur, pas une seule."),
     ]
-    tagged_candidates = [c for c in tagged_candidates if c[0] != correct_frac]
+    from fractions import Fraction
+    tagged_candidates = [c for c in tagged_candidates
+                         if Fraction(c[0]) != Fraction(favorable, total)]   # never a value-equal « wrong » choice
+
+    fav_fr = f"{favorable} bille{'s' if favorable > 1 else ''} {color_pl if favorable > 1 else color_sg}"
+    fav_en = f"{favorable} {color_en} marble{'s' if favorable != 1 else ''}"
+    oth_fr = "1 bille d'une autre couleur" if others == 1 else f"{others} billes d'autres couleurs"
+    oth_en = "1 marble of another colour" if others == 1 else f"{others} marbles of other colours"
 
     return {
         'q_type':           'multiple_choice',
-        'prompt_fr':        (f"Un sac contient {total} billes : {favorable} {color_fr} "
-                             f"et {total - favorable} d'autres couleurs. "
-                             f"Quelle est la probabilité de piger une bille {color_fr} ?"),
-        'prompt_en':        (f"A bag has {total} marbles: {favorable} {color_en} "
-                             f"and {total - favorable} of other colours. "
+        'prompt_fr':        (f"Un sac contient {total} billes : {fav_fr} et {oth_fr}. "
+                             f"Quelle est la probabilité de piger une bille {color_sg} ?"),
+        'prompt_en':        (f"A bag has {total} marbles: {fav_en} and {oth_en}. "
                              f"What is the probability of drawing {'an' if color_en[0] in 'aeiou' else 'a'} {color_en} marble?"),
         'hint_fr':          'Probabilité = nombre de cas favorables / nombre total de cas.',
         'hint_en':          'Probability = number of favourable outcomes / total number of outcomes.',
         'show_illustration': False,
         'shape_data':       [],
-        'choices':          _tagged_shuffle_mc(correct_frac, tagged_candidates[:4]),
+        'choices':          _tagged_shuffle_mc(correct_frac, tagged_candidates),
         'pairs':            [],
         'explanation_en': (
-            f'Step 1: Count the favourable outcomes: {favorable} {color_en} marble(s).\n'
+            f'Step 1: Count the favourable outcomes: {fav_en}.\n'
             f'Step 2: Count total outcomes: {total} marbles.\n'
             f'Step 3: P(event) = favourable ÷ total = {favorable}/{total}.\n'
             f'Answer: {correct_frac}'
         ),
         'explanation_fr': (
-            f'Étape 1 : Compte les cas favorables : {favorable} bille(s) {color_fr}.\n'
+            f'Étape 1 : Compte les cas favorables : {fav_fr}.\n'
             f'Étape 2 : Compte le total des cas : {total} billes.\n'
             f'Étape 3 : P(événement) = cas favorables ÷ total = {favorable}/{total}.\n'
             f'Réponse : {correct_frac}'
         ),
-        'correct_answers':  [correct_frac, correct_red],
+        'correct_answers':  list(dict.fromkeys([correct_frac, correct_red])),
     }
 
 
@@ -215,94 +211,93 @@ def g5_probability_frac_gen(level='easy'):
 # g5_count_outcomes_gen
 # ─────────────────────────────────────────────────────────────────────────────
 
-_SCENARIOS = [
-    # (fr, en, choices_a, choices_b)
-    ("chemises", "shirts",   3, 4),
-    ("pantalons", "pants",    4, 3),
-    ("sandwichs", "sandwiches", 3, 3),
-    ("pizzas",  "pizzas",    4, 2),
-    ("glaces",  "ice creams", 3, 5),
-    ("menus",   "menus",     4, 4),
-]
-_TOPPERS = [
-    ("garnitures", "toppings"),
-    ("couleurs",   "colours"),
-    ("saveurs",    "flavours"),
-    ("formats",    "sizes"),
+# One closed, coherent scenario each: the categories belong together and are independent.
+# (what is built fr/en, [category fr/en ×3])
+_OUTCOME_SCENARIOS = [
+    (('tenues', 'outfits'),
+     [('chandails', 'sweaters'), ('pantalons', 'pairs of pants'), ('paires de chaussures', 'pairs of shoes')]),
+    (('repas', 'meals'),
+     [('plats principaux', 'main dishes'), ('desserts', 'desserts'), ('boissons', 'drinks')]),
+    (('sandwichs', 'sandwiches'),
+     [('sortes de pain', 'kinds of bread'), ('garnitures', 'fillings'), ('sauces', 'sauces')]),
+    (('cornets de crème glacée', 'ice-cream cones'),
+     [('parfums de crème glacée', 'ice-cream flavours'), ('sortes de cornets', 'kinds of cones'), ('garnitures', 'toppings')]),
+    (('pizzas', 'pizzas'),
+     [('sortes de croûte', 'kinds of crust'), ('garnitures', 'toppings'), ('tailles', 'sizes')]),
 ]
 
 
 def g5_count_outcomes_gen(level='easy'):
     """QCM — count total outcomes using the multiplication principle."""
+    (what_fr, what_en), cats = random.choice(_OUTCOME_SCENARIOS)
+    fem = what_fr in ('tenues', 'pizzas')
     if level == 'easy':
-        name_fr, name_en, a, b = random.choice(_SCENARIOS[:4])
-        c = None
+        nums = random.sample(range(2, 5), 2)
     elif level == 'medium':
-        name_fr, name_en, a, b = random.choice(_SCENARIOS)
-        c = None
+        nums = random.sample(range(2, 7), 2)
     else:
-        # Three independent choices
-        name_fr, name_en, a, b = random.choice(_SCENARIOS)
-        c = random.randint(2, 4)
+        nums = random.sample(range(2, 6), 3)
+    cats = cats[:len(nums)]
+    total = 1
+    for n in nums:
+        total *= n
 
-    top_fr, top_en = random.choice(_TOPPERS)
+    bullets = [(f'{cfr[0].upper()}{cfr[1:]} : {n} choix', f'{cen[0].upper()}{cen[1:]}: {n} choices')
+               for (cfr, cen), n in zip(cats, nums)]
+    diff_fr = 'différentes' if fem else 'différents'
+    prompt_fr = f"Pour composer des {what_fr}, tu choisis un élément de chaque catégorie. Combien de {what_fr} {diff_fr} peux-tu composer ?"
+    prompt_en = f"To make {what_en}, you choose one item from each category. How many different {what_en} can you make?"
 
-    if c is None:
-        total   = a * b
-        prompt_fr = (f"Tu as {a} choix de {name_fr} et {b} choix de {top_fr}. "
-                     f"Combien de combinaisons différentes peux-tu faire ?")
-        prompt_en = (f"You have {a} choices of {name_en} and {b} choices of {top_en}. "
-                     f"How many different combinations can you make?")
-        wrong_sum = a + b
-        wrong2    = a * b - a
-        wrong3    = a + b + 1
-        wrong4    = total + b
-    else:
-        total   = a * b * c
-        prompt_fr = (f"Tu as {a} {name_fr}, {b} {top_fr} et {c} boissons. "
-                     f"Combien de repas différents peux-tu composer ?")
-        prompt_en = (f"You have {a} {name_en}, {b} {top_en} and {c} drinks. "
-                     f"How many different meals can you make?")
-        wrong_sum = a + b + c
-        wrong2    = a * b
-        wrong3    = a * b * c - a
-        wrong4    = total + 1
-
-    tagged_candidates = [
-        (str(wrong_sum), 'sum_not_product',
-         'When combining independent choices, multiply — don\'t add.',
-         'Quand on combine des choix indépendants, on multiplie — pas on additionne.'),
-        (str(wrong2),    'forgot_category',
-         'Did you use all the categories?',
-         'As-tu utilisé toutes les catégories ?'),
-        (str(wrong3),    'arithmetic_error',
-         'Recheck your multiplication.',
-         'Revérifie ta multiplication.'),
-        (str(wrong4),    'off_by_one',
-         'Count carefully.',
-         'Compte soigneusement.'),
+    # Distractors, each from a named mistake
+    a, b = nums[0], nums[1]
+    cand = [
+        (sum(nums), 'sum_not_product',
+         f'You added {" + ".join(map(str, nums))}. Each choice goes with every other one: multiply.',
+         f'Tu as additionné {" + ".join(map(str, nums))}. Chaque choix va avec chacun des autres : multiplie.'),
     ]
-    tagged_candidates = [c for c in tagged_candidates if c[0] != str(total)]
+    if len(nums) == 3:
+        c = nums[2]
+        cand += [
+            (a * b, 'forgot_category', f'{a} × {b} forgets the {cats[2][1]}.', f'{a} × {b} oublie les {cats[2][0]}.'),
+            (b * c, 'forgot_category', f'{b} × {c} forgets the {cats[0][1]}.', f'{b} × {c} oublie les {cats[0][0]}.'),
+            (a * b + c, 'added_last', f'{a} × {b} + {c}: the last category must be multiplied too.',
+             f'{a} × {b} + {c} : la dernière catégorie doit aussi être multipliée.'),
+            (a * c, 'forgot_category', f'{a} × {c} forgets the {cats[1][1]}.', f'{a} × {c} oublie les {cats[1][0]}.'),
+            (a * b * (c + 1), 'one_too_many', f'{a} × {b} × {c + 1}: there are only {c} {cats[2][1]}.',
+             f'{a} × {b} × {c + 1} : il n’y a que {c} {cats[2][0]}.'),
+        ]
+    else:
+        cand += [
+            (a * a, 'same_number_twice', f'{a} × {a} uses the number of {cats[0][1]} twice.', f'{a} × {a} utilise deux fois le nombre de {cats[0][0]}.'),
+            (b * b, 'same_number_twice', f'{b} × {b} uses the number of {cats[1][1]} twice.', f'{b} × {b} utilise deux fois le nombre de {cats[1][0]}.'),
+            (a * (b + 1), 'one_too_many', f'{a} × {b + 1}: there are only {b} {cats[1][1]}.', f'{a} × {b + 1} : il n’y a que {b} {cats[1][0]}.'),
+            (a * b + a + b, 'added_and_multiplied', f'{a} × {b} + {a} + {b}: the product alone counts every combination.',
+             f'{a} × {b} + {a} + {b} : le produit seul compte toutes les combinaisons.'),
+            ((a + 1) * b, 'one_too_many', f'{a + 1} × {b}: there are only {a} {cats[0][1]}.', f'{a + 1} × {b} : il n’y a que {a} {cats[0][0]}.'),
+        ]
+    tagged_candidates = [(str(v), e, fen, ffr) for v, e, fen, ffr in cand if v != total and v > 0]
 
+    calc = ' × '.join(map(str, nums))
     return {
         'q_type':           'multiple_choice',
         'prompt_fr':        prompt_fr,
         'prompt_en':        prompt_en,
-        'hint_fr':          'Multiplie le nombre de choix de chaque catégorie.',
-        'hint_en':          'Multiply the number of choices in each category.',
+        'bullets':          bullets,
+        'hint_fr':          'Chaque choix d’une catégorie va avec chaque choix des autres : multiplie les nombres de choix.',
+        'hint_en':          'Each choice in one category goes with every choice in the others: multiply the numbers of choices.',
         'show_illustration': False,
         'shape_data':       [],
-        'choices':          _tagged_shuffle_mc(str(total), tagged_candidates[:4]),
+        'choices':          _tagged_shuffle_mc(str(total), tagged_candidates),
         'pairs':            [],
         'explanation_en': (
             f'Step 1: Use the multiplication principle: multiply the number of choices in each category.\n'
-            f'Step 2: {" × ".join(str(x) for x in ([a, b] if c is None else [a, b, c]))} = {total}.\n'
-            f'Answer: {total} different combinations'
+            f'Step 2: {calc} = {total}.\n'
+            f'Answer: {total} different {what_en}'
         ),
         'explanation_fr': (
             f'Étape 1 : Utilise le principe multiplicatif : multiplie le nombre de choix de chaque catégorie.\n'
-            f'Étape 2 : {" × ".join(str(x) for x in ([a, b] if c is None else [a, b, c]))} = {total}.\n'
-            f'Réponse : {total} combinaisons différentes'
+            f'Étape 2 : {calc} = {total}.\n'
+            f'Réponse : {total} {what_fr} {diff_fr}'
         ),
         'correct_answers':  [str(total)],
     }
@@ -471,49 +466,46 @@ def g5_euler_gen(level='easy'):
         pool = _POLYHEDRA
 
     name_fr, name_en, V, E, F = random.choice(pool)
+    fem = name_fr.startswith('Pyramide')
+    sol_fr = f"{'Une' if fem else 'Un'} {name_fr[0].lower()}{name_fr[1:]}"      # « Une pyramide à base carrée »
+    sol_en = f"{'An' if name_en[0] in 'AEIOU' else 'A'} {name_en.lower()}"      # « An octahedron »
+    il = 'elle' if fem else 'il'
     # What to find
     unknown = random.choice(['E', 'V', 'F'])
 
     if unknown == 'E':
-        # V − E + F = 2 → E = V + F − 2
         correct = E
-        prompt_fr = f"Un **{name_fr}** a {V} sommets et {F} faces. Combien a-t-il d'arêtes ?"
-        prompt_en = f"A **{name_en}** has {V} vertices and {F} faces. How many edges does it have?"
-        wrong1 = V + F
-        wrong2 = V + F - 1
-        wrong3 = V * F
+        prompt_fr = f"{sol_fr} a {V} sommets et {F} faces. Combien a-t-{il} d'arêtes ?"
+        prompt_en = f"{sol_en} has {V} vertices and {F} faces. How many edges does it have?"
+        iso_fr = f'A = S + F − 2 = {V} + {F} − 2 = {E}'
+        iso_en = f'E = V + F − 2 = {V} + {F} − 2 = {E}'
+        wrong = [(V + F, 'forgot_minus_2', 'You added V + F but forgot to subtract 2.', 'Tu as fait S + F, mais oublié d’enlever 2.'),
+                 (V + F + 2, 'sign_error', 'E = V + F − 2: subtract 2, do not add it.', 'A = S + F − 2 : on enlève 2, on ne l’ajoute pas.'),
+                 (V + F - 1, 'off_by_one', 'Subtract 2, not 1.', 'Enlève 2, pas 1.'),
+                 (E - 1, 'off_by_one', 'Recheck V + F − 2.', 'Recalcule S + F − 2.')]
     elif unknown == 'V':
-        # E = V + F − 2 → V = E − F + 2
         correct = V
-        prompt_fr = f"Un **{name_fr}** a {E} arêtes et {F} faces. Combien a-t-il de sommets ?"
-        prompt_en = f"A **{name_en}** has {E} edges and {F} faces. How many vertices does it have?"
-        wrong1 = E + F
-        wrong2 = E - F
-        wrong3 = E + F - 2
+        prompt_fr = f"{sol_fr} a {E} arêtes et {F} faces. Combien a-t-{il} de sommets ?"
+        prompt_en = f"{sol_en} has {E} edges and {F} faces. How many vertices does it have?"
+        iso_fr = f'S = 2 + A − F = 2 + {E} − {F} = {V}'
+        iso_en = f'V = 2 + E − F = 2 + {E} − {F} = {V}'
+        wrong = [(E - F, 'forgot_plus_2', 'You did E − F but forgot to add 2.', 'Tu as fait A − F, mais oublié d’ajouter 2.'),
+                 (E + F - 2, 'sign_error', 'V = 2 + E − F: subtract the faces.', 'S = 2 + A − F : on soustrait les faces.'),
+                 (E + F, 'wrong_formula', 'Use V − E + F = 2 to isolate V.', 'Utilise S − A + F = 2 pour isoler S.'),
+                 (V + 1, 'off_by_one', 'Recheck 2 + E − F.', 'Recalcule 2 + A − F.')]
     else:
-        # F = 2 − V + E
         correct = F
-        prompt_fr = f"Un **{name_fr}** a {V} sommets et {E} arêtes. Combien a-t-il de faces ?"
-        prompt_en = f"A **{name_en}** has {V} vertices and {E} edges. How many faces does it have?"
-        wrong1 = E - V
-        wrong2 = V + E - 2
-        wrong3 = E + V
-
-    tagged_candidates = [
-        (str(wrong1), 'wrong_formula',
-         'Use Euler\'s formula: V − E + F = 2.',
-         'Utilise la relation d\'Euler : S − A + F = 2.'),
-        (str(wrong2), 'sign_error',
-         'Watch the signs in V − E + F = 2.',
-         'Attention aux signes dans S − A + F = 2.'),
-        (str(wrong3), 'wrong_operation',
-         'Isolate the unknown with Euler\'s formula.',
-         'Isole l\'inconnue avec la relation d\'Euler.'),
-        (str(correct + 1), 'off_by_one',
-         'Recheck your arithmetic.',
-         'Recalcule soigneusement.'),
-    ]
-    tagged_candidates = [c for c in tagged_candidates if c[0] != str(correct)]
+        prompt_fr = f"{sol_fr} a {V} sommets et {E} arêtes. Combien a-t-{il} de faces ?"
+        prompt_en = f"{sol_en} has {V} vertices and {E} edges. How many faces does it have?"
+        iso_fr = f'F = 2 + A − S = 2 + {E} − {V} = {F}'
+        iso_en = f'F = 2 + E − V = 2 + {E} − {V} = {F}'
+        wrong = [(E - V, 'forgot_plus_2', 'You did E − V but forgot to add 2.', 'Tu as fait A − S, mais oublié d’ajouter 2.'),
+                 (V + E - 2, 'sign_error', 'F = 2 + E − V: subtract the vertices.', 'F = 2 + A − S : on soustrait les sommets.'),
+                 (E + V, 'wrong_formula', 'Use V − E + F = 2 to isolate F.', 'Utilise S − A + F = 2 pour isoler F.'),
+                 (F + 1, 'off_by_one', 'Recheck 2 + E − V.', 'Recalcule 2 + A − S.')]
+    wrong += [(correct + 2, 'off_by_two', 'Recheck the ± 2 in the formula.', 'Revérifie le ± 2 de la relation.'),
+              (correct - 1, 'off_by_one', 'Recheck your arithmetic.', 'Recalcule soigneusement.')]
+    tagged_candidates = [(str(v), e, fen, ffr) for v, e, fen, ffr in wrong if v != correct and v > 0]
 
     return {
         'q_type':           'multiple_choice',
@@ -523,18 +515,18 @@ def g5_euler_gen(level='easy'):
         'hint_en':          'Euler\'s formula for convex polyhedra: Vertices − Edges + Faces = 2.',
         'show_illustration': False,
         'shape_data':       [],
-        'choices':          _tagged_shuffle_mc(str(correct), tagged_candidates[:4]),
+        'choices':          _tagged_shuffle_mc(str(correct), tagged_candidates),
         'pairs':            [],
         'explanation_en': (
             f'Step 1: Euler\'s formula: V − E + F = 2, where V = vertices, E = edges, F = faces.\n'
-            f'Step 2: For a {name_en}: V={V}, E={E}, F={F}. Check: {V} − {E} + {F} = {V - E + F} ✓\n'
-            f'Step 3: Isolate the unknown and calculate.\n'
+            f'Step 2: Isolate the unknown: {iso_en}.\n'
+            f'Step 3: Check: {V} − {E} + {F} = 2 ✓\n'
             f'Answer: {correct}'
         ),
         'explanation_fr': (
             f'Étape 1 : Relation d\'Euler : S − A + F = 2, où S = sommets, A = arêtes, F = faces.\n'
-            f'Étape 2 : Pour un {name_fr} : S={V}, A={E}, F={F}. Vérif : {V} − {E} + {F} = {V - E + F} ✓\n'
-            f'Étape 3 : Isole l\'inconnue et calcule.\n'
+            f'Étape 2 : Isole l\'inconnue : {iso_fr}.\n'
+            f'Étape 3 : Vérification : {V} − {E} + {F} = 2 ✓\n'
             f'Réponse : {correct}'
         ),
         'correct_answers':  [str(correct)],
@@ -557,39 +549,34 @@ def g5_solid_counts_gen(level='easy'):
         pool  = _POLYHEDRA
         count = 4
 
-    chosen = random.sample(pool, min(count, len(pool)))
-    # Vary description: sometimes F/V/E, sometimes just faces
-    pairs = []
+    # Two solids with the same (faces, vertices, edges) — the cube and the rectangular
+    # prism — could swap places, so a set never holds two equal profiles.
+    while True:
+        chosen = random.sample(pool, min(count, len(pool)))
+        if len({(V, E, F) for _, _, V, E, F in chosen}) == len(chosen):
+            break
+    pairs, lines_fr, lines_en = [], [], []
     for name_fr, name_en, V, E, F in chosen:
-        desc_kind = random.choice(['all', 'faces_edges'])
-        if desc_kind == 'all':
-            desc = f"{F} faces, {V} sommets, {E} arêtes"
-            desc_en = f"{F} faces, {V} vertices, {E} edges"
-        else:
-            desc = f"{F} face{'s' if F > 1 else ''}, {E} arête{'s' if E > 1 else ''}"
-            desc_en = f"{F} face{'s' if F > 1 else ''}, {E} edge{'s' if E > 1 else ''}"
+        desc = f"{F} faces, {V} sommets, {E} arêtes"
+        desc_en = f"{F} faces, {V} vertices, {E} edges"
         pairs.append({'left': name_fr, 'left_en': name_en, 'right': desc, 'right_en': desc_en})
+        lines_fr.append(f'{name_fr} : {desc} ({V} − {E} + {F} = 2 ✓)')
+        lines_en.append(f'{name_en}: {desc_en} ({V} − {E} + {F} = 2 ✓)')
 
     return {
         'q_type':           'mix_match',
         'prompt_fr':        'Associe chaque solide à ses caractéristiques (faces, sommets, arêtes).',
         'prompt_en':        'Match each solid to its properties (faces, vertices, edges).',
-        'hint_fr':          'Un cube a 6 faces, 8 sommets et 12 arêtes. Vérifie la relation d\'Euler : S − A + F = 2.',
-        'hint_en':          'A cube has 6 faces, 8 vertices, and 12 edges. Check Euler: V − E + F = 2.',
+        'hint_fr':          ('Imagine chaque solide : compte ses faces, puis ses sommets (les coins), puis ses arêtes. '
+                             'Vérifie avec la relation d\'Euler : sommets − arêtes + faces = 2.'),
+        'hint_en':          ('Picture each solid: count its faces, then its vertices (corners), then its edges. '
+                             'Check with Euler: vertices − edges + faces = 2.'),
         'show_illustration': False,
         'shape_data':       [],
         'choices':          [],
         'pairs':            pairs,
-        'explanation_en': (
-            'Step 1: Recall key solids — cube: 6F/8V/12E; tetrahedron: 4F/4V/6E; square pyramid: 5F/5V/8E.\n'
-            'Step 2: Use Euler\'s formula (V − E + F = 2) to verify each match.\n'
-            'Step 3: Match each solid name to its face/vertex/edge count.'
-        ),
-        'explanation_fr': (
-            'Étape 1 : Rappelle-toi les solides clés — cube : 6F/8S/12A ; tétraèdre : 4F/4S/6A ; pyramide carrée : 5F/5S/8A.\n'
-            'Étape 2 : Utilise la relation d\'Euler (S − A + F = 2) pour vérifier chaque association.\n'
-            'Étape 3 : Associe chaque nom de solide à ses caractéristiques.'
-        ),
+        'explanation_en':   '\n'.join(lines_en),
+        'explanation_fr':   '\n'.join(lines_fr),
         'correct_answers':  [p['right'] for p in pairs],
     }
 
@@ -601,7 +588,7 @@ def g5_solid_counts_gen(level='easy'):
 _PIE_CONTEXTS = [
     (['Chat', 'Chien', 'Oiseau'],            "animaux préférés",  "favourite animals"),
     (['Rouge', 'Bleu', 'Vert', 'Jaune'],     "couleurs préférées","favourite colours"),
-    (['Football', 'Basketball', 'Natation'], "sports pratiqués",  "sports"),
+    (['Soccer', 'Basketball', 'Natation'],   "sports pratiqués",  "sports"),   # Québec: « soccer »
     (['Été', 'Automne', 'Hiver', 'Printemps'], "saisons préférées","favourite seasons"),
 ]
 
@@ -613,17 +600,18 @@ def g5_pie_chart_gen(level='easy'):
     cats   = cats_list[:n_cats]
 
     # Generate proportions that sum to 100 (percentages)
-    for _ in range(100):
+    # All shares different, so « the largest share » has exactly one answer.
+    while True:
         props = [random.randint(5, 50) for _ in range(n_cats - 1)]
         last  = 100 - sum(props)
         if 5 <= last <= 50:
             props.append(last)
-            break
-    else:
-        props = [round(100 / n_cats)] * (n_cats - 1)
-        props.append(100 - sum(props))
+            if len(set(props)) == n_cats:
+                break
 
     q_type = random.choice(['largest', 'pct_of'])
+    shares_fr = ', '.join(f'{c} {p} %' for c, p in zip(cats, props))
+    shares_en = ', '.join(f"{_L(c, 'en')} {p}%" for c, p in zip(cats, props))
 
     if q_type == 'largest':
         max_idx = props.index(max(props))
@@ -636,11 +624,19 @@ def g5_pie_chart_gen(level='easy'):
              'Compare la taille de chaque secteur ou son pourcentage.')
             for c in cats if c != correct
         ]
+        hint = ('Lis le pourcentage de chaque secteur et trouve le plus grand.',
+                'Read the percentage of each sector and find the largest.')
+        expl_fr = [f'Les parts sont : {shares_fr}.', f'La plus grande est {props[max_idx]} % : « {correct} ».']
+        expl_en = [f'The shares are: {shares_en}.', f"The largest is {props[max_idx]}%: “{_L(correct, 'en')}”."]
     else:
         idx     = random.randint(0, n_cats - 1)
         correct = str(props[idx]) + ' %'
         prompt_fr = f"D'après le diagramme circulaire des {ctx_fr}, quel pourcentage représente « {cats[idx]} » ?"
         prompt_en = f"According to the pie chart about {ctx_en}, what percentage does '{_L(cats[idx], 'en')}' represent?"
+        hint = (f'Repère le secteur « {cats[idx]} » et lis le pourcentage écrit dessus.',
+                f"Find the “{_L(cats[idx], 'en')}” sector and read the percentage written on it.")
+        expl_fr = [f'Le secteur « {cats[idx]} » affiche {props[idx]} %.']
+        expl_en = [f"The “{_L(cats[idx], 'en')}” sector shows {props[idx]}%."]
         tagged_candidates = [
             (str(props[i]) + ' %', 'wrong_sector',
              'Find the correct sector for that category.',
@@ -658,25 +654,23 @@ def g5_pie_chart_gen(level='easy'):
         'q_type':           'multiple_choice',
         'prompt_fr':        prompt_fr,
         'prompt_en':        prompt_en,
-        'hint_fr':          'Lis le pourcentage de chaque secteur et compare-les.',
-        'hint_en':          'Read the percentage of each sector and compare them.',
+        'hint_fr':          hint[0],
+        'hint_en':          hint[1],
         'show_illustration': True,
         'shape_data':       [{
             'type':        'pie_chart_multi',
             'categories':  cats,
             'proportions': props,
         }],
-        'choices':          _tagged_shuffle_mc(str(correct), tagged_candidates[:4]),
+        # percentages as (fr, en) labels: « 45 % » in French, “45%” in English
+        'choices':          _tagged_shuffle_mc(_pct_label(correct), [(_pct_label(c[0]),) + tuple(c[1:]) for c in tagged_candidates[:4]]),
         'pairs':            [],
-        'explanation_en': (
-            f'Step 1: Identify each sector in the pie chart and its percentage label.\n'
-            f'Step 2: Find the sector for the category asked.\n'
-            f'Answer: {_L(correct, 'en')}'
-        ),
-        'explanation_fr': (
-            f'Étape 1 : Identifie chaque secteur du diagramme circulaire et son pourcentage.\n'
-            f'Étape 2 : Repère le secteur correspondant à la catégorie demandée.\n'
-            f'Réponse : {correct}'
-        ),
+        'explanation_en':   '\n'.join(expl_en + [f"Answer: {_L(correct, 'en').replace(' %', '%')}"]),
+        'explanation_fr':   '\n'.join(expl_fr + [f'Réponse : {correct}']),
         'correct_answers':  [str(correct)],
     }
+
+
+def _pct_label(label):
+    """'45 %' → ('45 %', '45%'); any other label is returned unchanged."""
+    return (label, label.replace(' %', '%')) if label.endswith(' %') else label

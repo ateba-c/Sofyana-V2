@@ -924,21 +924,25 @@ def bar_chart(cats, vals, color=BLUE, step=None, ylabel=None):
     return c.shape()
 
 
-def line_graph(xlabels, vals, step=None, unit='', color=RED):
-    """A broken-line graph: one point per x label, joined by segments."""
+def line_graph(xlabels, vals, step=None, unit='', color=RED, label_every=None):
+    """A broken-line graph: one point per x label, joined by segments.
+    A gridline every ``step``; a number every ``label_every`` (default: every gridline)."""
     c = Canvas(340, 210, max_h=220, css_w='max-w-md')
     top = max(vals)
     step = step or _nice_step(top)
+    label_every = label_every or step
     top = -(-top // step) * step + (step if top % step == 0 else 0)
-    gx, gy, gw, gh = 40, 18, 290, 162
+    gx, gy, gw, gh = 40, 30, 290, 150          # room above the top tick for the unit
     v = 0
     while v <= top:
         y = gy + gh - gh * v / top
-        c.line(gx, y, gx + gw, y, color='#E2E8F0', sw=1, opacity=1)
-        c.text(gx - 5, y + 4, f'{v}', size=10, anchor='end')
+        labelled = v % label_every == 0
+        c.line(gx, y, gx + gw, y, color='#CBD5E1' if labelled else '#E2E8F0', sw=1, opacity=1)
+        if labelled:
+            c.text(gx - 5, y + 4, f'{v}', size=10, anchor='end')
         v += step
     if unit:
-        c.text(gx - 5, gy - 2, unit, size=9, anchor='end', color=SOFT)
+        c.text(gx - 5, 12, unit, size=10, bold=True, anchor='end', color=SOFT)
     c.line(gx, gy, gx, gy + gh, color=INK, sw=1.6)
     c.line(gx, gy + gh, gx + gw, gy + gh, color=INK, sw=1.6)
     n = len(vals)
@@ -955,13 +959,23 @@ def pictograph(cats, vals, icon, per, half_ok=False):
     """
     Rows of icons: one icon = ``per`` items (key printed under the chart). A value that is a
     half multiple of ``per`` ends with a half icon when ``half_ok``.
+
+    Text labels are always painted on top of marks, so an emoji cannot be half-covered.
+    With ``half_ok`` (or any half value) the symbols are therefore drawn as blue discs
+    (marks), and a half symbol is a true half disc; ``icon`` should then be '🔵'.
     """
     rows = len(cats)
     max_icons = max(math.ceil(v / per) for v in vals)
+    discs = half_ok or any(v % per for v in vals)
     cell = 26
     w = 96 + max_icons * cell + 10
     h = rows * 32 + 34
     c = Canvas(w, h, max_h=min(h + 10, 230), css_w='max-w-md')
+    rr = 10
+
+    def half_disc(cx, cy):
+        c.path(f'M {_r(cx)},{_r(cy - rr)} A {rr},{rr} 0 0,0 {_r(cx)},{_r(cy + rr)} Z', fill=BLUE, stroke=INK, sw=1.2)
+
     for r, (cat, v) in enumerate(zip(cats, vals)):
         y = 8 + r * 32
         fr, en = (cat, None) if not isinstance(cat, tuple) else cat
@@ -969,15 +983,19 @@ def pictograph(cats, vals, icon, per, half_ok=False):
         c.line(94, y + 30, w - 6, y + 30, color='#E2E8F0', sw=1, opacity=1)
         full, rest = divmod(v, per)
         for k in range(full):
-            c.text(108 + k * cell, y + 21, icon, size=19)
+            if discs:
+                c.circle(108 + k * cell, y + 15, rr, fill=BLUE, stroke=INK, sw=1.2)
+            else:
+                c.text(108 + k * cell, y + 21, icon, size=19)
         if rest:
-            # half icon: draw the icon, then cover its right half
-            x = 108 + full * cell
-            c.text(x, y + 21, icon, size=19)
-            c.rect(x, y + 1, cell / 2 + 1, 28, fill='#FFFFFF', stroke='none', sw=0)
+            half_disc(108 + full * cell, y + 15)      # left half of a disc
     c.line(94, 4, 94, rows * 32 + 8, color=INK, sw=1.4)
-    c.text(10, h - 6, f'{icon} = {per}', size=13, bold=True, anchor='start', color=PURPLE,
-           text_en=f'{icon} = {per}')
+    if discs:
+        c.circle(18, h - 11, rr, fill=BLUE, stroke=INK, sw=1.2)
+        c.text(32, h - 6, f'= {per}', size=13, bold=True, anchor='start', color=PURPLE, text_en=f'= {per}')
+    else:
+        c.text(10, h - 6, f'{icon} = {per}', size=13, bold=True, anchor='start', color=PURPLE,
+               text_en=f'{icon} = {per}')
     return c.shape()
 
 
