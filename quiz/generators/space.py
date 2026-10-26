@@ -29,20 +29,23 @@ def cartesian_coord_gen(level='easy'):
 
     if ask == 'x':
         correct = [str(px)]
-        prompt_fr = f"Quel est l'abscisse (valeur de x) du point A sur ce repère ?"
-        prompt_en = f"What is the x-coordinate of point A on this grid?"
+        answer_type = 'integer'
+        prompt_fr = "Quelle est l'abscisse (valeur de x) du point A sur ce repère ?"
+        prompt_en = "What is the x-coordinate of point A on this grid?"
         hint_fr   = "Lis la valeur en dessous du point sur l'axe horizontal (axe des x)."
         hint_en   = "Read the value below the point on the horizontal axis (x-axis)."
     elif ask == 'y':
         correct = [str(py)]
-        prompt_fr = "Quel est l'ordonnée (valeur de y) du point A sur ce repère ?"
+        answer_type = 'integer'
+        prompt_fr = "Quelle est l'ordonnée (valeur de y) du point A sur ce repère ?"
         prompt_en = "What is the y-coordinate of point A on this grid?"
         hint_fr   = "Lis la valeur à gauche du point sur l'axe vertical (axe des y)."
         hint_en   = "Read the value to the left of the point on the vertical axis (y-axis)."
     else:
-        correct = [f"({px}, {py})", f"{px}, {py}", f"{px},{py}"]
-        prompt_fr = "Quelles sont les coordonnées du point A ? (Écris sous la forme x, y)"
-        prompt_en = "What are the coordinates of point A? (Write as x, y)"
+        correct = [f"({px}, {py})", f"{px}, {py}", f"{px},{py}", f"({px},{py})"]
+        answer_type = 'coordinate'
+        prompt_fr = "Quelles sont les coordonnées du point A ? Écris-les sous la forme (x, y)."
+        prompt_en = "What are the coordinates of point A? Write them as (x, y)."
         hint_fr   = "L'abscisse (x) se lit en premier, puis l'ordonnée (y)."
         hint_en   = "The x-coordinate comes first, then the y-coordinate."
 
@@ -60,13 +63,18 @@ def cartesian_coord_gen(level='easy'):
             f'Step 1: Locate point A on the grid.\n'
             f'Step 2: Read the x-coordinate (horizontal axis) = {px}.\n'
             f'Step 3: Read the y-coordinate (vertical axis) = {py}.\n'
-            f'Answer: point A is at ({px}, {py})'
+            + {'x': f'Answer: the x-coordinate of A is x = {px}.',
+               'y': f'Answer: the y-coordinate of A is y = {py}.',
+               'both': f'Answer: point A is at ({px}, {py}).'}[ask]
         ),
         'explanation_fr': (
             f'Étape 1 : Repère le point A sur le repère.\n'
             f'Étape 2 : Lis l\'abscisse (axe horizontal) = {px}.\n'
             f'Étape 3 : Lis l\'ordonnée (axe vertical) = {py}.\n'
-            f'Réponse : le point A est en ({px}, {py})'
+            + {'x': f'Réponse : l\'abscisse de A est x = {px}.',
+               'y': f'Réponse : l\'ordonnée de A est y = {py}.',
+               'both': f'Réponse : le point A est en ({px}, {py}).'}[ask]
         ),
+        'answer_type': answer_type,
         'correct_answers': correct,
     }
