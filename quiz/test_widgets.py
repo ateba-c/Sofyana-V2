@@ -82,3 +82,5 @@ class SimulatorRenderTests(SimpleTestCase):
         self.assertIn('Run 100 times', html)
         self.assertIn('[3.0, 1.0]', html)
         self.assertIn('Red', html)
+        self.assertNotIn('{#', html)          # a multi-line {# #} comment is printed as text
+        self.assertNotIn('Simulation runner', html)

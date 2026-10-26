@@ -1,7 +1,9 @@
 {% load quiz_extras %}
-{# Simulation runner (workplan D8.7): question.simulator = {'kind': 'spinner'|'die'|'coin'|'bag',
+{% comment %}
+Simulation runner (workplan D8.7): question.simulator = {'kind': 'spinner'|'die'|'coin'|'bag',
    'outcomes': [{'fr': 'Rouge', 'en': 'Red', 'color': '#EF4444', 'w': 3}, ...], 'batches': [10, 100]}.
-   Trials run in the browser; the question never depends on them (it asks about what they *should* show). #}
+   Trials run in the browser; the question never depends on them (it asks about what they *should* show).
+{% endcomment %}
 {% with sim=question.simulator %}
 <div class="rounded-xl border border-teal/30 bg-teal-light/60 p-3 mb-2"
      x-data='{
