@@ -100,34 +100,40 @@ def word_problem_gen(level: str = 'medium') -> dict:
         b = random.randint(20, 200)
         c = random.randint(10, a + b)
     else:
-        a = random.randint(200, 800)
-        b = random.randint(100, 500)
+        # Grade 3: every number, including the intermediate a + b, stays below 1000.
+        a = random.randint(200, 600)
+        b = random.randint(100, 999 - a)
         c = random.randint(50, a + b)
 
     result = a + b - c
-    if result < 0:
-        c = a + b  # ensure non-negative, result = 0
 
-    result = a + b - c
-
-    choices = _tagged_shuffle_mc(str(result), [
+    # Every distractor is a computed student error (no random filler).
+    tagged = [
+        (str(a + b),
+         'forgot_subtraction',
+         'You stopped after the first step: the last number must be subtracted.',
+         'Tu t\'es arrêté après la première étape : il faut encore soustraire.'),
         (str(a + b + c),
          'wrong_operation',
          'You added all three — the last number should be subtracted.',
          'Tu as tout additionné — le dernier nombre doit être soustrait.'),
-        (str(a - b - c if a - b - c > 0 else a + b),
-         'wrong_operation',
-         'Re-read the problem: first add, then subtract.',
-         'Relis le problème : d\'abord additionne, puis soustrais.'),
-        (str(a + b),
-         'forgot_subtraction',
-         'You forgot to give away the candies at the end.',
-         'Tu as oublié de soustraire les bonbons donnés.'),
-        (str(a - c if a >= c else a + c),
-         'ignored_b',
-         'Did you forget the candies won in the middle step?',
-         'As-tu oublié les bonbons gagnés au milieu ?'),
-    ])
+    ]
+    if a >= c:
+        tagged.append((str(a - c), 'ignored_b',
+                       'Did you forget the amount gained in the middle step?',
+                       'As-tu oublié la quantité gagnée au milieu ?'))
+    if a >= b:
+        tagged.append((str(a - b + c), 'swapped_operations',
+                       'Re-read the problem: first add, then subtract.',
+                       'Relis le problème : d\'abord additionne, puis soustrais.'))
+    tagged += [
+        (str(result + 10), 'calculation_error', 'Check your subtraction.', 'Vérifie ta soustraction.'),
+        (str(result - 10), 'calculation_error', 'Check your subtraction.', 'Vérifie ta soustraction.'),
+        (str(result + 1), 'calculation_error', 'Check your subtraction.', 'Vérifie ta soustraction.'),
+        (str(result + 100), 'calculation_error', 'Check your subtraction.', 'Vérifie ta soustraction.'),
+    ]
+    tagged = [t for t in tagged if int(t[0]) < 1000]
+    choices = _tagged_shuffle_mc(str(result), tagged)
 
     themes_fr = [
         (f'Un monstre a **{a}** bonbons. Il en gagne **{b}** puis en donne **{c}**. '
@@ -175,6 +181,8 @@ def multiply_context_gen(level: str = 'medium') -> dict:
     else:
         g = random.randint(6, 12)
         k = random.randint(6, 12)
+    if g == k == 2:              # 2 + 2 = 2 × 2: the addition would be right too
+        k = 3
 
     correct = f'{g} × {k}'
     total = g * k
@@ -188,7 +196,7 @@ def multiply_context_gen(level: str = 'medium') -> dict:
          'wrong_operation',
          'Division undoes multiplication — here you multiply to find the total.',
          'La division défait la multiplication — ici tu cherches le total.'),
-        (f'{g} − {k}',
+        (f'{max(g, k)} − {min(g, k)}',               # never a negative result
          'wrong_operation',
          'There is no subtraction here: all groups are combined.',
          'Il n\'y a pas de soustraction : tous les groupes s\'accumulent.'),
@@ -220,7 +228,7 @@ def multiply_context_gen(level: str = 'medium') -> dict:
         'hint_en': 'When you have several equal groups, you multiply.',
         'shape_data': [],
         'choices': choices,
-        'correct_answers': [correct, f'{k} × {g}'],   # commutative
+        'correct_answers': [correct] + ([f'{k} × {g}'] if g != k else []),   # commutative
         'time_limit': 30,
         'points': 1,
         'explanation_fr': (
@@ -243,15 +251,16 @@ def repeated_addition_gen(level: str = 'medium') -> dict:
     """
     count = 3 if level == 'easy' else 4
 
-    if level == 'easy':
-        factors = random.sample(range(2, 7), count)
-        repeats = random.sample(range(2, 6), count)
-    elif level == 'medium':
-        factors = random.sample(range(2, 10), count)
-        repeats = random.sample(range(2, 9), count)
-    else:
-        factors = random.sample(range(3, 12), count)
-        repeats = random.sample(range(3, 11), count)
+    f_rng, r_rng = ((range(2, 7), range(2, 6)) if level == 'easy' else
+                    (range(2, 10), range(2, 9)) if level == 'medium' else
+                    (range(3, 12), range(3, 11)))
+    # Every pair must have its own product: with 9+9+9+9+9 and 5+5+…+5 (9 times)
+    # both equal to 45, "5 × 9" and "9 × 5" would each fit either addition.
+    for _ in range(200):
+        factors = random.sample(f_rng, count)
+        repeats = random.sample(r_rng, count)
+        if len({f * r for f, r in zip(factors, repeats)}) == count:
+            break
 
     pairs = []
     seen = set()
@@ -292,7 +301,7 @@ def division_sharing_gen(level: str = 'medium') -> dict:
     """
     if level == 'easy':
         groups  = random.randint(2, 5)
-        per_grp = random.randint(1, 6)
+        per_grp = random.randint(2, 6)
     elif level == 'medium':
         groups  = random.randint(3, 8)
         per_grp = random.randint(2, 10)
@@ -302,7 +311,20 @@ def division_sharing_gen(level: str = 'medium') -> dict:
 
     total = groups * per_grp
 
+    # Computed errors only (no random filler).
     choices = _tagged_shuffle_mc(str(per_grp), [
+        (str(groups),
+         'answer_confusion',
+         'You gave the number of groups, not the share per group.',
+         'Tu as donné le nombre de groupes, pas la part de chacun.'),
+        (str(per_grp + 1),
+         'off_by_one',
+         'Close! Check your division: multiply back to verify.',
+         'Presque ! Vérifie ta division en remultipliant.'),
+        (str(per_grp - 1),
+         'off_by_one',
+         'Close! Check your division: multiply back to verify.',
+         'Presque ! Vérifie ta division en remultipliant.'),
         (str(total - groups),
          'wrong_operation',
          'You subtracted instead of dividing — share equally!',
@@ -311,14 +333,18 @@ def division_sharing_gen(level: str = 'medium') -> dict:
          'wrong_operation',
          'You added instead of dividing.',
          'Tu as additionné au lieu de diviser.'),
-        (str(groups),
-         'answer_confusion',
-         'You gave the number of groups, not the share per group.',
-         'Tu as donné le nombre de groupes, pas la part de chacun.'),
-        (str(per_grp + 1),
+        (str(total),
+         'no_operation',
+         'That is the whole amount, not one share.',
+         'C\'est la quantité totale, pas la part de chacun.'),
+        (str(per_grp + 2),
          'off_by_one',
-         'Close! Check your division.',
-         'Presque ! Vérifie ta division.'),
+         'Check your division: multiply back to verify.',
+         'Vérifie ta division en remultipliant.'),
+        (str(per_grp + 3),
+         'off_by_one',
+         'Check your division: multiply back to verify.',
+         'Vérifie ta division en remultipliant.'),
     ])
 
     themes_fr = [
@@ -361,107 +387,81 @@ def division_sharing_gen(level: str = 'medium') -> dict:
 
 def choose_operation_gen(level: str = 'medium') -> dict:
     """
-    QCM — read a word problem and choose the operation to use first.
-    Scenarios cycle through all four operations.
+    QCM — read a one-step word problem and choose the operation that solves it.
+    Scenarios cycle through all four operations; a division always shares exactly.
     """
-    _SCENARIOS = [
-        # (type, prompt_fr, prompt_en, answer_fr, answer_en, distractors_fr, distractors_en)
-        ('add',
-         lambda a, b: (
-             f'Léa a **{a}** billes. Elle en reçoit **{b}** de plus. '
-             f'Quelle est la première opération à faire ?',
-             f'Léa has **{a}** marbles. She gets **{b}** more. '
-             f'What is the first operation to use?',
-         ),
-         'addition', 'addition',
-         ['soustraction', 'multiplication', 'division'],
-         ['subtraction', 'multiplication', 'division']),
-        ('sub',
-         lambda a, b: (
-             f'Il y a **{a}** élèves. **{b}** partent. '
-             f'Quelle opération permet de trouver combien il en reste ?',
-             f'There are **{a}** students. **{b}** leave. '
-             f'Which operation finds how many remain?',
-         ),
-         'soustraction', 'subtraction',
-         ['addition', 'multiplication', 'division'],
-         ['addition', 'multiplication', 'division']),
-        ('mul',
-         lambda a, b: (
-             f'Il y a **{a}** rangées de **{b}** arbres. '
-             f'Quelle opération compte le nombre total d\'arbres ?',
-             f'There are **{a}** rows of **{b}** trees. '
-             f'Which operation counts the total number of trees?',
-         ),
-         'multiplication', 'multiplication',
-         ['addition', 'soustraction', 'division'],
-         ['addition', 'subtraction', 'division']),
-        ('div',
-         lambda a, b: (
-             f'**{a}** images sont réparties en **{b}** albums égaux. '
-             f'Quelle opération trouve le nombre d\'images par album ?',
-             f'**{a}** pictures are placed into **{b}** equal albums. '
-             f'Which operation finds pictures per album?',
-         ),
-         'division', 'division',
-         ['addition', 'soustraction', 'multiplication'],
-         ['addition', 'subtraction', 'multiplication']),
-    ]
-
     if level == 'easy':
         a, b = random.randint(5, 20), random.randint(2, 10)
+        q = random.randint(2, 5)
     elif level == 'medium':
         a, b = random.randint(20, 100), random.randint(3, 15)
+        q = random.randint(3, 9)
     else:
         a, b = random.randint(100, 500), random.randint(5, 20)
+        q = random.randint(6, 25)
 
-    sc = random.choice(_SCENARIOS)
-    _, make_prompt, ans_fr, ans_en, dist_fr, dist_en = sc
-    prompt_fr, prompt_en = make_prompt(a, b)
+    kind = random.choice(['add', 'sub', 'mul', 'div'])
+    if kind == 'add':
+        prompt_fr = (f'Léa a **{a}** billes. Elle en reçoit **{b}** de plus. '
+                     f'Quelle opération permet de trouver combien de billes elle a maintenant ?')
+        prompt_en = (f'Léa has **{a}** marbles. She gets **{b}** more. '
+                     f'Which operation finds how many marbles she has now?')
+        hint = ('On ajoute une quantité à une autre.', 'One amount is added to another.')
+        calc = f'{a} + {b} = {a + b}'
+        ans = ('addition', 'addition')
+    elif kind == 'sub':
+        a = max(a, b + 1)
+        prompt_fr = (f'Il y a **{a}** élèves. **{b}** partent. '
+                     f'Quelle opération permet de trouver combien il en reste ?')
+        prompt_en = (f'There are **{a}** students. **{b}** leave. '
+                     f'Which operation finds how many remain?')
+        hint = ('On enlève une quantité à un tout.', 'An amount is taken away from a whole.')
+        calc = f'{a} − {b} = {a - b}'
+        ans = ('soustraction', 'subtraction')
+    elif kind == 'mul':
+        rows, per = random.randint(2, 9 if level != 'hard' else 12), b
+        prompt_fr = (f'Il y a **{rows}** rangées de **{per}** arbres. '
+                     f'Quelle opération donne le plus rapidement le nombre total d\'arbres ?')
+        prompt_en = (f'There are **{rows}** rows of **{per}** trees. '
+                     f'Which operation gives the total number of trees the fastest?')
+        hint = ('Il y a plusieurs groupes du même nombre : cherche combien en tout.',
+                'There are several groups of the same size: find how many in all.')
+        calc = f'{rows} × {per} = {rows * per}'
+        ans = ('multiplication', 'multiplication')
+    else:
+        total = b * q                       # always an exact share
+        prompt_fr = (f'**{total}** images sont réparties également dans **{b}** albums. '
+                     f'Quelle opération permet de trouver le nombre d\'images par album ?')
+        prompt_en = (f'**{total}** pictures are shared equally among **{b}** albums. '
+                     f'Which operation finds how many pictures go in each album?')
+        hint = ('On partage un tout en parts égales.', 'A whole is shared into equal parts.')
+        calc = f'{total} ÷ {b} = {q}'
+        ans = ('division', 'division')
 
-    dist_lbl = dist_fr[:]
-    random.shuffle(dist_lbl)
-    candidates = [(d, 'wrong_operation',
-                   'Re-read the problem: look for keywords like "more", "less", "share", "groups".',
-                   'Relis le problème : cherche les mots "de plus", "de moins", "partage", "groupes".')
-                  for d in dist_lbl[:4]]
-
-    seen = {ans_fr}
-    pool = []
-    for (lbl, etype, fb_en, fb_fr) in candidates:
-        if lbl not in seen:
-            seen.add(lbl)
-            pool.append({'label': lbl, 'correct': False,
-                         'error_type': etype, 'feedback_en': fb_en, 'feedback_fr': fb_fr})
-        if len(pool) == 4:
-            break
-    # Pad if needed
-    extras = ['addition', 'soustraction', 'multiplication', 'division']
-    for e in extras:
-        if len(pool) >= 4:
-            break
-        if e not in seen:
-            seen.add(e)
-            pool.append({'label': e, 'correct': False,
-                         'error_type': 'wrong_operation', 'feedback_en': '', 'feedback_fr': ''})
-
-    insert = random.randint(0, 4)
-    pool.insert(insert, {'label': ans_fr, 'correct': True,
-                         'error_type': '', 'feedback_en': '', 'feedback_fr': ''})
+    ops = [('addition', 'addition'), ('soustraction', 'subtraction'),
+           ('multiplication', 'multiplication'), ('division', 'division')]
+    wrong = [o for o in ops if o[0] != ans[0]]
+    random.shuffle(wrong)
+    pool = [{'label': fr, 'label_en': en, 'correct': False, 'error_type': 'wrong_operation',
+             'feedback_en': f'Here: {hint[1]}', 'feedback_fr': f'Ici : {hint[0][0].lower()}{hint[0][1:]}'}
+            for fr, en in wrong]
+    pool.insert(random.randint(0, len(pool)),
+                {'label': ans[0], 'label_en': ans[1], 'correct': True,
+                 'error_type': '', 'feedback_en': '', 'feedback_fr': ''})
 
     return {
         'q_type': 'multiple_choice',
         'prompt_fr': prompt_fr,
         'prompt_en': prompt_en,
-        'hint_fr': 'Cherche les mots-clés : de plus, de moins, groupes, partage.',
-        'hint_en': 'Look for keywords: more, less, groups, share.',
+        'hint_fr': hint[0],
+        'hint_en': hint[1],
         'shape_data': [],
-        'choices': pool[:5],
-        'correct_answers': [ans_fr, ans_en],
+        'choices': pool,
+        'correct_answers': [ans[0], ans[1]],
         'time_limit': 35,
         'points': 1,
-        'explanation_fr': f'La bonne opération est : **{ans_fr}**.',
-        'explanation_en': f'The correct operation is: **{ans_en}**.',
+        'explanation_fr': f'{hint[0]} {calc}, donc une **{ans[0]}**.',
+        'explanation_en': f'{hint[1]} {calc}, so the operation is **{ans[1]}**.',
     }
 
 
@@ -486,6 +486,8 @@ def read_decimal_gen(level: str = 'medium') -> dict:
         int_part  = random.randint(0, 99)
         dec_places = 3                     # primary stops at thousandths
         dec_digit  = random.randint(10 ** (dec_places - 1), 10 ** dec_places - 1)
+        if dec_digit % 10 == 0:            # "virgule cent cinquante" = 91,15: keep 3 real places
+            dec_digit += random.randint(1, 9)
         dec_str    = str(dec_digit)
 
     words_fr, words_en = _decimal_to_words(int_part, dec_str)
@@ -497,15 +499,23 @@ def read_decimal_gen(level: str = 'medium') -> dict:
         'q_type': 'text_input',
         'prompt_fr': f'Écris en chiffres : **{words_fr}**',
         'prompt_en': f'Write in digits: **{words_en}**',
-        'hint_fr': 'La virgule sépare la partie entière de la partie décimale.',
-        'hint_en': 'The decimal point separates the whole part from the decimal part.',
+        'hint_fr': (f'La virgule sépare la partie entière de la partie décimale. '
+                    f'Ici, il y a {dec_places} chiffre{"s" if dec_places > 1 else ""} après la virgule '
+                    f'({_DEC_PLACE_NAMES_FR[dec_places]}s).'),
+        'hint_en': (f'The decimal point separates the whole part from the decimal part. '
+                    f'Here there {"are" if dec_places > 1 else "is"} {dec_places} digit{"s" if dec_places > 1 else ""} '
+                    f'after the point ({_DEC_PLACE_NAMES_EN[dec_places]}s).'),
         'shape_data': [],
         'choices': [],
         'correct_answers': [correct_str, correct_comma],
         'time_limit': 30,
         'points': 1,
-        'explanation_fr': f'"{words_fr}" s\'écrit **{correct_str}** en chiffres.',
-        'explanation_en': f'"{words_en}" is written **{correct_str}** in digits.',
+        'explanation_fr': (f'Partie entière : {int_part} ; partie décimale : {dec_str} '
+                           f'({_DEC_PLACE_NAMES_FR[dec_places]}s).\n'
+                           f'« {words_fr} » s\'écrit **{correct_comma}** en chiffres.'),
+        'explanation_en': (f'Whole part: {int_part}; decimal part: {dec_str} '
+                           f'({_DEC_PLACE_NAMES_EN[dec_places]}s).\n'
+                           f'"{words_en}" is written **{correct_str}** in digits.'),
     }
 
 
@@ -622,17 +632,19 @@ def number_classify_gen(level='easy'):
     even    = (n % 2 == 0)
     prime   = _is_prime(n)
 
+    # The four classes are mutually exclusive: a plain "Impair" would also be true
+    # for an odd prime, so the non-prime classes say "pas premier" explicitly.
     if even and prime:                # only n=2 in range
-        ans_fr, ans_en = "Pair et Premier",   "Even and Prime"
+        ans_fr, ans_en = "Pair et premier",       "Even and prime"
     elif even:
-        ans_fr, ans_en = "Pair",              "Even"
+        ans_fr, ans_en = "Pair, pas premier",     "Even, not prime"
     elif prime:
-        ans_fr, ans_en = "Impair et Premier", "Odd and Prime"
+        ans_fr, ans_en = "Impair et premier",     "Odd and prime"
     else:
-        ans_fr, ans_en = "Impair",            "Odd"
+        ans_fr, ans_en = "Impair, pas premier",   "Odd, not prime"
 
-    fixed_fr = ["Pair", "Impair", "Pair et Premier", "Impair et Premier", "Aucune de ces réponses"]
-    fixed_en = ["Even", "Odd",   "Even and Prime",   "Odd and Prime",     "None of these"]
+    fixed_fr = ["Pair, pas premier", "Impair, pas premier", "Pair et premier", "Impair et premier", "Ni pair ni impair"]
+    fixed_en = ["Even, not prime",   "Odd, not prime",      "Even and prime",  "Odd and prime",     "Neither even nor odd"]
 
     # Shuffle the choices
     idxs = list(range(len(fixed_fr)))
@@ -643,17 +655,24 @@ def number_classify_gen(level='easy'):
         fr_label = fixed_fr[i]
         en_label = fixed_en[i]
         correct  = (fr_label == ans_fr)
+        says_even = fr_label.startswith('Pair')
+        says_odd = fr_label.startswith('Impair')
+        says_prime = fr_label.endswith('et premier')
         if correct:
             fb_fr, fb_en = '', ''
-        elif 'Premier' in fr_label and not prime:
+        elif (says_even or says_odd) and says_even != even:
+            if even:
+                fb_fr = f'{n} est pair — il se divise par 2 sans reste.'
+                fb_en = f'{n} is even — it divides evenly by 2.'
+            else:
+                fb_fr = f'{n} est impair — il ne se divise pas par 2 sans reste.'
+                fb_en = f'{n} is odd — it does not divide evenly by 2.'
+        elif says_prime and not prime:
             fb_fr = f'{n} n\'est pas un nombre premier (il a plus de 2 diviseurs).'
             fb_en = f'{n} is not a prime number (it has more than 2 factors).'
-        elif fr_label == "Pair" and not even:
-            fb_fr = f'{n} est impair — il ne se divise pas par 2 sans reste.'
-            fb_en = f'{n} is odd — it does not divide evenly by 2.'
-        elif fr_label == "Impair" and even:
-            fb_fr = f'{n} est pair — il se divise par 2 sans reste.'
-            fb_en = f'{n} is even — it divides evenly by 2.'
+        elif (says_even or says_odd) and not says_prime and prime:
+            fb_fr = f'{n} est un nombre premier : ses seuls diviseurs sont 1 et {n}.'
+            fb_en = f'{n} is a prime number: its only factors are 1 and {n}.'
         else:
             fb_fr = 'Relis les définitions de pair, impair et premier.'
             fb_en = 'Review the definitions of even, odd, and prime.'
@@ -681,13 +700,13 @@ def number_classify_gen(level='easy'):
         'explanation_en': (
             f'Step 1: Is {n} divisible by 2? {"Yes — it is even." if even else "No — it is odd."}\n'
             f'Step 2: Does {n} have exactly 2 factors (1 and itself)? {"Yes — it is prime." if prime else "No — it is not prime."}\n'
-            f'Answer: {n} is {ans_en}'
+            f'Answer: {n} is {ans_en.lower()}'
         ),
         'explanation_fr': (
             f'Étape 1 : {n} est-il divisible par 2 ? {"Oui — il est pair." if even else "Non — il est impair."}\n'
             f'Étape 2 : {n} a-t-il exactement 2 diviseurs (1 et lui-même) ? '
             + ("Oui — il est premier." if prime else "Non — il n'est pas premier.")
-            + f'\nRéponse : {n} est {ans_fr}'
+            + f'\nRéponse : {n} est {ans_fr.lower()}'
         ),
         'correct_answers': [ans_fr],
     }
@@ -752,7 +771,29 @@ def fraction_collection_gen(level='easy'):
         (f'{part_b + 1}/{total}', 'off_by_one',
          'Count carefully.',
          'Compte bien.'),
+        # Back-ups for when the two parts are equal (7/14 apples = 7/14 oranges):
+        # always a real fraction, never a padded whole number like "44".
+        (f'{part_b - 1}/{total}', 'off_by_one',
+         'Count carefully.',
+         'Compte bien.'),
+        (f'{part_b}/{total + 1}', 'total_miscount',
+         f'Count the whole group again: there are {total} {cat_en}.',
+         f'Recompte tout le groupe : il y a {total} {cat_fr}.'),
+        (f'{part_b}/{total - 1}', 'total_miscount',
+         f'Count the whole group again: there are {total} {cat_en}.',
+         f'Recompte tout le groupe : il y a {total} {cat_fr}.'),
     ]
+    # Drop distractors equal in value to the answer (the complement when both parts
+    # are equal) and degenerate ones (0/n).
+    from fractions import Fraction as _F
+    _seen = {_F(part_b, total)}
+    _kept = []
+    for t in tagged_candidates:
+        n_, d_ = map(int, t[0].split('/'))
+        if n_ > 0 and _F(n_, d_) not in _seen:        # one value per choice (2/4 = 3/6)
+            _seen.add(_F(n_, d_))
+            _kept.append(t)
+    tagged_candidates = _kept
 
     def _n(k, word):            # "1 tulip", "3 tulips" — every plural here ends in s / x
         return f'{k} {word[:-1]}' if k == 1 else f'{k} {word}'

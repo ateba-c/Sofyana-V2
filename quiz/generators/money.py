@@ -47,14 +47,15 @@ _DENOM_NAMES_EN = {1: '1¢', 5: '5¢', 10: '10¢', 25: '25¢',
                    1000: '$10', 2000: '$20'}
 
 
-def _make_combination(amount_cents: int) -> str:
-    """Greedy coin decomposition of amount in French labels."""
+def _make_combination(amount_cents: int, lang: str = 'fr') -> str:
+    """Greedy coin decomposition: '1×5 $ + 2×25¢' (fr) or '1×$5 + 2×25¢' (en)."""
+    names = _DENOM_NAMES_EN if lang == 'en' else _DENOM_NAMES_FR
     remaining = amount_cents
     parts = []
     for denom in sorted(_DENOMINATIONS, reverse=True):
         count = remaining // denom
         if count:
-            lbl = _DENOM_NAMES_FR[denom]
+            lbl = names[denom]
             parts.append(f'{count}×{lbl}')
             remaining -= count * denom
     return ' + '.join(parts) if parts else '0¢'
@@ -94,29 +95,37 @@ def money_change_gen(level: str = 'medium') -> dict:
     paid_en      = _fmt_money_en(paid_cents)
     change_en    = _fmt_money_en(change_cents)
 
-    wrong1 = _fmt_money(paid_cents + price_cents)   # add instead of subtract
-    wrong2 = _fmt_money(price_cents - (price_cents % 100) if price_cents % 100 else price_cents)
-    wrong3 = _fmt_money(change_cents + 25 if change_cents + 25 <= paid_cents else max(0, change_cents - 25))
-    wrong4 = _fmt_money(price_cents)                # gave the price back
+    def _m(cents):
+        """A money label in both languages: ('7,25 $', '$7.25')."""
+        return (_fmt_money(cents), _fmt_money_en(cents))
 
-    choices = _tagged_shuffle_mc(change_str, [
-        (wrong1,
+    off = 25 if change_cents + 25 <= paid_cents else -25
+    dollar = 100 if change_cents + 100 < paid_cents else -100
+    tagged = [
+        (_m(paid_cents + price_cents),
          'wrong_operation',
          'To find change, subtract the price from what was paid.',
          'Pour la monnaie, soustrais le prix de la somme payée.'),
-        (wrong3,
+        (_m(change_cents + off),
          'off_by_cents',
          'Close! Check your cents carefully.',
          'Presque ! Vérifie bien les centimes.'),
-        (wrong4,
+        (_m(price_cents),
          'gave_back_price',
          'You gave the price, not the change.',
          'Tu as donné le prix, pas la monnaie.'),
-        (price_str,
-         'confusion',
-         'The change is what remains after paying.',
-         'La monnaie est ce qu\'il reste après avoir payé.'),
-    ])
+        (_m(change_cents + dollar),
+         'off_by_dollar',
+         'Check the dollars: did you regroup correctly?',
+         'Vérifie les dollars : as-tu bien fait l\'emprunt ?'),
+        (_m(change_cents - off),
+         'off_by_cents',
+         'Close! Check your cents carefully.',
+         'Presque ! Vérifie bien les centimes.'),
+    ]
+    # Amounts are never zero or negative.
+    tagged = [t for t in tagged if t[0][0] != '0 $' and not t[0][0].startswith('-')]
+    choices = _tagged_shuffle_mc((change_str, change_en), tagged)
 
     return {
         'q_type': 'multiple_choice',
@@ -171,9 +180,8 @@ def money_composition_gen(level: str = 'medium') -> dict:
 
     pairs = []
     for cents in pool_cents[:count]:
-        left  = _fmt_money(cents)
-        right = _make_combination(cents)
-        pairs.append({'left': left, 'right': right})
+        pairs.append({'left': _fmt_money(cents), 'right': _make_combination(cents),
+                      'left_en': _fmt_money_en(cents), 'right_en': _make_combination(cents, 'en')})
 
     return {
         'q_type': 'mix_match',
@@ -188,5 +196,5 @@ def money_composition_gen(level: str = 'medium') -> dict:
         'time_limit': 45,
         'points': count,
         'explanation_fr': '\n'.join(f'{p["left"]} → {p["right"]}' for p in pairs),
-        'explanation_en': '\n'.join(f'{p["left"]} → {p["right"]}' for p in pairs),
+        'explanation_en': '\n'.join(f'{p["left_en"]} → {p["right_en"]}' for p in pairs),
     }
