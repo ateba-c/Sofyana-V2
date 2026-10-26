@@ -562,10 +562,15 @@ class StatsProbabilityPlusTests(SimpleTestCase):
                 cat = re.search(r'ont choisi \*\*(.+?)\*\*', q['prompt_fr']).group(1)
                 per = int(re.search(r'vaut (\d+)', q['prompt_fr']).group(1))
                 row = next(l for l in shape['labels'] if l['text'] == cat)
-                icon = shape['labels'][-1]['text'].split(' = ')[0]
-                icons = [l for l in shape['labels'] if l['text'] == icon and abs(l['y'] - row['y'] - 2) <= 3]
-                covers = [m for m in shape['marks'] if m['type'] == 'rect' and m['fill'] == '#FFFFFF' and abs(m['y'] + 20 - row['y'] - 2) <= 4]
-                self.assertEqual(int(q['correct_answers'][0]), round((len(icons) - len(covers) / 2) * per), (cat, level))
+                icon = shape['labels'][-1]['text'].split('=')[0].strip()     # '⭐ = 2', or '= 4' after a drawn disc
+                if icon:      # emoji symbols (no half symbols)
+                    whole = len([l for l in shape['labels'] if l['text'] == icon and abs(l['y'] - row['y'] - 2) <= 3])
+                    halves = 0
+                else:         # discs drawn as marks: a circle = 1 symbol, a half-disc path = ½
+                    whole = len([m for m in shape['marks'] if m['type'] == 'circle' and abs(m['cy'] - row['y'] + 4) <= 3])
+                    halves = len([m for m in shape['marks'] if m['type'] == 'path' and m.get('fill') != 'none'
+                                  and abs(float(m['d'].split()[1].split(',')[1]) + 10 - row['y'] + 4) <= 3])
+                self.assertEqual(int(q['correct_answers'][0]), round((whole + halves / 2) * per), (cat, level))
 
     def test_line_graph_reading(self):
         for _ in range(40):
@@ -597,7 +602,7 @@ class StatsProbabilityPlusTests(SimpleTestCase):
         for level in LEVELS:
             for _ in range(30):
                 q = _q('g3-build-chart', level)
-                vals = list(map(int, re.findall(r' : (\d+)', q['prompt_fr'])))
+                vals = [int(row[1]) for row in q['table']['rows']]
                 n = len(vals)
                 bars = [m for m in q['shape_data'][0]['marks'] if m['type'] == 'rect']
                 panels = [[b['h'] for b in bars[k * n:(k + 1) * n]] for k in range(5)]
