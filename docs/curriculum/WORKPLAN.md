@@ -32,6 +32,7 @@ Session log (append one line per working session):
 | 2026-10-14 | Slowdown solved: `convex_polygon` (WP5) used a rejection loop that succeeds ~1/1000 tries for 7 corners → rewritten to build gaps directly. Stress test (1500 runs × 3 levels per skill) also caught a rare duplicate-distractor crash in `g6-divisibility` (WP4) → fixed. Full suite green: **169 tests in 87 s**. Next: Phase F (vocabulary, « who is right? », resolution levels, re-score). | F-pre |
 | 2026-10-14 | F1 vocabulary (4 skills), F2 « who is right? » (3 skills), F4 re-score: **214 / 236 covered, 0 missing**. Full suite green (171 tests, 73 s). Remaining: F3 resolution level for new skills, widget todos (tap-to-build chart, simulation runner, tap-to-place point), B4.16 per-fact tracking, decimal versions of 079/080, D2 decision. | F1-F2-F4 |
 | 2026-10-15 | F3 done: « Résolution » level for 60 new skills (19 new families in `resolution_plus.py`: grid walks, tiling, cube boxes, angles, circles, percent, recipe fractions, teams/multiples, powers, expected counts…), migration 0029, `ResolutionPlusTests`. Full suite green (173 tests, 74 s). Remaining: widget todos (tap-to-build chart, simulation runner, tap-to-place point), B4.16 per-fact tracking, decimal versions of 079/080, D2 decision. | F3 |
+| 2026-10-26 | Phase G: D2 decided (negatives where natural) → integers domain + grade-5 winter temps; 508 AI findings triaged by 5 agents and fixed; QC-079/080; per-fact tracking; tap-to-place / tap-to-build / simulator widgets. Coverage 214 → 223 of 236, nothing awaiting a decision. | see git log |
 
 ---
 
@@ -40,7 +41,7 @@ Session log (append one line per working session):
 | # | Decision | Status |
 |---|---|---|
 | D1 | Launch scope: grades 3–6 first, 1–2 afterwards | Adopted (recommendation) |
-| D2 | Signed integers — grade-6-only domain, no arithmetic | **[!] Awaiting owner** — conflicts with the standing "no negatives anywhere" rule. WP9 + 4-quadrant item blocked until answered. |
+| D2 | Signed integers — grade-6-only domain, no arithmetic | **Decided 2026-10-26 by the owner:** "allow negatives on temperatures and things that would go naturally negative". Grade 6 integer domain + 4-quadrant plane; grade 5 winter temperatures at hard level. Every other skill stays ≥ 0 (`SIGNED_SKILLS` in `resolution_plus.py`). |
 | D3 | Beyond-primary content: cap grade-tagged skills; generic skills stay as challenge | Adopted |
 | D4 | Typed answers at medium/hard for computation | Adopted |
 
@@ -115,7 +116,7 @@ WP4 Operations & calculation
 - [x] B4.13 `g6-prime-factors` (101)
 - [x] B4.14 `g6-powers` (022, 025, 102)
 - [x] B4.15 ×2 / square / triangular / growing sequences — delivered as new skill `g5-number-patterns` (legacy `number-sequence` untouched) (016, 107)
-- [~] B4.16 Fact fluency: content done (`g4-times-tables`, typed, 10 s); **todo**: per-fact adaptive tracking in the practice view (087, 094, 096)
+- [x] B4.16 Fact fluency: per-fact tracking (`quiz/facts.py`, `ProblemInteraction.item`, migration 0032) — missed facts come back about half the time until right twice in a row; feedback lists them (087, 094, 096)
 - [x] B4.17 `g6-write-large-number` (008) — added: writing numbers up to 999 999
 
 ## Phase C — Geometry & measurement (WP5, WP6)
@@ -161,7 +162,7 @@ WP4 Operations & calculation
 - [x] D8.6 `g5-tree-diagram` (230)
 - [x] D8.7 `g5-simulation` (224, 227, 228, 234, 235) — results simulated in the generator; **todo** interactive spin/roll runner
 - [x] D8.8 `g3-list-outcomes` (229) — slug changed from g2- (grade 3 until WP1 adds grade 2)
-- [!] D9.1–D9.4 Integers domain — blocked on D2
+- [x] D9 Integers domain (D2 decided 2026-10-26) — `g6-integer-read`, `-thermometer`, `-number-line`, `-compare`, `-order`, `g6-cartesian-4q`; `signed` answer type with a ± key; migration 0030
 
 ## Phase E — Grades 1–2 (WP1)
 
@@ -182,6 +183,15 @@ WP4 Operations & calculation
 - [x] F2 "Who is right?" reasoning items — `g4-who-is-right-numbers`, `g5-who-is-right-shapes`, `g5-who-is-right-data` (each wrong claim = a classic misconception)
 - [x] F3 Resolution level for new skills — 60 new skills get the 4th « Résolution » level (`quiz/generators/resolution_plus.py`, 19 new story families + reuse of the old ones; migration 0029). Naming / sorting / reasoning skills (vocabulary, « who is right? », shape recognition, symmetry…) stay at 3 levels on purpose. 4th level now on 129 skills (was 69).
 - [x] F4 Re-score — 214 covered / 10 partial / 0 missing / 5 off-screen / 7 decision; live table in `docs/curriculum/COVERAGE.md`
+
+## Phase G — QA pass + remaining features (branch `curriculum-phase-g`, 2026-10-26)
+
+- [x] G1 AI-diagnosis triage: 192 skill diagnoses / 508 findings pulled from prod (read-only); 5 parallel agents verified and fixed them by generator family (G1-A time & measure, G1-B data & probability, G1-C geometry, G1-D operations, G1-E numbers); shared story fixes in G1-0 / G1-0b
+- [x] G1-0 AI review feed: canvas pictures sent in full (were cut at 500 chars → "empty canvas" false alarms), ordering items shown shuffled; student-side ordering shuffle is unbiased and never returns the answer order
+- [x] QC-079 / 080 decimal versions — `g4-decimal-equivalences`, `g5-decimal-properties` (migration 0031)
+- [x] Widgets — tap-to-place point (`cartesian-place-point` medium/hard, `g6-cartesian-4q` hard), tap-to-build bar chart (`build_bars` q_type), simulation runner panel (`question.simulator`) — `quiz/widgets.py`, `partials/practice_widgets.html`, `partials/simulator.html`
+- [ ] Wire `build_bars` into `g3-build-chart` and the simulator into `g5-simulation` (after G1-B merges)
+- [ ] Deploy: migrate (0029 → 0032), `qa_refresh`, `qa_ingest` for the new skills, re-run `qa_ai_review` on changed skills
 
 ## Release checklist (owner-triggered, not done automatically)
 
