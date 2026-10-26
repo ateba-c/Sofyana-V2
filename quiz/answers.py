@@ -19,6 +19,7 @@ from fractions import Fraction
 
 ANSWER_TYPES = [
     ('integer',    'Integer'),
+    ('signed',     'Integer that may be negative (shows a ± key)'),
     ('decimal',    'Decimal number'),
     ('fraction',   'Fraction'),
     ('money',      'Money amount'),
@@ -27,7 +28,7 @@ ANSWER_TYPES = [
     ('symbol',     'Comparison symbol (<, >, =)'),
     ('text',       'Free text / word'),
 ]
-NUMERIC_TYPES = {'integer', 'decimal', 'fraction', 'money'}
+NUMERIC_TYPES = {'integer', 'signed', 'decimal', 'fraction', 'money'}
 
 _UNICODE_MINUS = '−'
 _SPACES = '   '          # nbsp, narrow nbsp, thin space
@@ -48,8 +49,9 @@ def _clean(s) -> str:
     s = '' if s is None else str(s)
     for ch in _SPACES:
         s = s.replace(ch, ' ')
-    s = s.replace(_UNICODE_MINUS, '-')
-    return re.sub(r'\s+', ' ', s).strip()
+    s = s.replace(_UNICODE_MINUS, '-').replace('–', '-')
+    s = re.sub(r'\s+', ' ', s).strip()
+    return re.sub(r'^-\s+(?=\d)', '-', s)          # "- 4" → "-4"
 
 
 def _strip_units(s: str) -> str:
@@ -161,7 +163,7 @@ def infer_answer_type(correct_answers) -> str:
         if any('/' in a for a in answers):
             return 'fraction'
         if all(p.denominator == 1 for p in parsed) and not any(re.search(r'[.,]\d', a) for a in answers):
-            return 'integer'
+            return 'signed' if any(p < 0 for p in parsed) else 'integer'
         return 'decimal'
     return 'text'
 
@@ -236,6 +238,9 @@ def input_spec(answer_type, lang='en') -> dict:
         'integer':    dict(inputmode='numeric', pattern=r'[-0-9 ]*',
                            placeholder='12',
                            hint='Un nombre entier' if fr else 'A whole number'),
+        'signed':     dict(inputmode='numeric', pattern=r'[-−0-9 ]*',
+                           placeholder='−5', signed=True,
+                           hint='Un nombre entier — touche ± pour un nombre négatif' if fr else 'A whole number — use ± for a negative number'),
         'decimal':    dict(inputmode='decimal', pattern=r'[-0-9 .,]*',
                            placeholder='3,5' if fr else '3.5',
                            hint='Utilise la virgule pour les décimales' if fr else 'Use a dot or comma for decimals'),

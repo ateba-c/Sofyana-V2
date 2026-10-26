@@ -192,4 +192,13 @@ UPGRADES = {
     161: ('C', 'g3-vocab-geometry (// ⊥, quadrilatère, convexe)', ''),
     181: ('C', 'g3-vocab-measurement, measure-unit', ''),
     236: ('C', 'g4-vocab-chance, probability-vocab', ''),
+    # WP9 integers — decision D2 settled 2026-10-26 (negatives where natural)
+    56: ('C', 'g6-integer-thermometer, g6-integer-number-line', ''),
+    57: ('C', 'g6-integer-read', ''),
+    58: ('C', 'g6-integer-number-line, g6-cartesian-4q', ''),
+    59: ('C', 'g6-integer-compare', ''),
+    60: ('C', 'g6-integer-order', ''),
+    61: ('C', 'g6-integer-read', 'No calculator ± key (off-screen)'),
+    136: ('C', 'g6-cartesian-4q', ''),
+    208: ('C', 'g3-thermometer, g5-thermometer, g5-temperature, g6-integer-thermometer', 'Below zero in grade 6'),
 }

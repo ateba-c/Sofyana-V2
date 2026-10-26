@@ -1028,7 +1028,7 @@ def render_shape(shape: dict, vw: float = 260, vh: float = 185,
             ))
             if t % (step * 2) == 0 or step >= 10:
                 out['labels'].append(_label(
-                    f"{t} °C", label_x + tick_len - 2, ty + 4,
+                    f"{t} °C".replace('-', '−'), label_x + tick_len - 2, ty + 4,
                     anchor='start', size=11, bold=True, color='#374151',
                 ))
             t += step

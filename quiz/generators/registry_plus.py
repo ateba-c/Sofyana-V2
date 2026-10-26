@@ -53,6 +53,10 @@ from .vocab_reasoning_plus import (
     vocab_numbers_gen, vocab_geometry_gen, vocab_measurement_gen, vocab_chance_gen,
     who_numbers_gen, who_geometry_gen, who_data_gen,
 )
+from .integers_plus import (
+    g6_integer_thermometer_gen, g6_integer_number_line_gen, g6_integer_compare_gen,
+    g6_integer_order_gen, g6_integer_read_gen, g6_cartesian_4q_gen,
+)
 
 _L3 = ['easy', 'medium', 'hard']
 
@@ -86,6 +90,13 @@ PLUS_GENERATORS = {
     'g6-decimal-number-line':        g6_decimal_number_line_gen,
     'g6-percent':                    g6_percent_gen,
     'g6-choose-notation':            g6_choose_notation_gen,
+    # WP9 — integers (D2: negatives where they occur naturally)
+    'g6-integer-read':               g6_integer_read_gen,
+    'g6-integer-thermometer':        g6_integer_thermometer_gen,
+    'g6-integer-number-line':        g6_integer_number_line_gen,
+    'g6-integer-compare':            g6_integer_compare_gen,
+    'g6-integer-order':              g6_integer_order_gen,
+    'g6-cartesian-4q':               g6_cartesian_4q_gen,
     # WP4 — operations & calculation
     'g3-equality-true':              g3_equality_true_gen,
     'g3-story-meaning':              g3_story_meaning_gen,
@@ -208,6 +219,12 @@ PLUS_SKILL_MAP = {
     'g6-decimal-number-line':        _sk('g4-decimal-number-line', 'g6-percent', 'compare-decimal', 'g4-decimal-number-line'),
     'g6-percent':                    _sk('g5-decimal-forms', 'g6-choose-notation', 'g5-probability-forms', 'fraction-to-decimal'),
     'g6-choose-notation':            _sk('g6-percent', 'g6-decimal-number-line', 'compare-mixed', 'g6-percent'),
+    'g6-integer-read':               _sk(None, 'g6-integer-thermometer', 'g6-integer-number-line', 'g5-thermometer'),
+    'g6-integer-thermometer':        _sk('g6-integer-read', 'g6-integer-number-line', 'g6-integer-compare', 'g3-thermometer'),
+    'g6-integer-number-line':        _sk('g6-integer-thermometer', 'g6-integer-compare', 'g6-cartesian-4q', 'g5-number-line'),
+    'g6-integer-compare':            _sk('g6-integer-number-line', 'g6-integer-order', 'g6-integer-order', 'g6-compare'),
+    'g6-integer-order':              _sk('g6-integer-compare', 'g6-cartesian-4q', 'g6-cartesian-4q', 'g6-order'),
+    'g6-cartesian-4q':               _sk('g6-integer-number-line', 'g6-integer-read', 'g6-translation', 'cartesian-coord'),
     'g3-equality-true':              _sk('missing-addend', 'g3-story-meaning', 'g4-equivalent-expressions', 'add'),
     'g3-story-meaning':              _sk('word-problem', 'g3-estimate-sum', 'choose-operation', 'missing-addend'),
     'g3-estimate-sum':               _sk('round-ten', 'word-problem', 'g5-estimate-quotient', 'round-ten'),
@@ -326,6 +343,14 @@ PLUS_GROUPS = [
         {'slug': 'g6-decimal-number-line',   'name_en': 'Decimals Between Decimals',   'name_fr': 'Décimaux entre deux décimaux'},
         {'slug': 'g6-percent',               'name_en': 'Percentages',                 'name_fr': 'Pourcentages'},
         {'slug': 'g6-choose-notation',       'name_en': 'Fraction, Decimal or %?',     'name_fr': 'Fraction, décimal ou % ?'},
+    ]},
+    {'name_en': 'Grade 6 — Integers', 'name_fr': '6e année — Nombres entiers', 'icon': '🌡️', 'grade': 6, 'topics': [
+        {'slug': 'g6-integer-read',          'name_en': 'Read & Write Integers',       'name_fr': 'Lire et écrire des nombres entiers'},
+        {'slug': 'g6-integer-thermometer',   'name_en': 'Below Zero: Thermometers',    'name_fr': 'Sous zéro : thermomètres'},
+        {'slug': 'g6-integer-number-line',   'name_en': 'Integers on a Number Line',   'name_fr': 'Nombres entiers sur une droite'},
+        {'slug': 'g6-integer-compare',       'name_en': 'Compare Integers',            'name_fr': 'Comparer des nombres entiers'},
+        {'slug': 'g6-integer-order',         'name_en': 'Order Integers',              'name_fr': 'Ordonner des nombres entiers'},
+        {'slug': 'g6-cartesian-4q',          'name_en': 'Four-Quadrant Plane',         'name_fr': 'Plan cartésien : 4 quadrants'},
     ]},
     {'name_en': 'Grade 3 — Arithmetic', 'grade': 3, 'topics': [
         {'slug': 'g3-equality-true',         'name_en': 'True Equalities',             'name_fr': 'Égalités vraies'},

@@ -26,6 +26,8 @@ Families:
   outfits           counting combinations (grade 3 two kinds, grade 5 three kinds)
   expected_count    how many times a spinner / die result is expected (grade 5)
   grid_walk         moving on a grid: blocks walked, where you end up
+  signed_story      temperatures below zero, elevator floors, divers (grade 6 integers — the only family with
+                    negative answers, decision D2)
 """
 import random
 from fractions import Fraction
@@ -822,6 +824,95 @@ def grid_walk(grade):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Grade 6 integers (D2: negatives only where they are natural)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _sg(n):
+    return f'−{abs(n)}' if n < 0 else str(n)
+
+
+def _signed(n, unit=''):
+    out = [_sg(n), str(n)] + ([f'{_sg(n)} {unit}'] if unit else [])
+    return list(dict.fromkeys(out))
+
+
+def signed_story(grade):
+    who, g = sc.pick_actor()
+    variant = random.choice(['temp_day', 'elevator', 'diver', 'gap'])
+    if variant == 'temp_day':
+        a = random.randint(-15, -2)
+        up = random.randint(3, 18)
+        down = random.randint(4, 16)
+        b, c = a + up, a + up - down
+        return _problem(
+            f"À Chibougamau, il fait **{_sg(a)} °C** à 6 h. À midi, la température a monté de **{up} degrés**. Le soir, elle baisse de **{down} degrés**. Quelle température fait-il le soir ?",
+            f"In Chibougamau it is **{_sg(a)} °C** at 6 a.m. By noon the temperature has risen by **{up} degrees**. In the evening it drops by **{down} degrees**. What is the evening temperature?",
+            _sg(c), [f'Midi : {_sg(a)} + {up} = {_sg(b)} °C', f'Soir : {_sg(b)} − {down} = {_sg(c)} °C', f'{_sg(c)} °C'],
+            [f'Noon: {_sg(a)} + {up} = {_sg(b)} °C', f'Evening: {_sg(b)} − {down} = {_sg(c)} °C', f'{_sg(c)} °C'],
+            'Avance sur le thermomètre : vers le haut quand ça monte, vers le bas quand ça baisse. Passe par 0.',
+            'Move along the thermometer: up when it rises, down when it drops. Go through 0.', 'signed', _signed(c, '°C'))
+    if variant == 'elevator':
+        start = random.randint(1, 9)
+        down = random.randint(start + 1, start + 4)
+        up = random.randint(1, 6)
+        mid, end = start - down, start - down + up
+        return _problem(
+            f"{who} est au **{start}e étage**. {_cap(sc.pronoun_fr(g))} descend de **{down} étages** pour aller au stationnement, puis remonte de **{up} étage{'s' if up > 1 else ''}**. Le rez-de-chaussée est l’étage 0 et les sous-sols sont négatifs. À quel étage est-{sc.pronoun_fr(g)} ?",
+            f"{who} is on **floor {start}**. {_cap(sc.pronoun_en(g))} goes down **{down} floors** to the car park, then up **{up} floor{'s' if up > 1 else ''}**. The ground floor is floor 0 and basement floors are negative. Which floor is {sc.pronoun_en(g)} on?",
+            _sg(end), [f'{start} − {down} = {_sg(mid)}', f'{_sg(mid)} + {up} = {_sg(end)}', f'Étage {_sg(end)}'],
+            [f'{start} − {down} = {_sg(mid)}', f'{_sg(mid)} + {up} = {_sg(end)}', f'Floor {_sg(end)}'],
+            'Imagine les boutons de l’ascenseur : 0 au rez-de-chaussée, −1, −2… dessous.', 'Picture the elevator buttons: 0 on the ground floor, −1, −2… below it.',
+            'signed', _signed(end))
+    if variant == 'diver':
+        depth = random.randint(8, 30)
+        up = random.randint(2, depth + 6)
+        end = -depth + up
+        return _problem(
+            f"Un plongeur est à **{_sg(-depth)} m** (0 m = niveau de la mer). Il remonte de **{up} m**. À quelle altitude est-il maintenant ?",
+            f"A diver is at **{_sg(-depth)} m** (0 m = sea level). He rises **{up} m**. What is his altitude now?",
+            _sg(end), [f'{_sg(-depth)} + {up} = {_sg(end)}', f'{_sg(end)} m' + (' (il est sorti de l’eau)' if end > 0 else '')],
+            [f'{_sg(-depth)} + {up} = {_sg(end)}', f'{_sg(end)} m' + (' (he is out of the water)' if end > 0 else '')],
+            'Remonter rapproche de 0 (ou le dépasse).', 'Rising brings you closer to 0 (or past it).', 'signed', _signed(end, 'm'))
+    hi = random.choice(range(50, 400, 10))
+    lo = -random.choice(range(10, 120, 5))
+    return _problem(
+        f"Un goéland vole à **{hi} m** au-dessus du niveau de la mer. Juste en dessous, un sous-marin est à **{_sg(lo)} m**. Quelle distance verticale les sépare ?",
+        f"A gull flies **{hi} m** above sea level. Right below it, a submarine is at **{_sg(lo)} m**. What vertical distance separates them?",
+        hi - lo, [f'Du sous-marin au niveau de la mer : {-lo} m', f'Du niveau de la mer au goéland : {hi} m', f'{-lo} + {hi} = {hi - lo} m'],
+        [f'From the submarine to sea level: {-lo} m', f'From sea level to the gull: {hi} m', f'{-lo} + {hi} = {hi - lo} m'],
+        'Passe par le niveau de la mer (0 m) : additionne les deux distances.', 'Go through sea level (0 m): add the two distances.')
+
+
+def plane_walk(grade):
+    """A robot moving across the four quadrants: where does it end up?"""
+    x, y = random.randint(-4, 4), random.randint(-4, 4)
+    moves, ex, ey, st_fr, st_en = [], x, y, [], []
+    for _ in range(random.randint(2, 3)):
+        d = random.choice(['g', 'd', 'h', 'b'])
+        k = random.randint(2, 7)
+        moves.append((d, k))
+        if d in 'gd':
+            nx = ex - k if d == 'g' else ex + k
+            st_fr.append(f"x : {_sg(ex)} {'−' if d == 'g' else '+'} {k} = {_sg(nx)}")
+            st_en.append(f"x: {_sg(ex)} {'−' if d == 'g' else '+'} {k} = {_sg(nx)}")
+            ex = nx
+        else:
+            ny = ey + k if d == 'h' else ey - k
+            st_fr.append(f"y : {_sg(ey)} {'+' if d == 'h' else '−'} {k} = {_sg(ny)}")
+            st_en.append(f"y: {_sg(ey)} {'+' if d == 'h' else '−'} {k} = {_sg(ny)}")
+            ey = ny
+    fr = {'g': 'vers la gauche', 'd': 'vers la droite', 'h': 'vers le haut', 'b': 'vers le bas'}
+    en = {'g': 'left', 'd': 'right', 'h': 'up', 'b': 'down'}
+    key = f'({_sg(ex)}, {_sg(ey)})'
+    return _problem(
+        f"Un robot part du point **({_sg(x)}, {_sg(y)})** du plan cartésien. Il se déplace de " + ', puis '.join(f'**{k}** {fr[d]}' for d, k in moves) + ". Quelles sont ses coordonnées d’arrivée ? Écris (x, y).",
+        f"A robot starts at point **({_sg(x)}, {_sg(y)})** on the coordinate plane. It moves " + ', then '.join(f'**{k}** {en[d]}' for d, k in moves) + ". What are its final coordinates? Write (x, y).",
+        key, st_fr + [key], st_en + [key],
+        'Gauche/droite change x ; haut/bas change y. Passe par 0 si besoin.', 'Left/right changes x; up/down changes y. Go through 0 if needed.',
+        'coordinate', [key, f'({ex}, {ey})'])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # registry: new skills → (grade, families)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -891,4 +982,14 @@ FAMILIES_PLUS = {
     'g6-triangle-type':        (6, [angles]),
     'g6-circle-parts':         (6, [circles]),
     'cartesian-place-point':   (6, [grid_walk]),
+    # grade 6 integers (negative answers allowed, decision D2)
+    'g6-integer-thermometer':  (6, [signed_story]),
+    'g6-integer-number-line':  (6, [signed_story]),
+    'g6-integer-compare':      (6, [signed_story]),
+    'g6-cartesian-4q':         (6, [plane_walk]),
 }
+
+# Skills whose answers may be negative (decision D2, 2026-10-26). Tests exempt exactly these from the
+# "no negative numbers" rule; every other generator must stay ≥ 0.
+SIGNED_SKILLS = {'g6-integer-read', 'g6-integer-thermometer', 'g6-integer-number-line', 'g6-integer-compare',
+                 'g6-integer-order', 'g6-cartesian-4q'}

@@ -75,6 +75,12 @@
                @keydown.enter="submit()"
                class="flex-1 bg-white border-2 border-brand-light rounded-xl px-4 py-3 text-ink placeholder-brand-light/70 font-mono text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus:border-brand transition"
                placeholder="{{ spec.placeholder|default:'…' }}">
+        {% if spec.signed %}
+        {# numeric keypads have no minus key: ± toggles the sign #}
+        <button type="button" :disabled="submitted" aria-label="{% if lang == 'fr' %}Changer le signe{% else %}Change the sign{% endif %}"
+                @click="const i = $el.parentElement.querySelector('input[name=answer]'); const v = i.value.trim(); i.value = /^[-−]/.test(v) ? v.replace(/^[-−]\s*/, '') : '−' + v; i.focus()"
+                class="px-4 py-3 rounded-xl font-black text-lg border-2 border-brand-light bg-white text-ink hover:border-brand disabled:opacity-40 transition min-h-[44px] min-w-[44px]">±</button>
+        {% endif %}
         <button type="button" @click="submit()" :disabled="submitted"
                 class="px-5 py-3 rounded-xl font-black text-sm bg-gradient-to-r from-brand to-coral text-white hover:opacity-90 disabled:opacity-40 transition shadow-card active:scale-[0.98] min-h-[44px]">
           OK

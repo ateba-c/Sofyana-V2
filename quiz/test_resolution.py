@@ -9,6 +9,7 @@ from django.test import SimpleTestCase, TestCase
 from .answers import check_answer
 from .generators import GENERATORS, SKILL_MAP, generator_for
 from .generators.resolution import RESOLUTION, RESOLUTION_FAMILIES
+from .generators.resolution_plus import SIGNED_SKILLS
 from .labels import localize_problem
 from .models import ProblemInteraction, Student
 from .test_language import FRENCH_WORDS
@@ -25,7 +26,8 @@ class ResolutionGeneratorTests(SimpleTestCase):
                     self.assertTrue(q.get(k), f'{slug}: missing {k}')
                 self.assertIn('Étape 1', q['explanation_fr'])
                 for a in q['correct_answers']:
-                    self.assertFalse(str(a).startswith(('-', '−')), f'{slug}: negative {a}')
+                    if slug not in SIGNED_SKILLS:
+                        self.assertFalse(str(a).startswith(('-', '−')), f'{slug}: negative {a}')
                     self.assertTrue(check_answer(a, q['correct_answers'], q['answer_type']), f'{slug}: {a} rejected')
                 self.assertFalse(check_answer('', q['correct_answers'], q['answer_type']))
                 q_en = localize_problem(gen('resolution'), 'en')

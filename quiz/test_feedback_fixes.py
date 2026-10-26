@@ -3,7 +3,8 @@ Regression tests for the parent-feedback round (Sept 2026):
 - parents create a child account that is linked to them, with a default grade
 - the child's home page opens on their grade
 - re-assigning a completed topic adds fresh homework and keeps the history; all assignments show in the practice sidebar
-- no square roots and no negative numbers anywhere in generated problems
+- no square roots anywhere, and no negative numbers outside the grade-6 integer skills (decision D2,
+  2026-10-26: negatives only where they occur naturally — temperatures, sea level, floors, 4-quadrant plane)
 """
 import re
 
@@ -12,6 +13,7 @@ from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
 from .generators import GENERATORS
+from .generators.resolution_plus import SIGNED_SKILLS
 from .models import ParentAssignment, ParentProfile, Student
 
 NEG = re.compile(r'(?<![\w\d])[-−]\s?\d')
@@ -30,11 +32,18 @@ class NoNegativesNoRootsTests(SimpleTestCase):
                     texts += [i['label'] for i in q.get('items', [])]
                     blob = '\n'.join(texts)
                     self.assertNotIn('√', blob, f'{slug}/{level}: square root shown')
+                    if slug in SIGNED_SKILLS:
+                        continue
                     for a in q.get('correct_answers', []):
                         self.assertFalse(str(a).strip().startswith(('-', '−')), f'{slug}/{level}: negative answer {a!r}')
                     for c in q.get('choices', []):
                         lab = str(c.get('label') or c.get('label_en') or '')
                         self.assertFalse(lab.strip().startswith(('-', '−')), f'{slug}/{level}: negative choice {lab!r}')
+
+    def test_signed_skills_are_the_integer_domain_only(self):
+        self.assertTrue(SIGNED_SKILLS)
+        for slug in SIGNED_SKILLS:
+            self.assertTrue(slug.startswith('g6-'), slug)      # grade 6 only (audit QC-056→061, 136)
 
 
 class ParentFlowTests(TestCase):

@@ -1,11 +1,11 @@
 | Field | Entries | Covered | Partial | Missing | Off-screen | Decision |
 |---|---|---|---|---|---|---|
-| Arithmetic | 131 | 118 | 4 | 0 | 3 | 6 |
-| Géométrie | 40 | 37 | 1 | 0 | 1 | 1 |
+| Arithmetic | 131 | 124 | 4 | 0 | 3 | 0 |
+| Géométrie | 40 | 38 | 1 | 0 | 1 | 0 |
 | Mesure | 38 | 37 | 0 | 0 | 1 | 0 |
 | Statistique | 11 | 9 | 2 | 0 | 0 | 0 |
 | Probabilité | 16 | 13 | 3 | 0 | 0 | 0 |
-| **Total** | **236** | **214** | **10** | **0** | **5** | **7** |
+| **Total** | **236** | **221** | **10** | **0** | **5** | **0** |
 
 Entries active in grade 1 or 2: 85. Covered 79, partial 3, missing 0, off-screen 3 (most 'covered' ones are only covered by grade 3+ skills with larger numbers).
 
@@ -71,12 +71,12 @@ Entries active in grade 1 or 2: 85. Covered 79, partial 3, missing 0, off-screen
 | QC-054 | Vocabulaire Nombre décimal, dixième, centième Symbole Notation décimale | `· · A M R R` | Covered | g4-decimal-equivalence, g5-decimal-write |  |
 | QC-055 | Vocabulaire Millième Symbole Notation décimale | `· · · · A M` | Covered | g5-decimal-write (hard) |  |
 | | **Sens et écriture des nombres / D. Nombres entiers** | | | | |
-| QC-056 | 1. Représenter des nombres entiers de différentes façons (concrètes ou imagées) (ex. : jetons de deux couleurs différentes, droite numérique… | `· · · A A M` | Decision needed | — | Conflicts with the "no negatives" rule — WP9 |
-| QC-057 | 2. Lire et écrire des nombres entiers | `· · · · A M` | Decision needed | — | WP9 |
-| QC-058 | 3. Situer des nombres entiers sur un axe de nombres (droite numérique, plan cartésien) | `· · · · A M` | Decision needed | cartesian-coord (1st quadrant only) | WP9 |
-| QC-059 | 4. Comparer entre eux des nombres entiers | `· · · · A M` | Decision needed | g5-temperature (positive only) | WP9 |
-| QC-060 | 5. Ordonner des nombres entiers par ordre croissant ou décroissant | `· · · · A M` | Decision needed | — | WP9 |
-| QC-061 | Vocabulaire Nombre entier Nombre négatif, nombre positif Symboles Notation d’un nombre entier, touche +/– sur la calculatrice | `· · · · A M` | Decision needed | — | WP9 |
+| QC-056 | 1. Représenter des nombres entiers de différentes façons (concrètes ou imagées) (ex. : jetons de deux couleurs différentes, droite numérique… | `· · · A A M` | Covered | g6-integer-thermometer, g6-integer-number-line |  |
+| QC-057 | 2. Lire et écrire des nombres entiers | `· · · · A M` | Covered | g6-integer-read |  |
+| QC-058 | 3. Situer des nombres entiers sur un axe de nombres (droite numérique, plan cartésien) | `· · · · A M` | Covered | g6-integer-number-line, g6-cartesian-4q |  |
+| QC-059 | 4. Comparer entre eux des nombres entiers | `· · · · A M` | Covered | g6-integer-compare |  |
+| QC-060 | 5. Ordonner des nombres entiers par ordre croissant ou décroissant | `· · · · A M` | Covered | g6-integer-order |  |
+| QC-061 | Vocabulaire Nombre entier Nombre négatif, nombre positif Symboles Notation d’un nombre entier, touche +/– sur la calculatrice | `· · · · A M` | Covered | g6-integer-read | No calculator ± key (off-screen) |
 | | **Sens des opérations / A. Nombres naturels inférieurs à…** | | | | |
 | QC-062 | 1. Reconnaître l’opération ou les opérations à effectuer dans une situation | `A M A M A M` | Covered | choose-operation, g3-story-meaning |  |
 | QC-063 | 2. Traduire une situation à l’aide de matériel concret, de schémas ou d’équations et vice versa (exploitation des différents sens de l’addit… | `A M A M A M` | Covered | g1-story-add-sub, g3-story-meaning |  |
@@ -159,7 +159,7 @@ Entries active in grade 1 or 2: 85. Covered 79, partial 3, missing 0, off-screen
 | QC-133 | 2. Effectuer des activités de repérage dans un plan | `A A A M · ·` | Covered | g3-grid-map | Placed in the grade 3 domain until grades 1–2 exist (WP1) |
 | QC-134 | 3. Effectuer des activités de repérage sur un axe (selon les types de nombres à l’étude) | `A M A M A M` | Covered | g4-number-line-point, g5-number-line, g6-fraction-on-line |  |
 | QC-135 | 4. Repérer des points dans le plan cartésien / a. dans le 1er quadrant | `A A A M · ·` | Covered | cartesian-coord, cartesian-place-point | Choose the point (MC); real tap-to-place still to do |
-| QC-136 | 4. Repérer des points dans le plan cartésien / b. dans les 4 quadrants | `· · · · A M` | Decision needed | — | Four quadrants need negatives — WP9 |
+| QC-136 | 4. Repérer des points dans le plan cartésien / b. dans les 4 quadrants | `· · · · A M` | Covered | g6-cartesian-4q |  |
 | QC-137 | Vocabulaire Système de repérage, plan, plan cartésien, couple | `A A A M R R` | Covered | g3-vocab-geometry (plan cartésien, couple) |  |
 | QC-138 | Symboles Écriture d’un couple (a, b) | `A A A A A M` | Covered | cartesian-coord (hard) |  |
 | | **Géométrie / B. Solides** | | | | |
@@ -242,7 +242,7 @@ Entries active in grade 1 or 2: 85. Covered 79, partial 3, missing 0, off-screen
 | QC-206 | Vocabulaire Jour, heure, minute, seconde Symboles h, min, s, codage de l’heure : 3 h, 3 h 25 min, 03 : 25 | `A M R R R R` | Covered | read-clock, g4-clock-24h |  |
 | QC-207 | Vocabulaire Cycle quotidien, cycle hebdomadaire, cycle annuel | `A A A M R R` | Covered | g1-calendar, time-convert |  |
 | | **Mesure / H. Températures** | | | | |
-| QC-208 | 1. Estimer et mesurer des températures à l’aide d’unités conventionnelles | `A A A A A M` | Covered | g3-thermometer, g5-thermometer, g5-temperature | Positive temperatures only until D2 |
+| QC-208 | 1. Estimer et mesurer des températures à l’aide d’unités conventionnelles | `A A A A A M` | Covered | g3-thermometer, g5-thermometer, g5-temperature, g6-integer-thermometer | Below zero in grade 6 |
 | QC-209 | Vocabulaire Degré Celsius Symbole °C | `A M R R R R` | Covered | g5-thermometer |  |
 | | **Statistique /** | | | | |
 | QC-210 | 1. Formuler des questions d’enquête (selon les sujets appropriés à la maturité de l’élève, l’évolution des apprentissages en français, etc.) | `A A A A A M` | Covered | g4-survey-question |  |
