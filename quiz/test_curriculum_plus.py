@@ -79,12 +79,12 @@ class FractionsPlusTests(SimpleTestCase):
                 self.assertTrue(0 < n < d)
 
     def test_benchmark_is_right(self):
-        names = ['plus petite que ½', 'égale à ½', 'entre ½ et 1', 'égale à 1', 'plus grande que 1']
+        names = ['égale à 0', 'entre 0 et ½', 'égale à ½', 'entre ½ et 1', 'égale à 1', 'plus grande que 1']
         for level in LEVELS:
             for _ in range(60):
                 q = _q('g4-fraction-benchmark', level)
                 f = _frac_in(q['prompt_fr'])[0]
-                want = 0 if f < Fraction(1, 2) else 1 if f == Fraction(1, 2) else 2 if f < 1 else 3 if f == 1 else 4
+                want = 0 if f == 0 else 1 if f < Fraction(1, 2) else 2 if f == Fraction(1, 2) else 3 if f < 1 else 4 if f == 1 else 5
                 self.assertEqual(q['correct_answers'][0], names[want])
 
     def test_equivalent_missing_term(self):
@@ -169,7 +169,8 @@ def _dec_in(text):
 class DecimalsPlusTests(SimpleTestCase):
     def test_round_and_truncate(self):
         from decimal import Decimal, ROUND_HALF_UP, ROUND_DOWN
-        places = {"à l'unité près": 0, 'au dixième près': 1, 'au centième près': 2}
+        places = {"à l'unité près": 0, 'au dixième près': 1, 'au centième près': 2,
+                  'au dixième (': 1, 'au centième (': 2}     # truncation wording has no « près »
         for level in LEVELS:
             for _ in range(60):
                 q = _q('g4-round-decimal', level)
@@ -186,7 +187,7 @@ class DecimalsPlusTests(SimpleTestCase):
                 m = re.search(r'\*\*([\d,]+) (×|÷) (\d+)\*\*', q['prompt_fr'])
                 x, op, f = Fraction(m.group(1).replace(',', '.')), m.group(2), int(m.group(3))
                 want = x * f if op == '×' else x / f
-                self.assertEqual(Fraction(q['correct_answers'][1]), want)
+                self.assertEqual(Fraction(q['correct_answers'][-1]), want)   # deduplicated for whole results
 
     def test_percent_values(self):
         for level in LEVELS:

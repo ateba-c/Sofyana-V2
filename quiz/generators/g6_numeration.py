@@ -56,9 +56,9 @@ def g6_digit_position_gen(level='easy'):
     n = _pick_number(level)
     i, d = _pos_of(n)
     k = len(str(n))
-    correct = f'{_POS_FR[i]} ({_POS_SYM[i]})'
-    tagged = [(f'{_POS_FR[j]} ({_POS_SYM[j]})', 'wrong_position',
-               'Count from the right: u, d, c, UM, DM, CM.',
+    correct = (f'{_POS_FR[i]} ({_POS_SYM[i]})', _POS_EN[i])
+    tagged = [((f'{_POS_FR[j]} ({_POS_SYM[j]})', _POS_EN[j]), 'wrong_position',
+               'Count from the right: ones, tens, hundreds, thousands, ten thousands, hundred thousands.',
                'Compte depuis la droite : u, d, c, UM, DM, CM.') for j in range(6) if j != i]
     random.shuffle(tagged)
     return {
@@ -66,13 +66,13 @@ def g6_digit_position_gen(level='easy'):
         'prompt_fr': f"Dans **{sc.fmt_n(n)}**, quelle position occupe le chiffre **{d}** ?",
         'prompt_en': f"In **{sc.fmt_n(n)}**, which position does the digit **{d}** occupy?",
         'hint_fr': 'De droite à gauche : unités (u), dizaines (d), centaines (c), unités de mille (UM), dizaines de mille (DM), centaines de mille (CM).',
-        'hint_en': 'Right to left: ones (u), tens (d), hundreds (c), thousands (UM), ten thousands (DM), hundred thousands (CM).',
+        'hint_en': 'Right to left: ones, tens, hundreds, thousands, ten thousands, hundred thousands.',
         'show_illustration': False, 'shape_data': [],
         'choices': _tagged_shuffle_mc(correct, tagged[:4]),
         'pairs': [],
-        'explanation_en': f'Positions from the right: {", ".join(_POS_EN[:k])}. The digit {d} is in position {i + 1} → {_POS_EN[i]} ({_POS_SYM[i]}).',
-        'explanation_fr': f'Positions depuis la droite : {", ".join(_POS_FR[:k])}. Le chiffre {d} est à la position {i + 1} → {correct}.',
-        'correct_answers': [correct, _POS_EN[i]],
+        'explanation_en': f'Positions from the right: {", ".join(_POS_EN[:k])}. The digit {d} is in position {i + 1} → {_POS_EN[i]}.',
+        'explanation_fr': f'Positions depuis la droite : {", ".join(_POS_FR[:k])}. Le chiffre {d} est à la position {i + 1} → {correct[0]}.',
+        'correct_answers': [correct[0], _POS_EN[i]],
     }
 
 
@@ -84,8 +84,8 @@ def g6_digit_value_gen(level='easy'):
         'q_type': 'text_input', 'answer_type': 'integer',
         'prompt_fr': f"Dans **{sc.fmt_n(n)}**, quelle est la valeur du chiffre **{d}** ?",
         'prompt_en': f"In **{sc.fmt_n(n)}**, what is the value of the digit **{d}**?",
-        'hint_fr': f'Le chiffre {d} est à la position des {_POS_FR[i]} ({_POS_SYM[i]}) : sa valeur est {d} × {sc.fmt_n(10 ** i)}.',
-        'hint_en': f'The digit {d} is in the {_POS_EN[i]} ({_POS_SYM[i]}) position: its value is {d} × {sc.fmt_n(10 ** i)}.',
+        'hint_fr': f'Repère la position du chiffre {d} en comptant depuis la droite (u, d, c, UM, DM, CM), puis multiplie {d} par la valeur de cette position.',
+        'hint_en': f'Find the position of the digit {d} by counting from the right (ones, tens, hundreds…), then multiply {d} by the value of that position.',
         'show_illustration': False, 'shape_data': [], 'choices': [], 'pairs': [],
         'explanation_en': f'{d} is in the {_POS_EN[i]} position → {d} × {sc.fmt_n(10 ** i)} = {sc.fmt_n(value)}.',
         'explanation_fr': f'{d} est à la position des {_POS_FR[i]} → {d} × {sc.fmt_n(10 ** i)} = {sc.fmt_n(value)}.',
@@ -99,16 +99,19 @@ def g6_count_groups_gen(level='easy'):
     i = min(i, len(str(n)) - 1)
     answer = n // 10 ** i
     rest = n - answer * 10 ** i
+    de_fr = (f"d'{_POS_FR[i]}" if _POS_FR[i][0] == 'u' else f'de {_POS_FR[i]}')
+    cover_fr = 'Cache le dernier chiffre à droite.' if i == 1 else f'Cache les {i} chiffres de droite.'
+    cover_en = 'Cover the rightmost digit.' if i == 1 else f'Cover the {i} rightmost digits.'
     return {
         'q_type': 'text_input', 'answer_type': 'integer',
         'prompt_fr': f"Combien y a-t-il d'**{_POS_FR[i]}** en tout dans **{sc.fmt_n(n)}** ?" if _POS_FR[i][0] == 'u'
                      else f"Combien y a-t-il de **{_POS_FR[i]}** en tout dans **{sc.fmt_n(n)}** ?",
         'prompt_en': f"How many **{_POS_EN[i]}** are there in total in **{sc.fmt_n(n)}**?",
-        'hint_fr': f"On veut le NOMBRE d'{_POS_FR[i]} (tous les groupes de {sc.fmt_n(10 ** i)}), pas seulement le chiffre. Cache les {i} chiffres de droite.",
-        'hint_en': f'We want the NUMBER of {_POS_EN[i]} (all the groups of {sc.fmt_n(10 ** i)}), not just the digit. Cover the {i} rightmost digits.',
+        'hint_fr': f"On veut le NOMBRE {de_fr} (tous les groupes de {sc.fmt_n(10 ** i)}), pas seulement le chiffre. {cover_fr}",
+        'hint_en': f'We want the NUMBER of {_POS_EN[i]} (all the groups of {sc.fmt_n(10 ** i)}), not just the digit. {cover_en}',
         'show_illustration': False, 'shape_data': [], 'choices': [], 'pairs': [],
-        'explanation_en': f'{sc.fmt_n(n)} = {sc.fmt_n(answer)} × {sc.fmt_n(10 ** i)} + {rest} → {sc.fmt_n(answer)} {_POS_EN[i]}.',
-        'explanation_fr': f'{sc.fmt_n(n)} = {sc.fmt_n(answer)} × {sc.fmt_n(10 ** i)} + {rest} → {sc.fmt_n(answer)} {_POS_FR[i]}.',
+        'explanation_en': f'{sc.fmt_n(n)} = {sc.fmt_n(answer)} × {sc.fmt_n(10 ** i)} + {sc.fmt_n(rest)} → {sc.fmt_n(answer)} {_POS_EN[i]}.',
+        'explanation_fr': f'{sc.fmt_n(n)} = {sc.fmt_n(answer)} × {sc.fmt_n(10 ** i)} + {sc.fmt_n(rest)} → {sc.fmt_n(answer)} {_POS_FR[i]}.',
         'correct_answers': [str(answer)],
     }
 
@@ -137,14 +140,17 @@ def g6_place_value_change_gen(level='easy'):
         if k == 1:
             name = {'fr': _POS_FR_SING, 'en': _POS_EN_SING}[lang][i]
         return f"**{k} {name}**"
+    k0, i0 = changes[0]
+    ex_fr = f"{part(k0, i0, 'fr').strip('*')} = {sc.fmt_n(k0 * 10 ** i0)}"
+    ex_en = f"{part(k0, i0, 'en').strip('*')} = {sc.fmt_n(k0 * 10 ** i0)}"
     fr = ' et '.join(part(k, i, 'fr') for k, i in changes)
     en = ' and '.join(part(k, i, 'en') for k, i in changes)
     return {
         'q_type': 'text_input', 'answer_type': 'integer',
         'prompt_fr': f"Pars du nombre **{sc.fmt_n(n)}** et ajoute {fr}. Quel nombre obtiens-tu ?",
         'prompt_en': f"Start from **{sc.fmt_n(n)}** and add {en}. What number do you get?",
-        'hint_fr': 'Transforme chaque ajout en valeur (ex. 6 centaines de mille = 600 000), puis additionne.',
-        'hint_en': 'Turn each addition into a value (e.g. 6 hundred thousands = 600 000), then add.',
+        'hint_fr': f'Transforme chaque ajout en valeur (ex. {ex_fr}), puis additionne.',
+        'hint_en': f'Turn each addition into a value (e.g. {ex_en}), then add.',
         'show_illustration': False, 'shape_data': [], 'choices': [], 'pairs': [],
         'explanation_en': f'{sc.fmt_n(n)} + ' + ' + '.join(sc.fmt_n(k * 10 ** i) for k, i in changes) + f' = {sc.fmt_n(result)}',
         'explanation_fr': f'{sc.fmt_n(n)} + ' + ' + '.join(sc.fmt_n(k * 10 ** i) for k, i in changes) + f' = {sc.fmt_n(result)}',
@@ -183,6 +189,10 @@ def g6_additive_form_gen(level='easy'):
     if len(terms) > 2:
         wrong.add(' + '.join(terms[:-1]))
     wrong.add(' + '.join(sc.fmt_n(int(ch) * 10 ** (len(s) - 2 - idx)) for idx, ch in enumerate(s) if ch != '0' and len(s) - 2 - idx >= 0))
+    # extra place-shift errors so numbers with few distinct digits (50 000) still get 4 distractors
+    for v in (n // 10, n * 10 if n * 10 < 1_000_000 else None, n + 10 ** (len(s) - 1) if n + 10 ** (len(s) - 1) < 1_000_000 else None):
+        if v:
+            wrong.add(_additive(v))
     wrong.discard(correct)
     tagged = [(w, 'wrong_decomposition', 'Check each digit against its place value.', 'Vérifie chaque chiffre avec la valeur de sa position.') for w in sorted(wrong) if w]
     return {

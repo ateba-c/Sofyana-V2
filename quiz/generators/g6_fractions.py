@@ -7,6 +7,8 @@ Topics:
   g6_fraction_order_gen     ordering         – sort fractions with the same denominator (proper & improper)
 """
 import random
+from fractions import Fraction
+
 from .base import _tagged_shuffle_mc
 from . import scenarios as sc  # noqa: F401  (kept for parity; fractions need no story)
 
@@ -42,9 +44,12 @@ def g6_fraction_on_line_gen(level='easy'):
         (_frac(num % d if num % d else 1, d), 'ignored_units', 'Past 1 keep counting: the numerator keeps growing.', 'Après 1, continue à compter : le numérateur continue à grandir.'),
         (_frac(d, num) if num != d else _frac(d, num + 1), 'swapped', 'Numerator on top, denominator below.', 'Numérateur en haut, dénominateur en bas.'),
     ]
-    seen = {correct}
-    tagged = [t for t in tagged if t[0] not in seen and not seen.add(t[0])]
+    # distinct VALUES: 4/4 and 3/3 are both 1, so only one of them may appear
+    seen = {Fraction(num, d)}
+    tagged = [t for t in tagged if Fraction(t[0]) not in seen and not seen.add(Fraction(t[0]))]
     whole, rem = divmod(num, d)
+    ticks_en = 'tick' if num == 1 else 'ticks'
+    ticks_fr = 'graduation' if num == 1 else 'graduations'
     return {
         'q_type': 'multiple_choice',
         'prompt_fr': "Quelle fraction se trouve au point « ? » sur cette droite numérique ?",
@@ -54,8 +59,8 @@ def g6_fraction_on_line_gen(level='easy'):
         'show_illustration': True,
         'shape_data': [{'type': 'fraction_number_line', 'denominator': d, 'units': units, 'target': num}],
         'choices': _tagged_shuffle_mc(correct, tagged), 'pairs': [],
-        'explanation_en': f'Each unit has {d} parts → denominator {d}. The point is {num} tick(s) after 0 → {correct}' + (f' = {whole} + {rem}/{d}' if whole and rem else f' = {whole}' if whole else '') + '.',
-        'explanation_fr': f'Chaque unité a {d} parts → dénominateur {d}. Le point est à {num} graduation(s) après 0 → {correct}' + (f' = {whole} + {rem}/{d}' if whole and rem else f' = {whole}' if whole else '') + '.',
+        'explanation_en': f'Each unit has {d} parts → denominator {d}. The point is {num} {ticks_en} after 0 → {correct}' + (f' = {whole} + {rem}/{d}' if whole and rem else f' = {whole}' if whole else '') + '.',
+        'explanation_fr': f'Chaque unité a {d} parts → dénominateur {d}. Le point est à {num} {ticks_fr} après 0 → {correct}' + (f' = {whole} + {rem}/{d}' if whole and rem else f' = {whole}' if whole else '') + '.',
         'correct_answers': [correct],
     }
 
@@ -71,19 +76,26 @@ def g6_fraction_between_gen(level='easy'):
         num += 1
     lo = num // d
     correct = (f'{lo} et {lo + 1}', f'{lo} and {lo + 1}')
-    tagged = [(f'{lo + 1} et {lo + 2}', 'off_by_one', 'How many whole units fit in the fraction?', "Combien d'unités entières entrent dans la fraction ?"),
-              (f'{max(0, lo - 1)} et {lo}', 'off_by_one', 'How many whole units fit in the fraction?', "Combien d'unités entières entrent dans la fraction ?"),
-              (f'{num - d} et {num}', 'confused_numerator', 'Divide the numerator by the denominator.', 'Divise le numérateur par le dénominateur.'),
-              ('0 et 1', 'thinks_proper', f'{num}/{d} is bigger than 1 because {num} > {d}.', f'{num}/{d} est plus grand que 1 car {num} > {d}.'),
-              (f'{d} et {d + 1}', 'confused_denominator', 'Divide the numerator by the denominator.', 'Divise le numérateur par le dénominateur.')]
-    seen = {correct[0]}
-    tagged = [t for t in tagged if t[0] not in seen and not seen.add(t[0])]
+    # Every choice is a pair of CONSECUTIVE whole numbers, so exactly one contains num/d.
+    cands = [(lo + 1, 'off_by_one', 'How many whole units fit in the fraction?', "Combien d'unités entières entrent dans la fraction ?"),
+             (lo - 1, 'off_by_one', 'How many whole units fit in the fraction?', "Combien d'unités entières entrent dans la fraction ?"),
+             (0, 'thinks_proper', f'{num}/{d} is bigger than 1 because {num} > {d}.', f'{num}/{d} est plus grand que 1 car {num} > {d}.'),
+             (d, 'confused_denominator', 'Divide the numerator by the denominator.', 'Divise le numérateur par le dénominateur.'),
+             (num - d, 'confused_numerator', 'Divide the numerator by the denominator.', 'Divise le numérateur par le dénominateur.'),
+             (lo + 2, 'off_by_one', 'How many whole units fit in the fraction?', "Combien d'unités entières entrent dans la fraction ?"),
+             (num % d, 'remainder', 'The remainder is the part left over, not the whole units.', "Le reste est la partie qui dépasse, pas les unités entières."),
+             (lo + 3, 'off_by_one', 'How many whole units fit in the fraction?', "Combien d'unités entières entrent dans la fraction ?")]
+    seen, tagged = {lo}, []
+    for a, *meta in cands:
+        if a >= 0 and a not in seen:
+            seen.add(a)
+            tagged.append((f'{a} et {a + 1}', *meta))
     return {
         'q_type': 'multiple_choice',
-        'prompt_fr': f"Sur une droite numérique, la fraction **{num}/{d}** se situe entre quels deux nombres entiers ?",
-        'prompt_en': f"On a number line, the fraction **{num}/{d}** lies between which two whole numbers?",
-        'hint_fr': f"Combien de fois {d} entre dans {num} ? {d} × {lo} = {d * lo} ≤ {num} < {d * (lo + 1)}.",
-        'hint_en': f"How many times does {d} go into {num}? {d} × {lo} = {d * lo} ≤ {num} < {d * (lo + 1)}.",
+        'prompt_fr': f"Sur une droite numérique, la fraction **{num}/{d}** se situe entre quels deux nombres entiers **consécutifs** ?",
+        'prompt_en': f"On a number line, the fraction **{num}/{d}** lies between which two **consecutive** whole numbers?",
+        'hint_fr': f"Combien de fois {d} entre-t-il dans {num} sans dépasser ? Ce nombre de fois est l'entier juste avant la fraction.",
+        'hint_en': f"How many times does {d} go into {num} without going over? That count is the whole number just below the fraction.",
         'show_illustration': False, 'shape_data': [],
         'choices': _tagged_shuffle_mc(correct, tagged), 'pairs': [],
         'explanation_en': f'{num} ÷ {d} = {lo} remainder {num - d * lo} → {num}/{d} = {lo} + {num - d * lo}/{d}, between {lo} and {lo + 1}.',
@@ -103,12 +115,17 @@ def g6_fraction_order_gen(level='easy'):
     desc = level == 'hard' and random.random() < 0.5
     ordered = nums[::-1] if desc else nums
     items = [{'label': _frac(n, d), 'order': i + 1} for i, n in enumerate(ordered)]
+    improper = any(n > d for n in nums)
+    more_fr = f" Une fraction dont le numérateur dépasse {d} est plus grande que 1." if improper else ''
+    more_en = f" A fraction whose numerator is above {d} is bigger than 1." if improper else ''
     return {
         'q_type': 'ordering',
-        'prompt_fr': f"Range ces fractions en ordre **{'décroissant' if desc else 'croissant'}**, comme sur une droite numérique.",
-        'prompt_en': f"Sort these fractions in **{'descending' if desc else 'ascending'}** order, as on a number line.",
-        'hint_fr': f"Même dénominateur ({d}) : compare seulement les numérateurs. Une fraction dont le numérateur dépasse {d} est plus grande que 1.",
-        'hint_en': f"Same denominator ({d}): compare only the numerators. A fraction whose numerator is above {d} is bigger than 1.",
+        'prompt_fr': (f"Range ces fractions en ordre **décroissant** (de la plus grande à la plus petite)." if desc else
+                      f"Range ces fractions en ordre **croissant**, comme sur une droite numérique."),
+        'prompt_en': (f"Sort these fractions in **descending** order (largest to smallest)." if desc else
+                      f"Sort these fractions in **ascending** order, as on a number line."),
+        'hint_fr': f"Même dénominateur ({d}) : compare seulement les numérateurs.{more_fr}",
+        'hint_en': f"Same denominator ({d}): compare only the numerators.{more_en}",
         'show_illustration': False, 'shape_data': [], 'choices': [], 'pairs': [],
         'items': items, 'correct_answers': [i['label'] for i in items], 'time_limit': 40, 'points': 1,
         'explanation_en': (' > ' if desc else ' < ').join(_frac(n, d) for n in ordered),
