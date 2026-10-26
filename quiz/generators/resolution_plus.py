@@ -952,6 +952,8 @@ FAMILIES_PLUS = {
     'g4-round-decimal':        (4, [decimal_measures]),
     # grade 5
     'g5-decimal-story':        (5, [decimal_shopping, decimal_measures]),
+    'g5-decimal-properties':   (5, [decimal_shopping]),
+    'g4-decimal-equivalences': (4, [decimal_measures]),
     'g5-estimate-decimal':     (5, [decimal_measures, decimal_shopping]),
     'g5-times-power-of-ten':   (5, [decimal_measures]),
     'g5-expression-for-story': (5, [decimal_shopping]),

@@ -203,6 +203,8 @@ CURRICULUM_REFS = {
     'g3-balance-scale': [200, 201, 202],
     'g3-capacity-estimate': [196, 197, 199],
     'g3-thermometer': [208, 209],
+    'g4-decimal-equivalences': [79],
+    'g5-decimal-properties': [80],
     # ── WP9 integers (decision D2, 2026-10-26) ──
     'g6-integer-read': [57, 61],
     'g6-integer-thermometer': [56, 208],

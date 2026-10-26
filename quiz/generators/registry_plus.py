@@ -53,6 +53,7 @@ from .vocab_reasoning_plus import (
     vocab_numbers_gen, vocab_geometry_gen, vocab_measurement_gen, vocab_chance_gen,
     who_numbers_gen, who_geometry_gen, who_data_gen,
 )
+from .decimal_equivalences_plus import g4_decimal_equivalences_gen, g5_decimal_properties_gen
 from .integers_plus import (
     g6_integer_thermometer_gen, g6_integer_number_line_gen, g6_integer_compare_gen,
     g6_integer_order_gen, g6_integer_read_gen, g6_cartesian_4q_gen,
@@ -90,6 +91,9 @@ PLUS_GENERATORS = {
     'g6-decimal-number-line':        g6_decimal_number_line_gen,
     'g6-percent':                    g6_percent_gen,
     'g6-choose-notation':            g6_choose_notation_gen,
+    # QC-079 / 080 — decimal equivalences
+    'g4-decimal-equivalences':       g4_decimal_equivalences_gen,
+    'g5-decimal-properties':         g5_decimal_properties_gen,
     # WP9 — integers (D2: negatives where they occur naturally)
     'g6-integer-read':               g6_integer_read_gen,
     'g6-integer-thermometer':        g6_integer_thermometer_gen,
@@ -219,6 +223,8 @@ PLUS_SKILL_MAP = {
     'g6-decimal-number-line':        _sk('g4-decimal-number-line', 'g6-percent', 'compare-decimal', 'g4-decimal-number-line'),
     'g6-percent':                    _sk('g5-decimal-forms', 'g6-choose-notation', 'g5-probability-forms', 'fraction-to-decimal'),
     'g6-choose-notation':            _sk('g6-percent', 'g6-decimal-number-line', 'compare-mixed', 'g6-percent'),
+    'g4-decimal-equivalences':       _sk('g4-decimal-equivalence', 'g4-round-decimal', 'g5-decimal-properties', 'g4-equivalent-expressions'),
+    'g5-decimal-properties':         _sk('g4-decimal-equivalences', 'g5-decimal-mult', 'g6-distributive', 'g4-properties'),
     'g6-integer-read':               _sk(None, 'g6-integer-thermometer', 'g6-integer-number-line', 'g5-thermometer'),
     'g6-integer-thermometer':        _sk('g6-integer-read', 'g6-integer-number-line', 'g6-integer-compare', 'g3-thermometer'),
     'g6-integer-number-line':        _sk('g6-integer-thermometer', 'g6-integer-compare', 'g6-cartesian-4q', 'g5-number-line'),
@@ -333,11 +339,13 @@ PLUS_GROUPS = [
         {'slug': 'g4-decimal-equivalence',   'name_en': 'Equal Decimal Writings',      'name_fr': 'Écritures équivalentes d\'un décimal'},
         {'slug': 'g4-decimal-number-line',   'name_en': 'Decimals on a Number Line',   'name_fr': 'Décimaux sur la droite numérique'},
         {'slug': 'g4-round-decimal',         'name_en': 'Round Decimals',              'name_fr': 'Arrondir un nombre décimal'},
+        {'slug': 'g4-decimal-equivalences',  'name_en': 'Equal Expressions with Decimals', 'name_fr': 'Expressions équivalentes avec des décimaux'},
     ]},
     {'name_en': 'Grade 5 — Arithmetic', 'grade': 5, 'topics': [
         {'slug': 'g5-times-power-of-ten',    'name_en': '× and ÷ by 10, 100, 1000',    'name_fr': '× et ÷ par 10, 100, 1000'},
         {'slug': 'g5-estimate-decimal',      'name_en': 'Estimate with Decimals',      'name_fr': 'Estimer avec des décimaux'},
         {'slug': 'g5-decimal-story',         'name_en': 'Decimal Word Problems',       'name_fr': 'Problèmes avec des décimaux'},
+        {'slug': 'g5-decimal-properties',    'name_en': 'Decimal Shortcuts (×, ÷)',    'name_fr': 'Raccourcis de calcul avec des décimaux (×, ÷)'},
     ]},
     {'name_en': 'Grade 6 — Decimals & Percentages', 'name_fr': '6e année — Décimaux et pourcentages', 'icon': '%', 'grade': 6, 'topics': [
         {'slug': 'g6-decimal-number-line',   'name_en': 'Decimals Between Decimals',   'name_fr': 'Décimaux entre deux décimaux'},

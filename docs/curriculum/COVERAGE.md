@@ -1,11 +1,11 @@
 | Field | Entries | Covered | Partial | Missing | Off-screen | Decision |
 |---|---|---|---|---|---|---|
-| Arithmetic | 131 | 124 | 4 | 0 | 3 | 0 |
+| Arithmetic | 131 | 126 | 2 | 0 | 3 | 0 |
 | Géométrie | 40 | 38 | 1 | 0 | 1 | 0 |
 | Mesure | 38 | 37 | 0 | 0 | 1 | 0 |
 | Statistique | 11 | 9 | 2 | 0 | 0 | 0 |
 | Probabilité | 16 | 13 | 3 | 0 | 0 | 0 |
-| **Total** | **236** | **221** | **10** | **0** | **5** | **0** |
+| **Total** | **236** | **223** | **8** | **0** | **5** | **0** |
 
 Entries active in grade 1 or 2: 85. Covered 79, partial 3, missing 0, off-screen 3 (most 'covered' ones are only covered by grade 3+ skills with larger numbers).
 
@@ -96,8 +96,8 @@ Entries active in grade 1 or 2: 85. Covered 79, partial 3, missing 0, off-screen
 | QC-076 | 1. Traduire une situation à l’aide de matériel concret, de schémas ou d’équations et vice versa (exploitation des différents sens de l’addit… | `· · A M A M` | Covered | g5-decimal-story |  |
 | QC-077 | 1. Traduire une situation à l’aide de matériel concret, de schémas ou d’équations et vice versa (exploitation des différents sens de l’addit… | `· · · · A M` | Covered | g5-decimal-story |  |
 | QC-078 | 2. Traduire une situation à l’aide de matériel concret, de schémas ou d’équations et vice versa (exploitation des différents sens de la mult… | `· · A M A M` | Covered | g5-decimal-story, g5-decimal-mult, g5-decimal-div |  |
-| QC-079 | 3. Déterminer des équivalences numériques à l’aide / a. de la relation entre les opérations (addition et soustraction), la commutativité de… | `· · A M · ·` | Partial | g4-properties | Natural numbers only; decimal version still to do |
-| QC-080 | 3. Déterminer des équivalences numériques à l’aide / b. des relations entre les opérations (les 4 opérations), la commutativité de l’additio… | `· · · · A M` | Partial | g6-distributive | Natural numbers only; decimal version still to do |
+| QC-079 | 3. Déterminer des équivalences numériques à l’aide / a. de la relation entre les opérations (addition et soustraction), la commutativité de… | `· · A M · ·` | Covered | g4-decimal-equivalences, g4-properties |  |
+| QC-080 | 3. Déterminer des équivalences numériques à l’aide / b. des relations entre les opérations (les 4 opérations), la commutativité de l’additio… | `· · · · A M` | Covered | g5-decimal-properties, g6-distributive |  |
 | QC-081 | 4. Traduire une situation à l’aide d’une chaîne d’opérations en respectant la priorité des opérations | `· · · · A M` | Covered | g5-expression-for-story, g5-order-ops |  |
 | | **Sens des opérations / C. Fractions** | | | | |
 | QC-082 | 1. Traduire une situation à l’aide de matériel concret, de schémas ou par une opération et vice versa (exploitation des différents sens de l… | `· · · · A M` | Covered | g6-whole-times-fraction, g5-fraction-meanings |  |
