@@ -125,7 +125,7 @@ def _is_num(s):
 
 def _is_numlike(s):
     """Numbers, fractions, powers, short expressions with a unit — anything that isn't a word answer."""
-    s = s.strip()
+    s = re.sub(r'\b(plus|moins|minus|positi(?:ve|f)|n[eé]gati(?:ve|f))\b', '', s.strip(), flags=re.I)   # "moins 38" is a number read aloud
     return any(ch.isdigit() for ch in s) and len(re.sub(r'[\d\s  ,./²³⁴⁰¹×+−=()$%°]', '', s)) <= 4
 
 
@@ -336,14 +336,14 @@ def rule_duplicate_word(q, lang):
     return []
 
 
-def rule_primary(q, lang):
+def rule_primary(q, lang, signed=False):
     found = []
     blob = '\n'.join(t for _, t in _texts(q, lang))
     if '√' in blob:
         found.append(_f('LINT-12', ERROR, 'square root shown (not primary)', lang))
     values = [str(a) for a in q.get('correct_answers') or []] + [str(c.get('label', '')) for c in q.get('choices') or []]
     neg = [v for v in values if v.strip().startswith(('-', '−'))]
-    if neg:
+    if neg and not signed:
         found.append(_f('LINT-12', ERROR, f'negative number in answers/choices: {neg}', lang))
     return found
 
@@ -352,18 +352,20 @@ ALL_RULES = [rule_leaks, rule_repetition, rule_options, rule_hint, rule_inline_d
              rule_language, rule_explanation, rule_length, rule_grammar, rule_duplicate_word, rule_primary]
 
 
-def lint_question(q, lang):
+def lint_question(q, lang, signed=False):
+    """``signed``: the skill is one where negatives are natural (temperatures, integers, 4-quadrant plane)."""
     found = []
     for rule in ALL_RULES:
-        found += rule(q, lang)
+        found += rule(q, lang, signed) if rule is rule_primary else rule(q, lang)
     return found
 
 
 def lint_payload(payload, slug):
+    from quiz.generators.resolution_plus import SIGNED_SKILLS
     findings = []
     for lang in ('fr', 'en'):
         q = render_question(payload, slug, lang)
-        findings += lint_question(q, lang)
+        findings += lint_question(q, lang, signed=slug in SIGNED_SKILLS)
     # one finding per (rule, message) — the same structural problem shows in both languages
     out, seen = [], set()
     for f in findings:

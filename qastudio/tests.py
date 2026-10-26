@@ -70,6 +70,17 @@ class LintTests(SimpleTestCase):
         self.assertTrue(any('identical' in m for m in msgs))
         self.assertTrue(any('marked correct' in m for m in msgs))
 
+    def test_negatives_only_allowed_in_signed_skills(self):
+        q = dict(OLD_DATA_TABLE, prompt_fr='Quelle température ?', prompt_en='What temperature?',
+                 choices=[{'label': '−5', 'correct': True}, {'label': '5', 'correct': False}])
+        self.assertIn('LINT-12', {f['rule'] for f in lint_payload(q, 'add')})
+        self.assertNotIn('LINT-12', {f['rule'] for f in lint_payload(q, 'g6-integer-thermometer')})
+        for slug in ('g6-integer-read', 'g6-integer-order', 'g6-integer-number-line', 'g6-integer-thermometer'):
+            for seed in range(1, 30):
+                for level in ('easy', 'medium', 'hard'):
+                    found = lint_payload(sampling.generate(slug, level, seed), slug)
+                    self.assertEqual([f for f in found if f['rule'] in ('LINT-12', 'LINT-03')], [], (slug, found))
+
     def test_language_leak(self):
         bad = dict(OLD_DATA_TABLE, prompt_en="Combien d'élèves ont répondu dans la classe ?")
         self.assertIn('LINT-07', {f['rule'] for f in lint_payload(bad, 'add')})
