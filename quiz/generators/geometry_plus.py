@@ -52,6 +52,13 @@ SHAPES = {
     'pent': ('pentagone', 'pentagones', 'pentagon', 'pentagons'),
     'hex': ('hexagone', 'hexagones', 'hexagon', 'hexagons'),
 }
+# Base shape as an adjective: (fr singular, fr plural, en) — « une base hexagonale », « 2 bases hexagonales »
+BASE_ADJ = {
+    'sq': ('carrée', 'carrées', 'square'),
+    'tri': ('triangulaire', 'triangulaires', 'triangular'),
+    'pent': ('pentagonale', 'pentagonales', 'pentagonal'),
+    'hex': ('hexagonale', 'hexagonales', 'hexagonal'),
+}
 FACES = {
     'cube': [(6, 'sq')], 'rect-prism': [(6, 'rect')],
     'tri-prism': [(2, 'tri'), (3, 'rect')], 'pent-prism': [(2, 'pent'), (5, 'rect')],
@@ -65,10 +72,24 @@ FVE = {'cube': (6, 8, 12), 'rect-prism': (6, 8, 12), 'tri-prism': (5, 6, 9), 'pe
        'pent-pyramid': (6, 6, 10), 'hex-pyramid': (7, 7, 12)}
 
 
+def _also_true(kind, other):
+    """True when ``other``'s name also fits ``kind``: a cube IS a rectangular prism (its squares are rectangles)."""
+    return kind == 'cube' and other == 'rect-prism'
+
+
 def faces_label(spec):
     fr = ' et '.join(f'{n} {SHAPES[s][0 if n == 1 else 1]}' for n, s in spec)
     en = ' and '.join(f'{n} {SHAPES[s][2 if n == 1 else 3]}' for n, s in spec)
     return fr, en
+
+
+def net_faces(kind):
+    """What a net is made of: (fr, en)."""
+    if kind == 'cylinder':
+        return '2 disques et 1 rectangle', '2 circles and 1 rectangle'
+    if kind == 'cone':
+        return '1 disque et 1 morceau de disque', '1 circle and 1 curved sector'
+    return faces_label(FACES[kind])
 
 
 def _solid_panels(kinds, color=None):
@@ -90,6 +111,8 @@ def g3_solid_picture_gen(level='easy'):
         kind = pick(['cube', 'sphere', 'cylinder', 'cone', 'square-pyramid', 'rect-prism', 'tri-prism'])
         correct = FAMILY[kind]
         pool = [NAME['cube'], NAME['sphere'], NAME['cylinder'], NAME['cone'], ('pyramide', 'pyramid'), ('prisme', 'prism')]
+        if kind == 'cube':                       # a cube is also a prism: never offer both
+            pool.remove(('prisme', 'prism'))
         return mc(('Quel est ce solide ?', 'What is this solid?'), correct, [p for p in pool if p != correct],
                   ('Regarde les faces : sont-elles plates ou courbes ? Combien de bases ?',
                    'Look at the faces: flat or curved? How many bases?'),
@@ -98,14 +121,17 @@ def g3_solid_picture_gen(level='easy'):
     if level == 'medium' and random.random() < 0.5:
         kind = pick(POLY + ROUND)
         return mc(('Quel est le nom exact de ce solide ?', 'What is the exact name of this solid?'),
-                  NAME[kind], [NAME[k] for k in random.sample([k for k in NAME if k != kind], 6)],
+                  NAME[kind], [NAME[k] for k in random.sample([k for k in NAME if k != kind and not _also_true(kind, k)], 6)],
                   ('Un prisme a 2 bases identiques ; une pyramide a 1 base et un sommet. Le nom dit la forme de la base.',
                    'A prism has 2 matching bases; a pyramid has 1 base and an apex. The name tells the shape of the base.'),
                   (f'C’est {art(kind)[0]}.', f'It is {art(kind)[1]}.'),
                   shape=I.solid(kind, color))
     if level == 'medium':
-        kinds = random.sample(POLY[:6] + ROUND, 5)
-        i = random.randrange(5)
+        while True:
+            kinds = random.sample(POLY[:6] + ROUND, 5)
+            i = random.randrange(5)
+            if not any(_also_true(k, kinds[i]) for k in kinds):   # a cube also shows a rectangular prism
+                break
         a = art(kinds[i])
         return _letters_mc((f'Quelle figure montre {a[0]} ?', f'Which picture shows {a[1]}?'), kinds, i,
                            ('Compare les bases et les faces de chaque solide.', 'Compare the bases and faces of each solid.'),
@@ -114,7 +140,7 @@ def g3_solid_picture_gen(level='easy'):
     if random.random() < 0.5:
         # 143 — which faces does this solid have?
         kind = pick(POLY)
-        others = [faces_label(FACES[k]) for k in POLY if FACES[k] != FACES[kind]]
+        others = [faces_label(FACES[k]) for k in POLY if FACES[k] != FACES[kind] and not _also_true(kind, k)]
         extra = [faces_label([(2, 'sq'), (4, 'tri')]), faces_label([(1, 'tri'), (3, 'rect')]),
                  faces_label([(2, 'hex'), (5, 'rect')])]
         return mc(('Quelles sont les faces de ce solide ?', 'What faces does this solid have?'),
@@ -168,20 +194,27 @@ def g3_prism_or_pyramid_gen(level='easy'):
     if random.random() < 0.5:
         kind = pick(POLY[2:])
         n_b = FACES[kind][0]
+        n_side = FACES[kind][-1][0]
         if kind.endswith('prism'):
-            b = SHAPES[FACES[kind][0][1]]
-            riddle = (f'Je suis un polyèdre. J’ai 2 bases en forme de {b[0]} et {FACES[kind][1][0]} faces rectangulaires. Qui suis-je ?',
-                      f'I am a polyhedron. I have 2 {b[3]} as bases and {FACES[kind][1][0]} rectangular faces. Who am I?')
+            b = BASE_ADJ[FACES[kind][0][1]]
+            riddle = (f'Je suis un polyèdre. J’ai 2 bases {b[1]} et {n_side} faces rectangulaires. Qui suis-je ?',
+                      f'I am a polyhedron. I have 2 {b[2]} bases and {n_side} rectangular faces. Who am I?')
+            why = (f'2 bases identiques reliées par des rectangles → c’est un prisme. Ses bases sont {b[1]} → {art(kind)[0]}.',
+                   f'2 matching bases joined by rectangles → it is a prism. Its bases are {b[2]} → {art(kind)[1]}.')
         elif kind == 'tri-pyramid':
             riddle = ('Je suis un polyèdre. J’ai 4 faces, toutes des triangles, et 4 sommets. Qui suis-je ?',
                       'I am a polyhedron. I have 4 faces, all triangles, and 4 vertices. Who am I?')
+            why = ('Une base triangulaire et 3 triangles qui se rejoignent en un sommet → une pyramide à base triangulaire.',
+                   'A triangular base and 3 triangles meeting at one apex → a triangular pyramid.')
         else:
-            b = SHAPES[n_b[1]]
-            riddle = (f'Je suis un polyèdre. J’ai une base en forme de {b[0]} et {FACES[kind][1][0]} faces triangulaires qui se rejoignent en un sommet. Qui suis-je ?',
-                      f'I am a polyhedron. I have a {b[2]} base and {FACES[kind][1][0]} triangular faces meeting at one apex. Who am I?')
+            b = BASE_ADJ[n_b[1]]
+            riddle = (f'Je suis un polyèdre. J’ai une base {b[0]} et {n_side} faces triangulaires qui se rejoignent en un sommet. Qui suis-je ?',
+                      f'I am a polyhedron. I have a {b[2]} base and {n_side} triangular faces meeting at one apex. Who am I?')
+            why = (f'1 seule base et des triangles qui se rejoignent en un sommet → c’est une pyramide. Sa base est {b[0]} → {art(kind)[0]}.',
+                   f'Only 1 base and triangles meeting at an apex → it is a pyramid. Its base is {b[2]} → {art(kind)[1]}.')
         return mc(riddle, NAME[kind], [NAME[k] for k in POLY[1:] if k != kind],
                   ('Deux bases → prisme. Une base et un sommet → pyramide.', 'Two bases → prism. One base and an apex → pyramid.'),
-                  (f'C’est {art(kind)[0]}.', f'It is {art(kind)[1]}.'))
+                  why)
     # 152 — polyhedron: a solid made only of flat polygon faces
     odd = pick(ROUND)
     kinds = random.sample(POLY, 4) + [odd]
@@ -215,16 +248,20 @@ def g3_net_match_gen(level='easy'):
     color = pick(I.PALETTE[:4])
     pool = ['cube', 'rect-prism', 'cylinder'] if level == 'easy' else ['cube', 'rect-prism', 'tri-prism', 'pent-prism', 'hex-prism', 'cylinder']
     kind = pick(pool)
+    faces = net_faces(kind)
     if level != 'hard':
-        distractors = [NAME[k] for k in ['cube', 'rect-prism', 'tri-prism', 'hex-prism', 'cylinder', 'cone', 'square-pyramid'] if k != kind]
+        distractors = [NAME[k] for k in ['cube', 'rect-prism', 'tri-prism', 'hex-prism', 'cylinder', 'cone', 'square-pyramid']
+                       if k != kind and not _also_true(kind, k)]
         return mc(('Ce **développement** se replie pour former quel solide ?', 'This **net** folds up into which solid?'),
                   NAME[kind], distractors,
                   ('Un développement montre toutes les faces à plat. Compte les bases et regarde leur forme.',
                    'A net shows every face laid flat. Count the bases and look at their shape.'),
-                  (f'Replié, ce développement donne {art(kind)[0]}.',
-                   f'Folded up, this net makes {art(kind)[1]}.'),
+                  (f'Ce développement a {faces[0]}. Replié, il donne {art(kind)[0]}.',
+                   f'This net has {faces[1]}. Folded up, it makes {art(kind)[1]}.'),
                   shape=I.net(kind, color, variant=random.randrange(3)))
-    others = [k for k in ['cube', 'rect-prism', 'tri-prism', 'pent-prism', 'hex-prism', 'square-pyramid', 'cylinder', 'cone'] if k != kind]
+    # a cube net also folds into a (square) rectangular prism: never show both
+    others = [k for k in ['cube', 'rect-prism', 'tri-prism', 'pent-prism', 'hex-prism', 'square-pyramid', 'cylinder', 'cone']
+              if k != kind and {k, kind} != {'cube', 'rect-prism'}]
     specs = [(kind, random.randrange(3))] + [(k, random.randrange(3)) for k in random.sample(others, 4)]
     random.shuffle(specs)
     i = [s[0] for s in specs].index(kind)
@@ -232,8 +269,8 @@ def g3_net_match_gen(level='easy'):
                            (f'Quel développement correspond à ce solide ({NAME[kind][0]}) ?', f'Which net matches this solid ({NAME[kind][1]})?'),
                            ('Les bases du solide doivent apparaître dans le développement, avec le bon nombre de faces.',
                             'The solid’s bases must appear in the net, with the right number of faces.'),
-                           (f'Le développement {L5[i]} : il a les mêmes faces que {art(kind)[0]}.',
-                            f'Net {L5[i]}: it has the same faces as {art(kind)[1]}.'), color)
+                           (f'Le développement {L5[i]} a {faces[0]}, comme {art(kind)[0]}. Les autres n’ont pas ces faces.',
+                            f'Net {L5[i]} has {faces[1]}, like {art(kind)[1]}. The other nets do not have these faces.'), color)
 
 
 def g4_net_pyramid_gen(level='easy'):
@@ -264,7 +301,10 @@ def g4_net_pyramid_gen(level='easy'):
                                 f'Which net matches this pyramid ({NAME[kind][1]})?'),
                                ('Il faut la bonne base et un triangle sur chacun de ses côtés.',
                                 'You need the right base and one triangle on each of its sides.'),
-                               (f'Le développement {L5[i]}.', f'Net {L5[i]}.'), color)
+                               (f'Le développement {L5[i]} a {faces_label(FACES[kind])[0]} : '
+                                f'la bonne base et un triangle sur chacun de ses côtés, comme {art(kind)[0]}.',
+                                f'Net {L5[i]} has {faces_label(FACES[kind])[1]}: '
+                                f'the right base and one triangle on each of its sides, like {art(kind)[1]}.'), color)
     n = FVE[kind][0] - 1
     ask = pick(['tri', 'faces'])
     if ask == 'tri':
@@ -287,7 +327,7 @@ def g6_polyhedron_net_gen(level='easy'):
     color = pick(I.PALETTE[:4])
     if level == 'easy':
         kind = pick(POLY)
-        others = [k for k in POLY if k != kind]
+        others = [k for k in POLY if k != kind and {k, kind} != {'cube', 'rect-prism'}]
         specs = [(kind, random.randrange(3))] + [(k, 0) for k in random.sample(others, 4)]
         random.shuffle(specs)
         i = [s[0] for s in specs].index(kind)
@@ -318,11 +358,24 @@ def g6_polyhedron_net_gen(level='easy'):
     f, v, e = FVE[kind]
     what = pick(['faces', 'sommets', 'arêtes'])
     ans, en = {'faces': (f, 'faces'), 'sommets': (v, 'vertices'), 'arêtes': (e, 'edges')}[what]
-    return typed((f'On replie ce développement. Combien de **{what}** aura le polyèdre obtenu ?',
+    de = 'd’' if what[0] in 'aeiouéèê' else 'de '
+    prism = kind.endswith('prism')
+    hint = {
+        'faces': ('Compte toutes les faces du développement : chacune devient une face du polyèdre.',
+                  'Count every face of the net: each one becomes a face of the polyhedron.'),
+        'sommets': (('Reconnais le solide : un prisme a les sommets de ses 2 bases.' if prism else
+                     'Reconnais le solide : une pyramide a les sommets de sa base, plus la pointe.'),
+                    ('Recognise the solid: a prism has the vertices of its 2 bases.' if prism else
+                     'Recognise the solid: a pyramid has the vertices of its base, plus the apex.')),
+        'arêtes': (('Reconnais le solide : compte les arêtes des 2 bases, puis les arêtes qui les relient.' if prism else
+                    'Reconnais le solide : compte les arêtes de la base, puis celles qui montent vers la pointe.'),
+                   ('Recognise the solid: count the edges of the 2 bases, then the edges joining them.' if prism else
+                    'Recognise the solid: count the edges of the base, then those rising to the apex.')),
+    }[what]
+    return typed((f'On replie ce développement. Combien {de}**{what}** aura le polyèdre obtenu ?',
                   f'This net is folded up. How many **{en}** will the polyhedron have?'),
                  [ans], 'integer',
-                 ('Reconnais d’abord le solide. Relation d’Euler : faces + sommets − arêtes = 2.',
-                  'First recognise the solid. Euler’s rule: faces + vertices − edges = 2.'),
+                 hint,
                  ([f'C’est {art(kind)[0]}.', f'{f} faces, {v} sommets, {e} arêtes ({f} + {v} − {e} = 2).'],
                   [f'It is {art(kind)[1]}.', f'{f} faces, {v} vertices, {e} edges ({f} + {v} − {e} = 2).']),
                  shape=I.net(kind, color, variant=random.randrange(2)))
@@ -355,16 +408,56 @@ def convex_polygon(n):
     return pts
 
 
+def max_interior_angle(pts):
+    """Largest interior angle in degrees (> 180 for a non-convex polygon)."""
+    import math
+    n = len(pts)
+    orient = 1 if sum(pts[i][0] * pts[(i + 1) % n][1] - pts[(i + 1) % n][0] * pts[i][1] for i in range(n)) > 0 else -1
+    worst = 0
+    for i in range(n):
+        a, b, c = pts[i - 1], pts[i], pts[(i + 1) % n]
+        v1, v2 = (a[0] - b[0], a[1] - b[1]), (c[0] - b[0], c[1] - b[1])
+        cos = (v1[0] * v2[0] + v1[1] * v2[1]) / (math.hypot(*v1) * math.hypot(*v2))
+        ang = math.degrees(math.acos(max(-1.0, min(1.0, cos))))
+        worst = max(worst, ang if _cross(a, b, c) * orient > 0 else 360 - ang)
+    return worst
+
+
+def _segments_cross(p, q, r, s):
+    d1, d2 = _cross(p, q, r), _cross(p, q, s)
+    d3, d4 = _cross(r, s, p), _cross(r, s, q)
+    return d1 * d2 < 0 and d3 * d4 < 0
+
+
+def is_simple(pts):
+    n = len(pts)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if j in (i, (i + 1) % n) or i == (j + 1) % n:
+                continue
+            if _segments_cross(pts[i], pts[(i + 1) % n], pts[j], pts[(j + 1) % n]):
+                return False
+    return True
+
+
 def concave_polygon(n, depth):
-    """A non-convex polygon: one vertex of a convex polygon pushed inward (depth 0.3 subtle … 0.9 obvious)."""
+    """A non-convex polygon: one vertex of a convex polygon pulled inside the chord of its neighbours.
+
+    ``depth`` sets how obvious the dent is: reflex angle 180° + 70° × depth (0.35 → 204.5°, 0.85 → 239.5°).
+    The reflex angle is built exactly, so a non-convex polygon never looks convex."""
+    import math
+    reflex = max(180 + 70 * depth, 200)
     while True:
         pts = convex_polygon(n)
         i = random.randrange(n)
         a, b = pts[i - 1], pts[(i + 1) % n]
         m = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
-        # move vertex i past the chord a–b, towards the centre
-        pts[i] = (m[0] * (1 - depth), m[1] * (1 - depth))
-        if not is_convex(pts):
+        half = math.hypot(b[0] - a[0], b[1] - a[1]) / 2
+        ln = math.hypot(*m) or 1
+        u = (-m[0] / ln, -m[1] / ln)                      # from the chord towards the centre
+        t = half * math.tan(math.radians((reflex - 180) / 2))
+        pts[i] = (m[0] + u[0] * t, m[1] + u[1] * t)
+        if not is_convex(pts) and is_simple(pts) and max_interior_angle(pts) >= 200:
             return pts
 
 
@@ -402,6 +495,21 @@ TRI_TYPES = {
     'iso':         ('isocèle, non rectangle', 'isosceles, not right'),
     'scal-right':  ('scalène et rectangle', 'scalene and right'),
     'scal':        ('scalène, non rectangle', 'scalene, not right'),
+}
+
+
+# From the angles to the sides, for the angle-based questions: (fr, en)
+ANGLE_WHY = {
+    'equi': ('Les trois angles sont égaux, donc les trois côtés sont égaux.',
+             'All three angles are equal, so all three sides are equal.'),
+    'iso-right': ('Deux angles sont égaux (45°), donc deux côtés sont égaux ; un angle mesure 90°.',
+                  'Two angles are equal (45°), so two sides are equal; one angle measures 90°.'),
+    'iso': ('Deux angles sont égaux, donc deux côtés sont égaux ; aucun angle ne mesure 90°.',
+            'Two angles are equal, so two sides are equal; no angle measures 90°.'),
+    'scal-right': ('Les trois angles sont différents, donc les trois côtés aussi ; un angle mesure 90°.',
+                   'The three angles are different, so are the three sides; one angle measures 90°.'),
+    'scal': ('Les trois angles sont différents, donc les trois côtés aussi ; aucun angle ne mesure 90°.',
+             'The three angles are different, so are the three sides; no angle measures 90°.'),
 }
 
 
@@ -477,9 +585,12 @@ def g6_triangle_type_gen(level='easy'):
         return mc((f'Les angles d’un triangle mesurent {angs[0]}. Quel est ce triangle ?',
                    f'The angles of a triangle measure {angs[1]}. What kind of triangle is it?'),
                   TRI_TYPES[kind], distractors,
-                  ('Deux angles égaux ↔ deux côtés égaux. Un angle de 90° → triangle rectangle.',
-                   'Two equal angles ↔ two equal sides. A 90° angle → right triangle.'),
-                  (expl_fr, expl_en))
+                  ('Si deux angles sont égaux, alors deux côtés sont égaux. Si les trois angles sont égaux, '
+                   'les trois côtés aussi. Si un angle mesure 90°, le triangle est rectangle.',
+                   'If two angles are equal, then two sides are equal. If all three angles are equal, '
+                   'so are all three sides. If one angle measures 90°, the triangle is a right triangle.'),
+                  ((f'Les angles mesurent {angs[0]}. ' + ANGLE_WHY[kind][0] + ' ' + expl_fr),
+                   (f'The angles measure {angs[1]}. ' + ANGLE_WHY[kind][1] + ' ' + expl_en)))
     s = [x for x in sides if x] if kind != 'scal-right' else list(sides)
     s_txt = (f'{s[0]} cm, {s[1]} cm et {s[2]} cm', f'{s[0]} cm, {s[1]} cm and {s[2]} cm')
     extra = (' Il a un angle droit.', ' It has a right angle.') if right is not None else (' Il n’a pas d’angle droit.', ' It has no right angle.')
@@ -544,10 +655,10 @@ def g6_circle_parts_gen(level='easy'):
                      (f'Un diamètre = 2 × {r} = {2 * r} cm ; deux diamètres = {4 * r} cm.', f'One diameter = 2 × {r} = {2 * r} cm; two diameters = {4 * r} cm.'))
     if a == 'd-from-r':
         return typed((f'Une roue a un rayon de {r} cm. Quel est son diamètre ?', f'A wheel has a radius of {r} cm. What is its diameter?'),
-                     [2 * r], 'integer', ('d = 2 × r', 'd = 2 × r'),
+                     [2 * r], 'integer', ('Le diamètre mesure deux fois le rayon.', 'The diameter is twice the radius.'),
                      (f'2 × {r} = {2 * r} cm', f'2 × {r} = {2 * r} cm'))
     return typed((f'Une table ronde a un diamètre de {2 * r} dm. Quel est son rayon ?', f'A round table has a diameter of {2 * r} dm. What is its radius?'),
-                 [r], 'integer', ('r = d ÷ 2', 'r = d ÷ 2'),
+                 [r], 'integer', ('Le rayon mesure la moitié du diamètre.', 'The radius is half of the diameter.'),
                  (f'{2 * r} ÷ 2 = {r} dm', f'{2 * r} ÷ 2 = {r} dm'))
 
 
@@ -711,7 +822,7 @@ def g6_translation_gen(level='easy'):
         nx, ny = x + dx, y + dy
         return typed((f'Le point A ({x}, {y}) glisse de {w[0]}. Quelles sont les coordonnées de son image ? (Écris x, y)',
                       f'Point A ({x}, {y}) slides {w[1]}. What are the coordinates of its image? (Write x, y)'),
-                     [f'({nx}, {ny})', f'{nx}, {ny}', f'{nx},{ny}', f'({nx},{ny})'], 'text',
+                     [f'({nx}, {ny})', f'{nx}, {ny}', f'{nx},{ny}', f'({nx},{ny})'], 'coordinate',
                      ('Vers la droite : x augmente ; vers le haut : y augmente.', 'Right: x goes up; up: y goes up.'),
                      ([f'x : {x} {"+" if dx >= 0 else "−"} {abs(dx)} = {nx}', f'y : {y} {"+" if dy >= 0 else "−"} {abs(dy)} = {ny}', f'Image : ({nx}, {ny})'],
                       [f'x: {x} {"+" if dx >= 0 else "−"} {abs(dx)} = {nx}', f'y: {y} {"+" if dy >= 0 else "−"} {abs(dy)} = {ny}', f'Image: ({nx}, {ny})']))
@@ -741,7 +852,7 @@ def g6_translation_gen(level='easy'):
         cells.update({(x + x0, y + y0): green for x, y in img})
         correct = ('une translation', 'a translation') if is_tr else ('une réflexion', 'a reflection')
         return mc(('La figure bleue a été transformée en la figure verte. Par quelle transformation ?',
-                   'The blue shape was moved onto the green shape. Which transformation was used?'),
+                   'The blue shape was transformed into the green shape. Which transformation was used?'),
                   correct, [('une translation', 'a translation'), ('une réflexion', 'a reflection'),
                             ('un agrandissement', 'an enlargement'), ('une réduction', 'a reduction'),
                             ('aucune : les figures sont différentes', 'none: the shapes are different')],
@@ -810,10 +921,20 @@ def g3_frieze_gen(level='easy'):
     i = order.index(0)
     return _letters_mc(('Cette frise suit une régularité. Quelle tuile vient ensuite ?', 'This frieze follows a pattern. Which tile comes next?'),
                        boxes, i,
-                       ('Compare chaque tuile avec la précédente : glisse-t-elle, ou est-elle retournée comme dans un miroir ?',
-                        'Compare each tile with the one before: does it slide, or is it flipped like in a mirror?'),
-                       (f'La frise est construite {rule[0]}. La tuile suivante est la {L5[i]}.',
-                        f'The frieze is built {rule[1]}. The next tile is {L5[i]}.'),
+                       {'easy': ('Compare chaque tuile avec la précédente : est-ce exactement le même motif, au même endroit ?',
+                                 'Compare each tile with the one before: is it exactly the same pattern, in the same place?'),
+                        'medium': ('Compare deux tuiles voisines : la deuxième est-elle retournée comme dans un miroir ?',
+                                   'Compare two neighbouring tiles: is the second one flipped like in a mirror?'),
+                        'hard': ('Vérifie deux choses à la fois : le motif (retourné ou non) et la couleur.',
+                                 'Check two things at once: the pattern (flipped or not) and the colour.')}[level],
+                       ((f'La frise est construite {rule[0]}. '
+                         + ('Toutes les tuiles sont pareilles' if level == 'easy' else
+                            f'Les tuiles se répètent toutes les 2 : la tuile suivante est pareille à la tuile n° {shown - 1}')
+                         + f'. C’est la tuile {L5[i]}.'),
+                        (f'The frieze is built {rule[1]}. '
+                         + ('All the tiles are the same' if level == 'easy' else
+                            f'The tiles repeat every 2: the next tile matches tile number {shown - 1}')
+                         + f'. It is tile {L5[i]}.')),
                        [c.shape(), cp.shape()])
 
 
@@ -822,11 +943,13 @@ def g3_congruent_gen(level='easy'):
     blue = I.SHADES[I.BLUE][2]
     m = motif(5, 3, 3) if level != 'easy' else motif(4, 3, 3)
     if level == 'easy':
-        same = m
+        same, how = m, ('elle est seulement déplacée', 'it is only moved')
     elif level == 'medium':
-        same = _rot90(m)
+        same, how = _rot90(m), ('elle est tournée d’un quart de tour', 'it is turned a quarter turn')
     else:
-        same = pick([_rot90(_rot90(m)), _mirror_v(m), _rot90(_mirror_h(m))])
+        same, how = pick([(_rot90(_rot90(m)), ('elle est tournée d’un demi-tour', 'it is turned a half turn')),
+                          (_mirror_v(m), ('elle est retournée comme dans un miroir', 'it is flipped like in a mirror')),
+                          (_rot90(_mirror_h(m)), ('elle est retournée puis tournée', 'it is flipped and then turned'))])
     wrong = []
     big = _norm({(2 * x + a, 2 * y + b) for x, y in m for a in (0, 1) for b in (0, 1)})   # same shape, twice as big
     while len(wrong) < 3:
@@ -860,8 +983,12 @@ def g3_congruent_gen(level='easy'):
                        boxes, i,
                        ('Compte les carrés et compare la forme. On peut tourner ou retourner la figure, mais pas l’agrandir.',
                         'Count the squares and compare the shape. You may turn or flip it, but not make it bigger.'),
-                       (f'La figure {L5[i]} a la même forme et la même taille que le modèle' + (' (elle est tournée ou retournée).' if level != 'easy' else '.'),
-                        f'Shape {L5[i]} has the same shape and size as the model' + (' (it is turned or flipped).' if level != 'easy' else '.')),
+                       (f'La figure {L5[i]} a {len(m)} carrés placés comme ceux du modèle : {how[0]}. '
+                        f'Elle a la même forme et la même taille. La grande figure a la bonne forme, mais elle est agrandie ; '
+                        f'les autres n’ont pas la même forme.',
+                        f'Shape {L5[i]} has {len(m)} squares arranged like the model’s: {how[1]}. '
+                        f'It has the same shape and size. The big shape has the right form but is enlarged; '
+                        f'the others do not have the same shape.'),
                        c.shape())
 
 
@@ -931,10 +1058,12 @@ def cartesian_place_point_gen(level='easy'):
         x, y = random.randint(1, size - 1), random.randint(1, size - 1)
         if level == 'easy' or x != y:
             break
-    cands = [(y, x), (x + 1, y), (x, y - 1), (x - 1, y + 1), (x, y + 1), (x + 1, y + 1), (x - 1, y)]
+    cands = [(y, x), (x + 1, y), (x, y - 1), (x - 1, y + 1), (x, y + 1), (x + 1, y + 1), (x - 1, y),
+             (x - 1, y - 1), (x + 1, y - 1), (x + 2, y), (x, y + 2), (x - 2, y), (x, y - 2)]
     others = []
     for p in cands:
-        if 0 <= p[0] <= size and 0 <= p[1] <= size and p != (x, y) and p not in others:
+        # stay off the last grid line, so no point letter is clipped at the top or right edge
+        if 0 <= p[0] < size and 0 <= p[1] < size and p != (x, y) and p not in others:
             others.append(p)
     others = others[:4]
     pts = [(x, y)] + others

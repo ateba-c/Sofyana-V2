@@ -543,129 +543,143 @@ def identify_angle_gen(level="medium"):
         "medium": [("acute", (15, 85)), ("right", None), ("obtuse", (95, 165))],
         "hard": [("acute", (75, 88)), ("obtuse", (92, 110))],
     }
-    import random
     choices_for_level = angle_types.get(level, angle_types["medium"])
     angle_type, deg_range = random.choice(choices_for_level)
     degrees = 90 if deg_range is None else random.randint(*deg_range)
-    correct_fr = {"acute": "aigu", "right": "droit", "obtuse": "obtus"}[angle_type]
-    correct_en = {"acute": "acute", "right": "right", "obtuse": "obtuse"}[angle_type]
-    distractors = [(t, "wrong_angle_type",
-                   "Compare to a right angle (corner of paper).",
-                   "Compare a un angle droit.")
-                  for t in ["aigu", "droit", "obtus"] if t != correct_fr]
-    distractors.append(("plat", "wrong_angle_type", "Flat angle = 180 degrees.", "Angle plat = 180."))
-    from quiz.generators.base import _tagged_shuffle_mc
-    mc = _tagged_shuffle_mc(correct_fr, distractors)
-    expl = {"acute": ("Aigu: 0<angle<90.", "Acute: 0<90."),
-            "right": ("Droit: exactement 90.", "Right: exactly 90."),
-            "obtuse": ("Obtus: 90<angle<180.", "Obtuse: 90<180.")}[angle_type]
+    names = {"acute": ("aigu", "acute"), "right": ("droit", "right"),
+             "obtuse": ("obtus", "obtuse"), "straight": ("plat", "straight")}
+    correct = names[angle_type]
+    distractors = [(names[t], "wrong_angle_type",
+                    "Compare it with a right angle (the corner of a sheet of paper).",
+                    "Compare-le à un angle droit (le coin d’une feuille).")
+                   for t in ("acute", "right", "obtuse") if t != angle_type]
+    distractors.append((names["straight"], "wrong_angle_type",
+                        "A straight angle measures 180°: its two sides form a straight line.",
+                        "Un angle plat mesure 180° : ses deux côtés forment une ligne droite."))
+    mc = _tagged_shuffle_mc(correct, distractors)
+    expl = {"acute": ("Un angle aigu mesure plus de 0° et moins de 90°.",
+                      "An acute angle is greater than 0° and less than 90°."),
+            "right": ("Un angle droit mesure exactement 90°.", "A right angle measures exactly 90°."),
+            "obtuse": ("Un angle obtus mesure plus de 90° et moins de 180°.",
+                       "An obtuse angle is greater than 90° and less than 180°.")}[angle_type]
     return {
         "q_type": "multiple_choice",
-        "prompt_fr": "Quel type d angle vois-tu ?",
+        "prompt_fr": "Quel type d’angle vois-tu ?",
         "prompt_en": "What type of angle is this?",
-        "hint_fr": "Droit = coin parfait. Aigu < droit. Obtus > droit.",
-        "hint_en": "Right = perfect corner. Acute < right < obtuse.",
+        "hint_fr": "Droit = 90° (coin parfait). Aigu : moins de 90°. Obtus : entre 90° et 180°. Plat = 180° (une ligne droite).",
+        "hint_en": "Right = 90° (a perfect corner). Acute: less than 90°. Obtuse: between 90° and 180°. Straight = 180° (a straight line).",
         "shape_data": [{"type": "angle", "degrees": degrees}],
         "show_illustration": True,
         "choices": mc,
-        "correct_answers": [correct_fr, correct_en],
+        "correct_answers": list(correct),
         "time_limit": 25, "points": 1,
-        "explanation_fr": f"Cet angle mesure {degrees}. {expl[0]}",
-        "explanation_en": f"This angle is {degrees}. {expl[1]}",
+        "explanation_fr": f"Cet angle mesure {degrees}°. {expl[0]} C’est un angle {correct[0]}.",
+        "explanation_en": f"This angle measures {degrees}°. {expl[1]} It is {_a_en(correct[1])} angle.",
     }
 
 
+# Line relations — mutually exclusive labels: perpendicular lines are also
+# intersecting, so the third relation is « sécantes non perpendiculaires ».
+LINE_LABELS = {
+    'parallel': ('parallèles', 'parallel'),
+    'perpendicular': ('perpendiculaires', 'perpendicular'),
+    'intersecting': ('sécantes non perpendiculaires', 'intersecting, not perpendicular'),
+}
+
+
 def parallel_perpendicular_gen(level='medium'):
-    """QCM + SVG — identify whether lines are parallel, perpendicular or intersecting."""
-    import random
-    from quiz.generators.base import _tagged_shuffle_mc
+    """QCM + SVG — identify whether lines are parallel, perpendicular or intersecting (not at a right angle)."""
     relations = ['parallel', 'perpendicular', 'intersecting']
     relation = random.choice(['parallel', 'perpendicular'] if level == 'easy' else relations)
-    labels_fr = {'parallel': 'paralleles', 'perpendicular': 'perpendiculaires',
-                 'intersecting': 'secantes'}
-    labels_en = {'parallel': 'parallel', 'perpendicular': 'perpendicular',
-                 'intersecting': 'intersecting'}
-    correct_fr, correct_en = labels_fr[relation], labels_en[relation]
+    correct = LINE_LABELS[relation]
     distractors = [
-        (labels_fr[r], 'wrong_relation',
-         'Parallel: never meet. Perpendicular: 90 degree crossing.',
-         'Paralleles: ne se croisent pas. Perpendiculaires: angle droit.')
+        (LINE_LABELS[r], 'wrong_relation',
+         'Parallel: they never meet. Perpendicular: they cross at a right angle. '
+         'Intersecting, not perpendicular: they cross without a right angle.',
+         'Parallèles : elles ne se croisent jamais. Perpendiculaires : elles se croisent à angle droit. '
+         'Sécantes non perpendiculaires : elles se croisent sans angle droit.')
         for r in relations if r != relation
     ]
-    distractors.append(('ni parallel ni perp', 'wrong_relation',
-                        'One of the three must apply.', "L'une des trois s'applique."))
-    choices = _tagged_shuffle_mc(correct_fr, distractors)
-    expl_fr = {'parallel': 'Paralleles: ne se croisent pas.',
-               'perpendicular': 'Perpendiculaires: angle droit (90).',
-               'intersecting': 'Secantes: se croisent en un point.'}[relation]
-    expl_en = {'parallel': 'Parallel: they never meet.',
-               'perpendicular': 'Perpendicular: they cross at 90 degrees.',
-               'intersecting': 'Intersecting: they cross at a point.'}[relation]
+    distractors.append((('courbes', 'curved'), 'irrelevant_property',
+                        'These are straight lines.', 'Ce sont des droites, pas des courbes.'))
+    choices = _tagged_shuffle_mc(correct, distractors)
+    expl_fr = {'parallel': 'Elles ne se croisent jamais et gardent le même écart : elles sont parallèles.',
+               'perpendicular': 'Elles se croisent en formant un angle droit (90°) : elles sont perpendiculaires.',
+               'intersecting': 'Elles se croisent en un point, sans angle droit : elles sont sécantes non perpendiculaires.'}[relation]
+    expl_en = {'parallel': 'They never meet and stay the same distance apart: they are parallel.',
+               'perpendicular': 'They cross forming a right angle (90°): they are perpendicular.',
+               'intersecting': 'They cross at one point, without a right angle: they are intersecting, not perpendicular.'}[relation]
     return {
         'q_type': 'multiple_choice',
-        'prompt_fr': 'Ces droites sont-elles paralleles, perpendiculaires ou secantes ?',
-        'prompt_en': 'Are these lines parallel, perpendicular, or intersecting?',
-        'hint_fr': 'Paralleles = jamais en contact. Perpendiculaires = angle droit.',
-        'hint_en': 'Parallel = never meet. Perpendicular = right angle.',
+        'prompt_fr': 'Ces deux droites sont-elles parallèles, perpendiculaires ou sécantes non perpendiculaires ?',
+        'prompt_en': 'Are these two lines parallel, perpendicular, or intersecting but not perpendicular?',
+        'hint_fr': 'Les droites se croisent-elles ? Si oui, cherche un angle droit (petit carré). '
+                   'Des droites perpendiculaires sont aussi sécantes : choisis la réponse la plus précise.',
+        'hint_en': 'Do the lines cross? If they do, look for a right angle (small square). '
+                   'Perpendicular lines also intersect: choose the most precise answer.',
         'shape_data': [{'type': 'line_pair', 'relation': relation}],
         'show_illustration': True,
         'choices': choices,
-        'correct_answers': [correct_fr, correct_en],
+        'correct_answers': list(correct),
         'time_limit': 25, 'points': 1,
         'explanation_fr': expl_fr,
         'explanation_en': expl_en,
     }
 
 
-_POLYGON_NAMES_FR = {3: 'triangle', 4: 'quadrilatere', 5: 'pentagone',
-                     6: 'hexagone', 7: 'heptagone', 8: 'octogone'}
-_POLYGON_NAMES_EN = {3: 'triangle', 4: 'quadrilateral', 5: 'pentagon',
-                     6: 'hexagon', 7: 'heptagon', 8: 'octagon'}
+POLYGON_NAMES = {3: ('triangle', 'triangle'), 4: ('quadrilatère', 'quadrilateral'),
+                 5: ('pentagone', 'pentagon'), 6: ('hexagone', 'hexagon'),
+                 7: ('heptagone', 'heptagon'), 8: ('octogone', 'octagon')}
+
+
+def _a_en(word):
+    """English indefinite article: « an octagon », « a hexagon »."""
+    return ('an ' if word[0] in 'aeiou' else 'a ') + word
+
+
+def _count_steps(n):
+    return ', '.join(str(k) for k in range(1, n + 1))
 
 
 def name_polygon_gen(level='medium'):
-    """QCM + SVG -- see a regular polygon, choose its name."""
-    import random
-    from quiz.generators.base import _tagged_shuffle_mc
-    mapping = {'easy': [3, 4], 'medium': [3, 4, 5, 6], 'hard': [3, 4, 5, 6, 7, 8]}
+    """QCM + SVG — see a regular polygon, choose its name."""
+    mapping = {'easy': [3, 4], 'medium': [3, 4, 5, 6], 'hard': [5, 6, 7, 8]}
     sides = random.choice(mapping.get(level, [3, 4, 5, 6]))
-    correct_fr = _POLYGON_NAMES_FR[sides]
-    correct_en = _POLYGON_NAMES_EN[sides]
-    distract_sides = [s for s in _POLYGON_NAMES_FR if s != sides]
+    correct = POLYGON_NAMES[sides]
+    distract_sides = [s for s in POLYGON_NAMES if s != sides]
     random.shuffle(distract_sides)
     distractors = [
-        (_POLYGON_NAMES_FR[s], 'wrong_name',
-         f'Count the sides -- this shape has {sides}.',
-         f'Compte les cotes -- cette figure en a {sides}.')
+        (POLYGON_NAMES[s], 'wrong_name',
+         f'Count the sides: this shape has {sides}.',
+         f'Compte les côtés : cette figure en a {sides}.')
         for s in distract_sides[:4]
     ]
-    choices = _tagged_shuffle_mc(correct_fr, distractors)
+    choices = _tagged_shuffle_mc(correct, distractors)
     return {
         'q_type': 'multiple_choice',
-        'prompt_fr': 'Comment s\'appelle cette figure ?',
+        'prompt_fr': 'Comment s’appelle cette figure ?',
         'prompt_en': 'What is this shape called?',
-        'hint_fr': 'Compte le nombre de cotes.',
+        'hint_fr': 'Compte le nombre de côtés.',
         'hint_en': 'Count the number of sides.',
         'shape_data': [{'type': 'polygon', 'sides': sides}],
         'show_illustration': True,
         'choices': choices,
-        'correct_answers': [correct_fr, correct_en],
+        'correct_answers': list(correct),
         'time_limit': 25, 'points': 1,
-        'explanation_fr': f'Cette figure a {sides} cotes -> {correct_fr}.',
-        'explanation_en': f'This shape has {sides} sides -> {correct_en}.',
+        'explanation_fr': f'Cette figure a {sides} côtés, donc c’est un {correct[0]}.',
+        'explanation_en': f'This shape has {sides} sides, so it is {_a_en(correct[1])}.',
     }
 
 
 def count_sides_gen(level='medium'):
-    """Typed + SVG -- count the number of sides of a polygon."""
-    import random
-    mapping = {'easy': [3, 4, 5], 'medium': [3, 4, 5, 6], 'hard': [3, 4, 5, 6, 7, 8]}
+    """Typed + SVG — count the number of sides of a polygon."""
+    mapping = {'easy': [3, 4, 5], 'medium': [3, 4, 5, 6], 'hard': [5, 6, 7, 8]}
     sides = random.choice(mapping.get(level, [3, 4, 5, 6]))
-    name_fr = _POLYGON_NAMES_FR[sides]
-    name_en = _POLYGON_NAMES_EN[sides]
+    name_fr, name_en = POLYGON_NAMES[sides]
     return {
         'q_type': 'text_input',
-        'prompt_fr': 'Combien de cotes a cette figure ?',
+        'answer_type': 'integer',
+        'prompt_fr': 'Combien de côtés a cette figure ?',
         'prompt_en': 'How many sides does this shape have?',
         'hint_fr': 'Compte chaque segment du contour une seule fois.',
         'hint_en': 'Count each edge of the outline once.',
@@ -674,8 +688,10 @@ def count_sides_gen(level='medium'):
         'choices': [],
         'correct_answers': [str(sides)],
         'time_limit': 20, 'points': 1,
-        'explanation_fr': f'Cette figure a {sides} cotes -- c\'est un {name_fr}.',
-        'explanation_en': f'This shape has {sides} sides -- it is a {name_en}.',
+        'explanation_fr': (f'Je compte les segments du contour : {_count_steps(sides)}. '
+                           f'Cette figure a {sides} côtés : c’est un {name_fr}.'),
+        'explanation_en': (f'Count the segments of the outline: {_count_steps(sides)}. '
+                           f'This shape has {sides} sides: it is {_a_en(name_en)}.'),
     }
 
 
@@ -701,6 +717,30 @@ _SOLIDS_EN = {
     'Pyramide à base carrée':     'Square Pyramid',
 }
 
+# English descriptions (plural after 0 and after numbers above 1)
+_SOLIDS_DESC_EN = {
+    'Cône':                       '1 circular base, 1 vertex, 0 straight edges',
+    'Cube':                       '6 square faces, 8 vertices, 12 edges',
+    'Cylindre':                   '2 circular bases, 0 vertices, 0 straight edges',
+    'Sphère':                     '0 flat faces, 0 edges, 0 vertices',
+    'Prisme à base triangulaire': '5 faces, 6 vertices, 9 edges',
+    'Pyramide à base carrée':     '5 faces, 5 vertices, 8 edges',
+}
+
+# Why each description fits: (fr, en)
+_SOLIDS_WHY = {
+    'Cône':      ('le cône a une seule base ronde et une pointe (1 sommet)',
+                  'the cone has one round base and a tip (1 vertex)'),
+    'Cube':      ('le cube a 6 faces carrées', 'the cube has 6 square faces'),
+    'Cylindre':  ('le cylindre a 2 bases rondes et aucun sommet', 'the cylinder has 2 round bases and no vertex'),
+    'Sphère':    ('la sphère est toute ronde : aucune face plate, aucune arête, aucun sommet',
+                  'the sphere is completely round: no flat face, no edge, no vertex'),
+    'Prisme à base triangulaire': ('le prisme à base triangulaire a 2 triangles et 3 rectangles : 5 faces et 6 sommets',
+                                   'the triangular prism has 2 triangles and 3 rectangles: 5 faces and 6 vertices'),
+    'Pyramide à base carrée': ('la pyramide à base carrée a 1 carré et 4 triangles : 5 faces et 5 sommets',
+                               'the square pyramid has 1 square and 4 triangles: 5 faces and 5 vertices'),
+}
+
 
 def identify_solid_gen(level='easy'):
     """mix_match — match solid name to its face/vertex/edge description."""
@@ -717,28 +757,21 @@ def identify_solid_gen(level='easy'):
     pairs = []
     for name_fr in chosen:
         desc_fr, _ = _SOLIDS_FR[name_fr]
-        pairs.append({'left': name_fr, 'left_en': _SOLIDS_EN.get(name_fr, name_fr), 'right': desc_fr})
+        pairs.append({'left': name_fr, 'left_en': _SOLIDS_EN.get(name_fr, name_fr),
+                      'right': desc_fr, 'right_en': _SOLIDS_DESC_EN[name_fr]})
 
     return {
         'q_type':          'mix_match',
         'prompt_fr':       'Associe chaque solide à sa description (faces, sommets, arêtes).',
         'prompt_en':       'Match each solid to its description (faces, vertices, edges).',
-        'hint_fr':         'Un cube a 6 faces carrées. Un cône a 1 sommet et 1 base circulaire.',
-        'hint_en':         'A cube has 6 square faces. A cone has 1 apex and 1 circular base.',
+        'hint_fr':         'Imagine chaque solide : a-t-il des surfaces courbes ? Compte ses faces plates, puis ses sommets (les pointes).',
+        'hint_en':         'Picture each solid: does it have curved surfaces? Count its flat faces, then its vertices (the corners and tips).',
         'show_illustration': False,
         'shape_data':      [],
         'choices':         [],
         'pairs':           pairs,
-        'explanation_en': (
-            'Step 1: Recall key solids — cube: 6 faces; cone: 1 apex + 1 circular base; cylinder: 2 circular bases.\n'
-            'Step 2: Match each solid name to its correct description.\n'
-            'Step 3: Use elimination if unsure — rule out the descriptions that don\'t fit.'
-        ),
-        'explanation_fr': (
-            'Étape 1 : Rappelle-toi les solides clés — cube : 6 faces carrées ; cône : 1 sommet + 1 base circulaire ; cylindre : 2 bases circulaires.\n'
-            'Étape 2 : Associe chaque nom de solide à sa description correcte.\n'
-            'Étape 3 : Utilise l\'élimination si besoin — écarte les descriptions qui ne correspondent pas.'
-        ),
+        'explanation_en':  '\n'.join(f'{_SOLIDS_EN[n]} → {_SOLIDS_DESC_EN[n]}: {_SOLIDS_WHY[n][1]}.' for n in chosen),
+        'explanation_fr':  '\n'.join(f'{n} → {_SOLIDS_FR[n][0]} : {_SOLIDS_WHY[n][0]}.' for n in chosen),
         'correct_answers': [p['right'] for p in pairs],
     }
 
@@ -746,6 +779,18 @@ def identify_solid_gen(level='easy'):
 # ─────────────────────────────────────────────────────────────────────────────
 # perimeter_labeled_gen  (content2.md Thème 3, section 15)
 # ─────────────────────────────────────────────────────────────────────────────
+
+_PERIM_HINTS = {
+    'rectangle': ('Un rectangle a 4 côtés et ses côtés opposés ont la même longueur. Additionne les 4 côtés.',
+                  'A rectangle has 4 sides and its opposite sides are the same length. Add all 4 sides.'),
+    'square': ('Un carré a 4 côtés de même longueur. Additionne les 4 côtés.',
+               'A square has 4 sides of the same length. Add all 4 sides.'),
+    'equilateral': ('Un triangle équilatéral a 3 côtés de même longueur. Additionne les 3 côtés.',
+                    'An equilateral triangle has 3 sides of the same length. Add all 3 sides.'),
+    'isosceles': ('Ce triangle a 3 côtés, dont 2 de même longueur. Additionne les 3 côtés.',
+                  'This triangle has 3 sides, 2 of them the same length. Add all 3 sides.'),
+}
+
 
 def perimeter_labeled_gen(level='easy'):
     """
@@ -794,7 +839,7 @@ def perimeter_labeled_gen(level='easy'):
         else:  # isosceles
             base = random.randint(3, 20)
             leg  = random.randint(3, 20)
-            while leg == base:
+            while leg == base or base >= 2 * leg:   # triangle inequality
                 leg = random.randint(3, 20)
             sides = [leg, base, leg]
             svg = [{'type': 'labeled_triangle', 'sides': sides, 'unit': unit}]
@@ -844,7 +889,7 @@ def perimeter_labeled_gen(level='easy'):
         else:  # isosceles
             base = random.randint(5, 50)
             leg  = random.randint(5, 50)
-            while leg == base:
+            while leg == base or base >= 2 * leg:   # triangle inequality
                 leg = random.randint(5, 50)
             sides = [leg, base, leg]
             svg = [{'type': 'labeled_triangle', 'sides': sides, 'unit': unit}]
@@ -856,8 +901,8 @@ def perimeter_labeled_gen(level='easy'):
         'q_type':          'text_input',
         'prompt_fr':       "Quel est le périmètre de cet enclos (en cm) ?",
         'prompt_en':       "What is the perimeter of this enclosure (in cm)?",
-        'hint_fr':         f"Additionne tous les côtés : {sides_str} = ?",
-        'hint_en':         f"Add all sides: {sides_str} = ?",
+        'hint_fr':         _PERIM_HINTS[shape_type][0],
+        'hint_en':         _PERIM_HINTS[shape_type][1],
         'show_illustration': True,
         'shape_data':      svg,
         'choices':         [],
