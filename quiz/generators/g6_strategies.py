@@ -39,12 +39,26 @@ def _build(level):
     fact2_en = c[mode + '_en'].format(S=cap(b_en), T=a_en, n=sc.fmt_n(diff))
     q_fr = c['q_fr'].format(S=b_fr)
     q_en = c['q_en'].format(S=b_en)
-    d_fr, d_en, dlo, dhi = random.choice(sc.DISTRACTOR_FACTS)
+    # The unneeded fact must not talk about one of the two subjects (a second speed
+    # for "le guépard" would contradict the story) nor about the same quantity.
+    names = {w.lower() for s in (a_fr, b_fr) for w in s.replace("'", ' ').split()} - {'le', 'la', 'l', 'de', 'des', 'les'}
+    safe = [f for f in sc.DISTRACTOR_FACTS
+            if not ({w.lower().strip('.') for w in f[0].replace("'", ' ').split()} & names)
+            and c['unit'] not in f[0]]
+    d_fr, d_en, dlo, dhi = random.choice(safe or sc.DISTRACTOR_FACTS)
     dn = sc.fmt_n(random.randint(dlo, dhi))
     dist_fr, dist_en = d_fr.format(n=dn), d_en.format(n=dn)
+    unit = c['unit']
+    if unit == '$':                                   # 52 647 $ (fr) / $52 647 (en)
+        res_fr, res_en = f"{sc.fmt_n(answer)} $", f"${sc.fmt_n(answer)}"
+    else:
+        unit_en = {'habitants': 'inhabitants'}.get(unit, unit)
+        res_fr, res_en = f"{sc.fmt_n(answer)} {unit}", f"{sc.fmt_n(answer)} {unit_en}"
+    art = {'prix': 'le prix'}.get(c['attr_fr'], f"la {c['attr_fr']}")
     return dict(fact1_fr=fact1_fr, fact1_en=fact1_en, fact2_fr=fact2_fr, fact2_en=fact2_en,
                 q_fr=q_fr, q_en=q_en, dist_fr=dist_fr, dist_en=dist_en, answer=answer, calc=calc,
-                unit=c['unit'], attr_fr=c['attr_fr'], attr_en=c['attr_en'])
+                unit=unit, attr_fr=c['attr_fr'], attr_en=c['attr_en'], attr_art_fr=art,
+                res_fr=res_fr, res_en=res_en)
 
 
 def g6_relevant_info_gen(level='easy'):
@@ -71,7 +85,7 @@ def g6_relevant_info_gen(level='easy'):
         'show_illustration': False, 'shape_data': [],
         'choices': _tagged_shuffle_mc(correct, tagged), 'pairs': [],
         'explanation_en': f"The question is about the {s['attr_en']}. Useless: “{s['dist_en']}”. Needed: {s['calc']}.",
-        'explanation_fr': f"La question porte sur la {s['attr_fr']}. Inutile : « {s['dist_fr']} ». Nécessaire : {s['calc']}.",
+        'explanation_fr': f"La question porte sur {s['attr_art_fr']}. Inutile : « {s['dist_fr']} ». Nécessaire : {s['calc']}.",
         'correct_answers': [s['dist_fr'], s['dist_en']],
     }
 
@@ -92,7 +106,7 @@ def g6_comparative_phrase_gen(level='easy'):
         'hint_fr': "« plus … que » → addition ; « moins … que » → soustraction ; « fois plus » → multiplication. Ignore les données qui ne concernent pas la question.",
         'hint_en': '“more … than” → add; “less … than” → subtract; “times more” → multiply. Ignore facts unrelated to the question.',
         'show_illustration': False, 'shape_data': [], 'choices': [], 'pairs': [],
-        'explanation_en': f"Translate the comparison into an operation: {s['calc']} {s['unit']}.",
-        'explanation_fr': f"Traduis la comparaison en opération : {s['calc']} {s['unit']}.",
+        'explanation_en': f"Translate the comparison into an operation: {s['calc']}. Answer: {s['res_en']}.",
+        'explanation_fr': f"Traduis la comparaison en opération : {s['calc']}. Réponse : {s['res_fr']}.",
         'correct_answers': [str(s['answer'])],
     }

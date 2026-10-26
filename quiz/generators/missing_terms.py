@@ -20,24 +20,32 @@ def missing_addend_gen(level: str = 'medium') -> dict:
     Typed — find the missing addend:  a + __ = c
     The answer is always non-negative.
     """
+    # Grade 3: every number stays below 1000; no trivial "+ 0" / "+ 1" / "0 + …".
     if level == 'easy':
-        a = random.randint(0, 15)
-        c = random.randint(a, 20)
+        a = random.randint(2, 15)
+        c = random.randint(a + 2, 20)
     elif level == 'medium':
         a = random.randint(10, 400)
-        c = random.randint(a, a + random.randint(10, 300))
+        c = random.randint(a + 10, a + 300)
     else:
-        a = random.randint(100, 4000)
-        c = random.randint(a, a + random.randint(100, 2000))
+        a = random.randint(100, 799)
+        c = random.randint(a + 50, 999)
 
-    missing = c - a  # always ≥ 0
+    missing = c - a  # always ≥ 2
+
+    if level == 'easy':
+        hint_fr = f'Compte à partir de {a} jusqu\'à {c}, ou calcule {c} − {a}.'
+        hint_en = f'Count on from {a} up to {c}, or work out {c} − {a}.'
+    else:
+        hint_fr = f'L\'addition et la soustraction sont inverses : calcule {c} − {a}.'
+        hint_en = f'Addition and subtraction undo each other: work out {c} − {a}.'
 
     return {
         'q_type': 'text_input',
         'prompt_fr': f'Complète : **{a} + ___ = {c}**',
         'prompt_en': f'Complete: **{a} + ___ = {c}**',
-        'hint_fr': f'Cherche combien il faut ajouter à {a} pour obtenir {c}.',
-        'hint_en': f'Find how much you must add to {a} to get {c}.',
+        'hint_fr': hint_fr,
+        'hint_en': hint_en,
         'shape_data': [],
         'choices': [],
         'correct_answers': [str(missing)],
@@ -59,22 +67,24 @@ def missing_subtrahend_gen(level: str = 'medium') -> dict:
     Typed — find the missing subtrahend:  a - __ = c
     Guarantees result (a - c) ≥ 0.
     """
+    # Grade 3: every number stays below 1000.  No degenerate items: the result c
+    # and the missing term are both ≥ 1 (no "a − ___ = 0" or "a − ___ = a").
     if level == 'easy':
-        c = random.randint(0, 15)
-        a = random.randint(c, 20)
+        c = random.randint(1, 15)
+        a = random.randint(c + 2, 20)
     elif level == 'medium':
-        c = random.randint(0, 300)
+        c = random.randint(1, 300)
         a = random.randint(c + 10, c + 400)
     else:
-        c = random.randint(0, 3000)
-        a = random.randint(c + 100, c + 3000)
+        c = random.randint(1, 800)
+        a = random.randint(c + 100, 999) if c + 100 <= 999 else 999
 
-    missing = a - c  # always ≥ 0
+    missing = a - c  # always ≥ 1
 
     return {
         'q_type': 'text_input',
-        'prompt_fr': f'Complète : **{a} - ___ = {c}**',
-        'prompt_en': f'Complete: **{a} - ___ = {c}**',
+        'prompt_fr': f'Complète : **{a} − ___ = {c}**',
+        'prompt_en': f'Complete: **{a} − ___ = {c}**',
         'hint_fr': f'Cherche ce qu\'on enlève à {a} pour obtenir {c}.',
         'hint_en': f'Find what is subtracted from {a} to get {c}.',
         'shape_data': [],

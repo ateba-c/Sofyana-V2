@@ -8,7 +8,7 @@ Topics:
 Difficulty (number_sequence_gen):
   easy   → start 10-100, step in {5, 10}
   medium → start 10-500, step in {5, 10, 25, 50}
-  hard   → start 10-5000, step in {5, 10, 25, 50, 100, 250}; some decreasing sequences
+  hard   → start 25-975, step in {10, 25, 50, 100}; some decreasing sequences; all terms < 1000
 
 Difficulty (fact_family_gen):
   easy   → factors 2-5
@@ -34,14 +34,18 @@ def number_sequence_gen(level='easy'):
         n_shown   = 4
         ascending = True
     else:
-        start     = random.randint(1, 200) * 25
-        step      = random.choice([10, 25, 50, 100, 250])
+        step      = random.choice([10, 25, 50, 100])
         n_shown   = 4
         ascending = random.choice([True, False])
+        start     = random.randint(1, 39) * 25
 
-    if not ascending:
-        # Never let a descending sequence reach a negative term (primary school).
-        start = max(start, step * (n_shown + 1))
+    # Grade 3: every term, the answer included, stays below 1000 — and never
+    # below 0 for a descending sequence.
+    span = step * n_shown
+    if ascending:
+        start = min(start, (999 - span) // 5 * 5)
+    else:
+        start = min(max(start, span + step), 995)
     terms = []
     for i in range(n_shown + 1):
         if ascending:
@@ -97,6 +101,10 @@ def fact_family_gen(level='easy'):
     else:
         a = random.randint(6, 12)
         b = random.randint(6, 12)
+    # a = b gives only two distinct facts (11 × 11 twice): the hidden fact would be
+    # printed among the shown ones.
+    while b == a:
+        b = random.randint(2, 5) if level == 'easy' else random.randint(2, 9) if level == 'medium' else random.randint(6, 12)
 
     prod = a * b
 
@@ -114,23 +122,30 @@ def fact_family_gen(level='easy'):
     hidden_fact = all_facts[0]
     shown_facts = all_facts[1:]
 
-    shown_str = "  |  ".join(shown_facts[:n_shown])
+    shown_list = shown_facts[:n_shown]
 
     # Parse the answer from the hidden fact (number after '=')
     answer_str = hidden_fact.split('=')[1].strip()
+    answer = int(answer_str)
 
-    # Distractors: nearby numbers
-    distractors = [
-        str(prod + 1), str(prod - 1),
-        str(a + b), str(a * b + a),
-    ]
-    distractors = [d for d in distractors if d != answer_str]
+    # Distractors: errors tied to the family (other factor, product, ±1 row of the table)
+    if answer == prod:
+        nums = [prod + a, prod - a, prod + b, prod - b, a + b, prod + 1, prod - 1]
+    else:
+        other = a if answer == b else b
+        nums = [answer + 1, answer - 1, prod, other + answer, answer + 2, prod - answer]
+    seen = {answer}
+    distractors = []
+    for x in nums:
+        if x > 0 and x not in seen:
+            seen.add(x)
+            distractors.append(str(x))
 
     tagged_candidates = [
         (d, 'wrong_fact',
          "Check the relationship between multiplication and division.",
          "Vérifie le lien entre la multiplication et la division.")
-        for d in distractors[:4]
+        for d in distractors
     ]
 
     # Present the hidden fact with a blank
@@ -138,8 +153,10 @@ def fact_family_gen(level='easy'):
 
     return {
         'q_type':          'multiple_choice',
-        'prompt_fr':       f"Famille de calculs : {shown_str}\nComplète : {blank_fact}",
-        'prompt_en':       f"Fact family: {shown_str}\nComplete: {blank_fact}",
+        # The known facts are shown as a bullet list (one equality per line).
+        'prompt_fr':       f"Voici des calculs de la même famille. Complète : **{blank_fact}**",
+        'prompt_en':       f"Here are facts from the same family. Complete: **{blank_fact}**",
+        'bullets':         list(shown_list),
         'hint_fr':         "La multiplication et la division sont des opérations inverses.",
         'hint_en':         "Multiplication and division are inverse operations.",
         'show_illustration': False,

@@ -13,7 +13,7 @@ operations_plus.py — WP4 of the curriculum upgrade (docs/curriculum/PLAN.md §
   g3_estimate_sum_gen          G3  estimate a sum / difference (083)
   g5_estimate_quotient_gen     G5  estimate a quotient with compatible numbers (084)
   g6_divisibility_gen          G6  divisibility by 2, 3, 4, 5, 6, 8, 9, 10 (103)
-  g6_prime_factors_gen         G6  prime factorisation, factor trees (101)
+  g6_prime_factors_gen         G6  prime factorization, factor trees (101)
   g6_powers_gen                G6  exponents, squares and cubes (022, 025, 102)
   g5_number_patterns_gen       G5  sequences: ×2, squares, triangular, growing steps (016, 107)
   g4_times_tables_gen          G4  multiplication facts 0×0 … 10×10, typed and timed (094, 096)
@@ -62,11 +62,16 @@ def g3_equality_true_gen(level='medium'):
     wrong = []
     while len(wrong) < 4:
         delta = random.choice([-2, -1, 1, 2, 10, -10] if level != 'easy' else [-2, -1, 1, 2])
-        w = v + delta
-        if w <= 0:
+        # Each false equality has its own pair of values, in random order, so the
+        # options do not all share one left-hand value.
+        x = v + random.choice([-3, -2, -1, 0, 0, 1, 2, 3])
+        y = x + delta
+        if x <= 0 or y <= 0:
             continue
-        cand = f'{_expr_equal_to(v, hi)} = {_expr_equal_to(w, hi)}'
-        if cand not in [x[0] for x in wrong]:
+        sides = [_expr_equal_to(x, hi), _expr_equal_to(y, hi)]
+        random.shuffle(sides)
+        cand = f'{sides[0]} = {sides[1]}'
+        if cand not in [o[0] for o in wrong]:
             wrong.append((cand, 'unequal', 'Work out BOTH sides: they must give the same number.',
                           'Calcule les DEUX côtés : ils doivent donner le même nombre.'))
     return mc(('Laquelle de ces égalités est **vraie** ?', 'Which of these equalities is **true**?'),
@@ -88,17 +93,20 @@ def g4_equivalent_expr_gen(level='medium'):
         if r - a > b:
             r = a - a % 10
         missing = v - r
-        return typed((f'Complète pour que l’égalité soit vraie : **{a} + {b} = {r} + ?**', f'Fill in so the equality is true: **{a} + {b} = {r} + ?**'),
+        return typed((f'Complète pour que l’égalité soit vraie : **{a} + {b} = {r} + ?**', f'Fill in the missing number so that the equality is true: **{a} + {b} = {r} + ?**'),
                      [missing], 'integer',
                      (f'Les deux côtés doivent valoir {a} + {b}. {a} est devenu {r} : qu’arrive-t-il à {b} ?',
                       f'Both sides must equal {a} + {b}. {a} became {r}: what happens to {b}?'),
                      ([f'{a} + {b} = {v}', f'{v} − {r} = {missing}'], [f'{a} + {b} = {v}', f'{v} − {r} = {missing}']))
     correct = random.choice([f'{v - 10} + 10', f'{2 * v} ÷ 2', f'{v + 5} − 5', f'{a - a % 10} + {b + a % 10}'])
-    wrong = [(f'{a + 1} + {b + 1}', 'both_up', 'Adding to both numbers changes the sum.', 'Ajouter aux deux nombres change la somme.'),
-             (f'{a} − {b}' if a > b else f'{b} − {a}', 'wrong_op', 'Keep the same total.', 'Garde le même total.'),
-             (f'{v + 10} − 1', 'off', 'Work out the expression.', 'Calcule l’expression.'),
-             (f'{v} × 2', 'double', 'That is twice as much.', 'C’est deux fois plus.'),
-             (f'{a - 10} + {b - 10}' if a > 10 and b > 10 else f'{a + 10} + {b}', 'both_down', 'Taking from both numbers changes the sum.', 'Enlever aux deux nombres change la somme.')]
+    # Compensation errors close to the right value (not guessable by size alone).
+    s = random.randint(1, 9)
+    wrong = [(f'{a + s} + {b + s}', 'both_up', 'Adding to both numbers changes the sum.', 'Ajouter aux deux nombres change la somme.'),
+             (f'{a + s} + {b}', 'no_compensation', f'You added {s} to {a}: take {s} away from {b} to compensate.', f'Tu as ajouté {s} à {a} : enlève {s} à {b} pour compenser.'),
+             (f'{a - s} + {b - s}', 'both_down', 'Taking from both numbers changes the sum.', 'Enlever aux deux nombres change la somme.'),
+             (f'{v - 10} + 1', 'off', 'Work out the expression: it is not the same total.', 'Calcule l’expression : ce n’est pas le même total.'),
+             (f'{a} + {b - s}', 'no_compensation', f'You took {s} from {b} without giving it back.', f'Tu as enlevé {s} à {b} sans le rendre.'),
+             (f'{v + s} − {2 * s + 1}', 'off', 'Work out the expression: it is not the same total.', 'Calcule l’expression : ce n’est pas le même total.')]
     return mc((f'Quelle expression est égale à **{a} + {b}** ?', f'Which expression is equal to **{a} + {b}**?'),
               correct, wrong,
               ('Calcule la valeur de chaque expression et compare.', 'Work out each expression and compare.'),
@@ -111,15 +119,17 @@ def g4_properties_gen(level='medium'):
     hi = 50 if level == 'easy' else 200 if level == 'medium' else 999
     a, b, c = random.randint(11, hi), random.randint(11, hi), random.randint(2, 30)
     kind = random.choice(['comm_add', 'comm_mul'] if level == 'easy' else ['comm_add', 'comm_mul', 'assoc_add', 'assoc_mul', 'inverse'])
-    if kind == 'comm_add':
-        return typed((f'Complète sans calculer : **{a} + {b} = {b} + ?**', f'Fill in without calculating: **{a} + {b} = {b} + ?**'),
-                     [a], 'integer', ('On peut additionner dans n’importe quel ordre.', 'You can add in any order.'),
-                     ([f'{a} + {b} = {b} + {a} (commutativité)'], [f'{a} + {b} = {b} + {a} (commutative property)']))
-    if kind == 'comm_mul':
-        x, y = random.randint(3, 12), random.randint(13, 99)
-        return typed((f'Complète sans calculer : **{x} × {y} = {y} × ?**', f'Fill in without calculating: **{x} × {y} = {y} × ?**'),
-                     [x], 'integer', ('On peut multiplier dans n’importe quel ordre.', 'You can multiply in any order.'),
-                     ([f'{x} × {y} = {y} × {x} (commutativité)'], [f'{x} × {y} = {y} × {x} (commutative property)']))
+    if kind in ('comm_add', 'comm_mul'):
+        op = '+' if kind == 'comm_add' else '×'
+        x, y = (a, b) if kind == 'comm_add' else (random.randint(3, 12), random.randint(13, 99))
+        # The blank moves around so the answer is not always the first number shown.
+        p, ans = random.choice([(f'{x} {op} {y} = {y} {op} ?', x), (f'? {op} {y} = {y} {op} {x}', x),
+                                (f'{x} {op} ? = {y} {op} {x}', y), (f'{y} {op} {x} = ? {op} {y}', x)])
+        why = ('On peut additionner dans n’importe quel ordre.', 'You can add in any order.') if op == '+' else \
+              ('On peut multiplier dans n’importe quel ordre.', 'You can multiply in any order.')
+        return typed((f'Complète sans calculer : **{p}**', f'Fill in without calculating: **{p}**'),
+                     [ans], 'integer', why,
+                     ([f'{x} {op} {y} = {y} {op} {x} (commutativité)'], [f'{x} {op} {y} = {y} {op} {x} (commutative property)']))
     if kind == 'assoc_add':
         return typed((f'Complète sans calculer : **({a} + {b}) + {c} = {a} + ({b} + ?)**', f'Fill in without calculating: **({a} + {b}) + {c} = {a} + ({b} + ?)**'),
                      [c], 'integer', ('On peut regrouper les termes d’une addition comme on veut.', 'You can group the terms of a sum any way you like.'),
@@ -146,13 +156,13 @@ def g6_distributive_gen(level='medium'):
     if kind == 'picture':
         return typed((f'Le tableau de {a} lignes et {b} colonnes est coupé en deux. Complète : **{a} × {b} = {a} × 10 + {a} × ?**',
                       f'The array of {a} rows and {b} columns is cut in two. Fill in: **{a} × {b} = {a} × 10 + {a} × ?**'),
-                     [u], 'integer', ('Compte les colonnes bleues : la partie rouge a 10 colonnes.', 'Count the blue columns: the red part has 10 columns.'),
+                     [u], 'integer', (f'Le facteur {a} reste le même : compte les colonnes de la partie bleue.', f'The factor {a} stays the same: count the columns of the blue part.'),
                      ([f'{b} = 10 + {u}', f'{a} × {b} = {a} × 10 + {a} × {u} = {a * 10} + {a * u} = {a * b}'],
                       [f'{b} = 10 + {u}', f'{a} × {b} = {a} × 10 + {a} × {u} = {a * 10} + {a * u} = {a * b}']),
                      shape=ill.dot_array(a, b, split_col=10))
     if kind == 'split':
         return typed((f'Complète : **{a} × {b} = {a} × {tens} + {a} × ?**', f'Fill in: **{a} × {b} = {a} × {tens} + {a} × ?**'),
-                     [u], 'integer', (f'Décompose {b} en {tens} + {u}.', f'Split {b} into {tens} + {u}.'),
+                     [u], 'integer', (f'Sépare {b} en {tens} et un autre nombre : {tens} + ? = {b}.', f'Split {b} into {tens} and another number: {tens} + ? = {b}.'),
                      ([f'{b} = {tens} + {u}', f'{a} × {b} = {a} × {tens} + {a} × {u} = {a * tens} + {a * u} = {a * b}'],
                       [f'{b} = {tens} + {u}', f'{a} × {b} = {a} × {tens} + {a} × {u} = {a * tens} + {a * u} = {a * b}']))
     if kind == 'mental':
@@ -169,7 +179,7 @@ def g6_distributive_gen(level='medium'):
              (f'{a} × {tens} + {a} × {u + 1}', 'split', f'{tens} + {u + 1} is not {b}.', f'{tens} + {u + 1} ne fait pas {b}.'),
              (f'{a + tens} × {u}', 'mixed', 'Keep the factor and split the other number.', 'Garde le facteur et décompose l’autre nombre.')]
     return mc((f'Quelle expression est égale à **{a} × {b}** ?', f'Which expression is equal to **{a} × {b}**?'),
-              correct, wrong, (f'{b} = {tens} + {u}', f'{b} = {tens} + {u}'),
+              correct, wrong, (f'Sépare {b} en dizaines et unités, puis multiplie CHAQUE partie par {a}.', f'Split {b} into tens and ones, then multiply EACH part by {a}.'),
               ([f'{a} × {b} = {correct} = {a * b}'], [f'{a} × {b} = {correct} = {a * b}']))
 
 
@@ -197,19 +207,24 @@ def g4_missing_factor_gen(level='medium'):
 # ── G4 · Division with remainder ─────────────────────────────────────────────
 
 def g4_division_remainder_gen(level='medium'):
-    d = random.randint(2, 9) if level != 'hard' else random.randint(11, 25)
-    q = random.randint(2, 9) if level == 'easy' else random.randint(10, 99) if level == 'medium' else random.randint(20, 300)
+    # Grade 4: the divisor always has one digit (up to 4-digit ÷ 1-digit at hard).
+    d = random.randint(2, 9) if level != 'hard' else random.randint(6, 9)
+    q = random.randint(2, 9) if level == 'easy' else random.randint(10, 99) if level == 'medium' else random.randint(100, 9999 // d - 1)
     r = random.randint(1, d - 1)
     n = d * q + r
     ask = random.choice(['q', 'r'])
     if level == 'hard' and random.random() < 0.4:
         who, g = random.choice(sc.ACTORS)
-        cap = random.choice([('boîtes', 'boxes'), ('sacs', 'bags'), ('rangées', 'rows')])
-        return typed((f'{who} range **{N(n)}** biscuits dans des {cap[0]} de **{d}**. Combien de {cap[0]} complètes peut-{sc.pronoun_fr(g)} remplir ?',
-                      f'{who} packs **{N(n)}** cookies into {cap[1]} of **{d}**. How many full {cap[1]} can {sc.pronoun_en(g)} fill?'),
+        # (plural fr, "complet(e)s" agreement, plural en, singular fr, singular en)
+        cap = random.choice([('boîtes', 'complètes', 'boxes', 'une boîte complète', 'a whole box'),
+                             ('sacs', 'complets', 'bags', 'un sac complet', 'a whole bag'),
+                             ('rangées', 'complètes', 'rows', 'une rangée complète', 'a whole row')])
+        return typed((f'{who} range **{N(n)}** biscuits dans des {cap[0]} de **{d}**. Combien de {cap[0]} {cap[1]} peut-{sc.pronoun_fr(g)} remplir ?',
+                      f'{who} packs **{N(n)}** cookies into {cap[2]} of **{d}**. How many full {cap[2]} can {sc.pronoun_en(g)} fill?'),
                      [q], 'integer',
-                     ('Le reste ne remplit pas une boîte complète.', 'The remainder does not fill a whole box.'),
-                     ([f'{n} = {d} × {q} + {r}', f'{q} complètes, il reste {r}'], [f'{n} = {d} × {q} + {r}', f'{q} full, {r} left over']))
+                     (f'Le reste ne remplit pas {cap[3]}.', f'The remainder does not fill {cap[4]}.'),
+                     ([f'{N(n)} = {d} × {q} + {r}', f'{q} {cap[0]} {cap[1]}, il reste {r} biscuit{"s" if r > 1 else ""}'],
+                      [f'{N(n)} = {d} × {q} + {r}', f'{q} full {cap[2]}, {r} cookie{"s" if r > 1 else ""} left over']))
     name = ('le **quotient**', 'the **quotient**') if ask == 'q' else ('le **reste**', 'the **remainder**')
     return typed((f'Dans la division **{N(n)} ÷ {d}**, quel est {name[0]} ?', f'In the division **{N(n)} ÷ {d}**, what is {name[1]}?'),
                  [q if ask == 'q' else r], 'integer',
@@ -244,7 +259,8 @@ def g4_arrays_gen(level='medium'):
     near = 5                      # 6, 7, 8, 9 = 5 + something: start from a known fact
     diff = a - near
     return typed((f'Pour calculer **{a} × {b}**, Léa fait **{near} × {b} + ? × {b}**. Complète.', f'To work out **{a} × {b}**, Léa does **{near} × {b} + ? × {b}**. Fill in.'),
-                 [diff], 'integer', (f'{a} = {near} + ?', f'{a} = {near} + ?'),
+                 [diff], 'integer', (f'Combien faut-il ajouter à {near} pour obtenir {a} ? Chaque partie se multiplie par {b}.',
+                                     f'How much must you add to {near} to get {a}? Each part is multiplied by {b}.'),
                  ([f'{a} = {near} + {diff}', f'{a} × {b} = {near * b} + {diff * b} = {a * b}'], [f'{a} = {near} + {diff}', f'{a} × {b} = {near * b} + {diff * b} = {a * b}']))
 
 
@@ -282,7 +298,7 @@ def g3_story_meaning_gen(level='medium'):
              f'{who} had some {obj[1]}. Someone gave {he == "she" and "her" or "him"} {b} more. Now {he} has {a + b}. How many did {he} have at the start?')
         ans, st = a, (f'{a + b} − {b} = {a}', f'{a + b} − {b} = {a}')
     elif kind == 'separate_change':
-        p = (f'{who} avait {a + b} {obj[0]}. {il.capitalize()} en a donné. Il lui en reste {a}. Combien en a-t-{il} donné ?',
+        p = (f'{who} avait {a + b} {obj[0]}. {il.capitalize()} en a donné une partie. Il lui en reste {a}. Combien en a-t-{il} donné ?',
              f'{who} had {a + b} {obj[1]} and gave some away. {he.capitalize()} has {a} left. How many did {he} give away?')
         ans, st = b, (f'{a + b} − {a} = {b}', f'{a + b} − {a} = {b}')
     elif kind == 'separate_start':
@@ -298,68 +314,130 @@ def g3_story_meaning_gen(level='medium'):
              f'{other} has {a} {obj[1]}. {who} has {b} more than {other}. How many does {who} have?')
         ans, st = a + b, (f'{a} + {b} = {a + b}', f'{a} + {b} = {a + b}')
     else:
-        p = (f'{who} a {a + b} {obj[0]}. C’est {b} de plus que {other}. Combien de {obj[0]} a {other} ?',
-             f'{who} has {a + b} {obj[1]}. That is {b} more than {other}. How many does {other} have?')
+        p = (f'{who} a {a + b} {obj[0]}, soit {b} {obj[0]} de plus que {other}. Combien de {obj[0]} a {other} ?',
+             f'{who} has {a + b} {obj[1]}, which is {b} more {obj[1]} than {other}. How many does {other} have?')
         ans, st = a, (f'{a + b} − {b} = {a}', f'{a + b} − {b} = {a}')
-    return typed(p, [ans], 'integer',
-                 ('Demande-toi : connaît-on le début, le changement ou la fin ? Fais un petit schéma.',
-                  'Ask yourself: do we know the start, the change or the end? Draw a quick sketch.'),
-                 ([st[0]], [st[1]]))
+    if kind.startswith('compare'):
+        hint = ('Compare les deux quantités : l’écart est la différence entre la plus grande et la plus petite. Fais un petit schéma.',
+                'Compare the two amounts: the gap is the difference between the larger and the smaller. Draw a quick sketch.')
+    else:
+        hint = ('Demande-toi : connaît-on le début, le changement ou la fin ? Fais un petit schéma.',
+                'Ask yourself: do we know the start, the change or the end? Draw a quick sketch.')
+    return typed(p, [ans], 'integer', hint, ([st[0]], [st[1]]))
 
 
 # ── G5 · Pick the expression for a story ─────────────────────────────────────
 
 def g5_expression_for_story_gen(level='medium'):
+    from fractions import Fraction as F
     who, g = random.choice(sc.ACTORS)
     a, b, c = random.randint(3, 9), random.randint(4, 12), random.randint(2, 9)
-    obj = random.choice([('paquets de crayons', 'packs of pencils', 'crayons', 'pencils'),
-                         ('boîtes de biscuits', 'boxes of cookies', 'biscuits', 'cookies'),
-                         ('sacs de billes', 'bags of marbles', 'billes', 'marbles')])
+    while len({a, b, c}) < 3:          # 7 + 7 × 7: equal numbers make equal-valued choices
+        b, c = random.randint(4, 12), random.randint(2, 9)
+    # (container fr, item fr, container en, item en) → "4 boîtes de 6 biscuits"
+    cont_fr, item_fr, cont_en, item_en = random.choice([('paquets', 'crayons', 'packs', 'pencils'),
+                                                        ('boîtes', 'biscuits', 'boxes', 'cookies'),
+                                                        ('sacs', 'billes', 'bags', 'marbles')])
+    il = sc.pronoun_fr(g).capitalize()
     kind = random.choice(['minus', 'plus', 'share'] if level != 'easy' else ['minus', 'plus'])
+
+    def d(label, value, err, en, fr):
+        """value None = an intermediate result would be negative: never offered."""
+        return (label, value, err, en, fr)
+
     if kind == 'minus':
         c = min(c, a * b - 1)
-        p = (f'{who} achète **{a}** {obj[0]} de **{b}**, puis en donne **{c}** à un ami.',
-             f'{who} buys **{a}** {obj[1]} with **{b}** in each, then gives **{c}** to a friend.')
-        correct = f'{a} × {b} − {c}'
-        wrong = [f'{a} × ({b} − {c})', f'{a} + {b} − {c}', f'{a} × {b} + {c}', f'({a} − {c}) × {b}', f'{a} × {b} × {c}']
-        val = a * b - c
+        p = (f'{who} achète **{a}** {cont_fr} de **{b}** {item_fr}, puis donne **{c}** {item_fr} à un ami.',
+             f'{who} buys **{a}** {cont_en} of **{b}** {item_en}, then gives **{c}** {item_en} to a friend.')
+        correct, val = f'{a} × {b} − {c}', a * b - c
+        cands = [d(f'{a} × ({b} − {c})', a * (b - c) if b >= c else None, 'took_from_each',
+                   f'The {c} {item_en} are given once, not taken from every {cont_en[:-2] if cont_en == "boxes" else cont_en[:-1]}.',
+                   f'On donne {c} {item_fr} une seule fois, pas dans chaque contenant.'),
+                 d(f'({a} − {c}) × {b}', (a - c) * b if a >= c else None, 'took_containers',
+                   f'{who} gives away {item_en}, not {cont_en}.', f'{who} donne des {item_fr}, pas des {cont_fr}.'),
+                 d(f'{a} + {b} − {c}', a + b - c if a + b >= c else None, 'added_groups',
+                   f'{a} {cont_en} of {b}: that is a multiplication.', f'{a} {cont_fr} de {b} : c’est une multiplication.'),
+                 d(f'{a} × {b} + {c}', a * b + c, 'wrong_sign',
+                   f'{who} gives some away: subtract.', f'{who} en donne : on soustrait.'),
+                 d(f'{a} × {b} × {c}', a * b * c, 'times_all',
+                   'Giving away is a subtraction.', 'Donner, c’est soustraire.'),
+                 d(f'{a} × {b} ÷ {c}', F(a * b, c), 'wrong_op',
+                   'Giving away is a subtraction, not a sharing.', 'Donner, c’est soustraire, pas partager.'),
+                 d(f'{a} × {c} − {b}', a * c - b if a * c >= b else None, 'mixed_numbers',
+                   f'Each of the {a} {cont_en} holds {b} {item_en}.', f'Chacun des {a} {cont_fr} contient {b} {item_fr}.')]
+        hint = (f'Calcule d’abord combien il y a de {item_fr} dans les {cont_fr}, puis enlève ceux qui sont donnés.',
+                f'First work out how many {item_en} are in the {cont_en}, then take away the ones given.')
+        words = ([f'Dans les {cont_fr} : {a} × {b} = {a * b} {item_fr}.', f'On en donne {c} : {a * b} − {c} = {val}.'],
+                 [f'In the {cont_en}: {a} × {b} = {a * b} {item_en}.', f'{c} are given away: {a * b} − {c} = {val}.'])
     elif kind == 'plus':
-        p = (f'{who} a **{c}** {obj[2]}. {sc.pronoun_fr(g).capitalize()} achète **{a}** {obj[0]} de **{b}**.',
-             f'{who} has **{c}** {obj[3]} and buys **{a}** {obj[1]} with **{b}** in each.')
-        correct = f'{c} + {a} × {b}'
-        wrong = [f'({c} + {a}) × {b}', f'{c} × {a} + {b}', f'{c} + {a} + {b}', f'{c} × {a} × {b}', f'{a} × ({b} + {c})']
-        val = c + a * b
+        p = (f'{who} a **{c}** {item_fr}. {il} achète **{a}** {cont_fr} de **{b}** {item_fr}.',
+             f'{who} has **{c}** {item_en} and buys **{a}** {cont_en} of **{b}** {item_en}.')
+        correct, val = f'{c} + {a} × {b}', c + a * b
+        cands = [d(f'({c} + {a}) × {b}', (c + a) * b, 'grouped_wrong',
+                   f'Only the {cont_en} hold {b} each; the {c} {item_en} are already counted.',
+                   f'Seuls les {cont_fr} contiennent {b} {item_fr} ; les {c} {item_fr} du départ sont à part.'),
+                 d(f'{c} × {a} + {b}', c * a + b, 'multiplied_start',
+                   f'The {c} {item_en} are added, not multiplied.', f'Les {c} {item_fr} du départ s’ajoutent : on ne les multiplie pas.'),
+                 d(f'{c} + {a} + {b}', c + a + b, 'added_groups',
+                   f'{a} {cont_en} of {b}: that is a multiplication.', f'{a} {cont_fr} de {b} : c’est une multiplication.'),
+                 d(f'{c} × {a} × {b}', c * a * b, 'times_all',
+                   f'The {c} {item_en} are added, not multiplied.', f'Les {c} {item_fr} du départ s’ajoutent : on ne les multiplie pas.'),
+                 d(f'{a} × ({b} + {c})', a * (b + c), 'added_to_each',
+                   f'The {c} {item_en} are not in every {cont_en[:-2] if cont_en == "boxes" else cont_en[:-1]}.',
+                   f'Les {c} {item_fr} ne sont pas dans chaque contenant.'),
+                 d(f'{b} + {a} × {c}', b + a * c, 'mixed_numbers',
+                   f'Each of the {a} {cont_en} holds {b} {item_en}.', f'Chacun des {a} {cont_fr} contient {b} {item_fr}.')]
+        hint = (f'Calcule d’abord le contenu des {cont_fr} ; les {item_fr} que {who} a déjà s’ajoutent ensuite.',
+                f'First work out what is in the {cont_en}; the {item_en} {who} already has are added after.')
+        words = ([f'Dans les {cont_fr} : {a} × {b} = {a * b} {item_fr}.', f'Avec les {c} du départ : {c} + {a * b} = {val}.'],
+                 [f'In the {cont_en}: {a} × {b} = {a * b} {item_en}.', f'With the {c} from the start: {c} + {a * b} = {val}.'])
     else:
         k = random.randint(2, 6)
-        tot_each = a * b + c
-        while tot_each % k:
+        while (a * b + c) % k:
             c += 1
-            tot_each = a * b + c
-        p = (f'{who} a **{a}** {obj[0]} de **{b}** et **{c}** {obj[2]} en vrac. {sc.pronoun_fr(g).capitalize()} partage tout également entre **{k}** amis.',
-             f'{who} has **{a}** {obj[1]} with **{b}** in each and **{c}** loose {obj[3]}, and shares everything equally among **{k}** friends.')
-        correct = f'({a} × {b} + {c}) ÷ {k}'
-        wrong = [f'{a} × {b} + {c} ÷ {k}', f'{a} × ({b} + {c}) ÷ {k}', f'({a} + {b} + {c}) ÷ {k}', f'{a} × {b} + {c} × {k}', f'({a} × {b} − {c}) ÷ {k}']
-        val = (a * b + c) // k
+        p = (f'{who} a **{a}** {cont_fr} de **{b}** {item_fr} et **{c}** {item_fr} en vrac. {il} partage tous ses {item_fr} également entre **{k}** amis.',
+             f'{who} has **{a}** {cont_en} of **{b}** {item_en} and **{c}** loose {item_en}, and shares all the {item_en} equally among **{k}** friends.')
+        correct, val = f'({a} × {b} + {c}) ÷ {k}', (a * b + c) // k
+        cands = [d(f'{a} × {b} + {c} ÷ {k}', a * b + F(c, k), 'shared_loose_only',
+                   'Everything is shared, not only the loose ones: group with parentheses.', 'Tout est partagé, pas seulement le vrac : regroupe avec des parenthèses.'),
+                 d(f'{a} × ({b} + {c}) ÷ {k}', F(a * (b + c), k), 'added_to_each',
+                   f'The loose {item_en} are not in every container.', f'Les {item_fr} en vrac ne sont pas dans chaque contenant.'),
+                 d(f'({a} + {b} + {c}) ÷ {k}', F(a + b + c, k), 'added_groups',
+                   f'{a} {cont_en} of {b}: that is a multiplication.', f'{a} {cont_fr} de {b} : c’est une multiplication.'),
+                 d(f'{a} × {b} + {c} × {k}', a * b + c * k, 'times_instead_of_share',
+                   'Sharing equally is a division.', 'Partager également, c’est diviser.'),
+                 d(f'({a} × {b} − {c}) ÷ {k}', F(a * b - c, k) if a * b >= c else None, 'wrong_sign',
+                   'The loose ones are added to the rest.', 'Les objets en vrac s’ajoutent au reste.'),
+                 d(f'{a} × {b} ÷ {k} + {c}', F(a * b, k) + c, 'shared_boxes_only',
+                   'The loose ones are shared too: group with parentheses.', 'Le vrac est partagé aussi : regroupe avec des parenthèses.')]
+        hint = ('Regroupe d’abord tout ce qui est partagé (entre parenthèses), puis divise.',
+                'First group everything that is shared (in parentheses), then divide.')
+        words = ([f'Tout ce qui est partagé : {a} × {b} + {c} = {a * b + c}.', f'Partagé entre {k} : {a * b + c} ÷ {k} = {val}.'],
+                 [f'Everything shared: {a} × {b} + {c} = {a * b + c}.', f'Shared among {k}: {a * b + c} ÷ {k} = {val}.'])
+    # Keep only distractors that are really wrong (a different value — 6 + 7 × 6 and
+    # 6 × 7 + 6 are equal) and never go below zero, and that differ from each other.
+    wrong, seen = [], {val}
+    for label, value, err, en, fr in cands:
+        if value is None or value in seen:
+            continue
+        seen.add(value)
+        wrong.append((label, err, en, fr))
     return mc((p[0] + ' Quelle chaîne d’opérations donne la réponse ?', p[1] + ' Which chain of operations gives the answer?'),
-              correct, [(w, 'order', 'Remember: × and ÷ come before + and −, unless there are parentheses.',
-                         'Rappel : × et ÷ passent avant + et −, sauf s’il y a des parenthèses.') for w in wrong],
-              ('Repère ce qui se fait en premier dans l’histoire ; les parenthèses imposent un ordre.', 'Find what happens first in the story; parentheses force an order.'),
-              ([f'{correct} = {val}'], [f'{correct} = {val}']))
+              correct, wrong, hint,
+              (words[0] + [f'Donc : {correct} = {val}'], words[1] + [f'So: {correct} = {val}']),
+              pad=lambda: correct.replace(f'{a} ×', f'{a + random.randint(1, 4)} ×', 1))
 
 
 # ── Estimation ───────────────────────────────────────────────────────────────
 
 def g3_estimate_sum_gen(level='medium'):
     to = 10 if level == 'easy' else random.choice([10, 100]) if level == 'medium' else 100
-    hi = 99 if level == 'easy' else 999 if level == 'medium' else 4999
+    # A sum only (the skill is "Estimer une somme"); grade 3 keeps the exact sum and
+    # the estimate below 1000.
+    hi = 99 if level == 'easy' else 449 if to == 100 else 494
     a, b = random.randint(to + 1, hi), random.randint(to + 1, hi)
-    sub = random.random() < 0.4
-    if sub and a < b:
-        a, b = b, a
+    sub = False
     ra, rb = (a + to // 2) // to * to, (b + to // 2) // to * to
-    if sub and ra <= rb:
-        a += 3 * to
-        ra = (a + to // 2) // to * to
     est = ra - rb if sub else ra + rb
     op = '−' if sub else '+'
     exact = a - b if sub else a + b
@@ -420,7 +498,7 @@ def g6_divisibility_gen(level='medium'):
     digits = ' + '.join(str(good))
     return mc((f'Lequel de ces nombres est **divisible par {k}** ?', f'Which of these numbers is **divisible by {k}**?'),
               str(good), [(b, 'rule', f'Divisible by {k}: {_RULES[k][1]}.', f'Divisible par {k} : {_RULES[k][0]}.') for b in bad],
-              (f'Un nombre est divisible par {k} si {_RULES[k][0]}.', f'A number is divisible by {k} if {_RULES[k][1]}.'),
+              (f'Un nombre est divisible par {k} si {_RULES[k][0]}.'.replace(' si il ', ' s’il '), f'A number is divisible by {k} if {_RULES[k][1]}.'),
               ([f'{good} : {_RULES[k][0]}' + (f' ({digits} = {sum(map(int, str(good)))})' if k in (3, 9) else ''), f'{good} ÷ {k} = {good // k}'],
                [f'{good}: {_RULES[k][1]}' + (f' ({digits} = {sum(map(int, str(good)))})' if k in (3, 9) else ''), f'{good} ÷ {k} = {good // k}']))
 
@@ -456,17 +534,26 @@ def g6_prime_factors_gen(level='medium'):
         tree = _tree(n)
         inner = [t for t in _walk(tree) if not isinstance(t, int)]
         hide_val = random.choice([t[0] for t in inner[1:]] or [fs[-1]])
+        # Show how the hidden node is found: parent ÷ sibling (= product of its children).
+        parent = next((t for t in inner if (t[2] if isinstance(t[2], int) else t[2][0]) == hide_val), None)
+        why = []
+        if parent is not None:
+            why = [f'? = {parent[0]} ÷ {parent[1]} = {hide_val}']
+            node = parent[2]
+            if not isinstance(node, int):
+                kid = node[2] if isinstance(node[2], int) else node[2][0]
+                why.append(f'{node[1]} × {kid} = {hide_val}')
         return typed((f'Voici l’arbre des facteurs de **{n}**. Quel nombre remplace le « ? » ?', f'Here is the factor tree of **{n}**. Which number replaces the “?”?'),
                       [hide_val], 'integer',
                       ('Chaque nombre est le produit des deux nombres juste en dessous.', 'Each number is the product of the two numbers just below it.'),
-                      ([f'{n} = {correct}'], [f'{n} = {correct}']), shape=ill.factor_tree(tree, hide=hide_val))
+                      (why + [f'{n} = {correct}'], why + [f'{n} = {correct}']), shape=ill.factor_tree(tree, hide=hide_val))
     a = fs[0]
     wrong = [(f'{a} × {n // a}' if not _is_prime(n // a) else f'{a * a} × {n // (a * a)}' if n % (a * a) == 0 else f'1 × {n}', 'not_prime', 'Every factor must be a prime number.', 'Chaque facteur doit être un nombre premier.'),
              (' × '.join(map(str, fs[1:])), 'missing', f'The product must equal {n}: you lost a factor.', f'Le produit doit donner {n} : il manque un facteur.'),
              (' × '.join(map(str, fs + [fs[0]])), 'extra', f'The product must equal {n}.', f'Le produit doit donner {n}.'),
              (' × '.join(map(str, sorted(fs[:-1] + [fs[-1] + 2]))), 'wrong', f'The product must equal {n}.', f'Le produit doit donner {n}.'),
              (f'{fs[0] * fs[1]} × ' + ' × '.join(map(str, fs[2:])) if len(fs) > 2 else f'{n} × 1', 'not_prime', 'Every factor must be a prime number.', 'Chaque facteur doit être un nombre premier.')]
-    return mc((f'Quelle est la décomposition de **{n}** en facteurs premiers ?', f'What is the prime factorisation of **{n}**?'),
+    return mc((f'Quelle est la décomposition de **{n}** en facteurs premiers ?', f'What is the prime factorization of **{n}**?'),
               correct, wrong,
               ('Divise par 2 tant que possible, puis par 3, 5, 7…', 'Divide by 2 as long as you can, then by 3, 5, 7…'),
               (_steps(n), _steps(n)))
@@ -494,6 +581,7 @@ def _steps(n):
 # ── G6 · Powers ──────────────────────────────────────────────────────────────
 
 _SUP = {2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶'}
+_SUP_DIGITS = str.maketrans('0123456789', '⁰¹²³⁴⁵⁶⁷⁸⁹')
 
 
 def g6_powers_gen(level='medium'):
@@ -517,11 +605,24 @@ def g6_powers_gen(level='medium'):
                      ([f'{rep} = {val}'], [f'{rep} = {val}']))
     if kind == 'notation':
         correct = f'{base}{_SUP[exp]}'
-        wrong = [(f'{exp}{_SUP.get(base, "^" + str(base))}' if base in _SUP else f'{exp} × {base}', 'swapped', 'The base is the repeated number; the exponent counts it.', 'La base est le nombre répété ; l’exposant compte les répétitions.'),
-                 (f'{base} × {exp}', 'times', 'An exponent is not a multiplication by the exponent.', 'Un exposant n’est pas une multiplication par l’exposant.'),
-                 (f'{base}{_SUP[exp + 1 if exp < 6 else exp - 1]}', 'count', 'Count how many times the number appears.', 'Compte combien de fois le nombre apparaît.'),
-                 (f'{base * exp}', 'times', 'An exponent is not a multiplication by the exponent.', 'Un exposant n’est pas une multiplication par l’exposant.'),
-                 (f'{base}{_SUP[exp - 1]}' if exp > 2 else f'{base + 1}{_SUP[exp]}', 'count', 'Count how many times the number appears.', 'Compte combien de fois le nombre apparaît.')]
+        def sup(e):
+            return str(e).translate(_SUP_DIGITS)
+        swap = ('The base is the repeated number; the exponent counts it.', 'La base est le nombre répété ; l’exposant compte les répétitions.')
+        times = ('An exponent is not a multiplication by the exponent.', 'Un exposant n’est pas une multiplication par l’exposant.')
+        count = ('Count how many times the number appears.', 'Compte combien de fois le nombre apparaît.')
+        base_ = ('The base is the number that is repeated.', 'La base est le nombre qui est répété.')
+        cands = [(f'{exp}{sup(base)}', exp ** base, 'swapped') + swap,
+                 (f'{base} × {exp}', base * exp, 'times') + times,
+                 (f'{base}{sup(exp + 1)}', base ** (exp + 1), 'count') + count,
+                 (f'{base}{sup(exp - 1)}', base ** (exp - 1), 'count') + count,
+                 (f'{base + 1}{sup(exp)}', (base + 1) ** exp, 'base') + base_,
+                 (f'{base - 1}{sup(exp)}', (base - 1) ** exp, 'base') + base_]
+        # Five choices with five different values (7 × 2, 2 × 7 and 14 are one error).
+        wrong, seen = [], {val}
+        for label, v, err, en, fr in cands:
+            if v not in seen and v > 0:
+                seen.add(v)
+                wrong.append((label, err, en, fr))
         return mc((f'Comment écrit-on **{rep}** avec un exposant ?', f'How do you write **{rep}** with an exponent?'),
                   correct, wrong, ('Base = le nombre répété ; exposant = le nombre de fois.', 'Base = the repeated number; exponent = how many times.'),
                   ([f'{rep} = {correct} = {val}'], [f'{rep} = {correct} = {val}']))
@@ -557,22 +658,52 @@ def _sequence(level):
     return kind, seq, rule
 
 
+_PATTERN_HINTS = {
+    'double': ('Regarde si chaque nombre s’obtient en multipliant le précédent par le même nombre.',
+               'Check whether each number is the previous one multiplied by the same number.'),
+    'square': ('Pense aux nombres qu’on obtient en multipliant un nombre par lui-même.',
+               'Think of the numbers you get by multiplying a number by itself.'),
+    'triangular': ('Calcule les écarts entre deux nombres voisins : comment changent-ils ?',
+                   'Work out the gaps between neighbouring numbers: how do they change?'),
+    'growing': ('Calcule les écarts entre deux nombres voisins : comment changent-ils ?',
+                'Work out the gaps between neighbouring numbers: how do they change?'),
+}
+
+
+def _gaps(seq):
+    """'16 → 17 : +1 ; 17 → 19 : +2' (fr) and the English twin."""
+    if all(seq[i + 1] == seq[i] * 2 for i in range(len(seq) - 1)):
+        parts = [f'{seq[i]} × 2 = {seq[i + 1]}' for i in range(len(seq) - 1)]
+        return ' ; '.join(parts), '; '.join(parts)
+    parts = [f'{seq[i]} → {seq[i + 1]} : +{seq[i + 1] - seq[i]}' for i in range(len(seq) - 1)]
+    return ' ; '.join(parts), '; '.join(p.replace(' : ', ': ') for p in parts)
+
+
 def g5_number_patterns_gen(level='medium'):
     kind, seq, rule = _sequence(level)
     shown = seq[:4] if level != 'hard' else seq[:5]
     nxt = seq[len(shown)]
+    hint = _PATTERN_HINTS[kind]
     if level == 'hard' or random.random() < 0.6:
+        g_fr, g_en = _gaps(shown + [nxt])
         return typed((f'Quel est le nombre suivant ? **{", ".join(map(str, shown))}, …**', f'What is the next number? **{", ".join(map(str, shown))}, …**'),
-                     [nxt], 'integer', ('Regarde comment on passe d’un nombre au suivant : l’écart change-t-il ?', 'Look at how you get from one number to the next: does the gap change?'),
-                     ([f'Règle : {rule[0]}', f'Suivant : {nxt}'], [f'Rule: {rule[1]}', f'Next: {nxt}']))
+                     [nxt], 'integer', hint,
+                     ([g_fr, f'Règle : {rule[0]}', f'Suivant : {nxt}'], [g_en, f'Rule: {rule[1]}', f'Next: {nxt}']))
+    # Mutually exclusive rule families — "the gap grows by 1" and "add 2, then 3,
+    # then 4…" describe the same sequences, so they never appear together.
+    growing = ('l’écart augmente de 1 à chaque fois', 'the gap grows by 1 each time')
     rules = [('on multiplie par 2', 'multiply by 2'), ('les nombres carrés', 'the square numbers'),
-             ('on ajoute 2, puis 3, puis 4… (nombres triangulaires)', 'add 2, then 3, then 4… (triangular numbers)'),
-             ('on ajoute toujours le même nombre', 'add the same number each time'), ('on soustrait 1 à chaque fois', 'subtract 1 each time')]
-    correct = rule if kind != 'growing' else ('l’écart augmente de 1 à chaque fois', 'the gap grows by 1 each time')
+             growing, ('on ajoute toujours le même nombre', 'add the same number each time'),
+             ('on multiplie par 3', 'multiply by 3')]
+    correct = rule if kind in ('double', 'square') else growing
+    if kind == 'triangular':
+        correct = ('l’écart augmente de 1 à chaque fois (nombres triangulaires)', 'the gap grows by 1 each time (triangular numbers)')
+    wrong = [(r, 'wrong_rule', 'Test the rule on every step of the sequence.', 'Vérifie la règle à chaque étape de la suite.')
+             for r in rules if r[0] != correct[0] and (kind in ('double', 'square') or r is not growing)]
+    g_fr, g_en = _gaps(seq[:5])
     return mc((f'Quelle est la règle de cette suite ? **{", ".join(map(str, seq[:5]))}, …**', f'What is the rule of this sequence? **{", ".join(map(str, seq[:5]))}, …**'),
-              correct, [r for r in rules if r[0] != correct[0]],
-              ('Calcule les écarts entre les nombres.', 'Work out the gaps between the numbers.'),
-              ([f'Règle : {correct[0]}'], [f'Rule: {correct[1]}']))
+              correct, wrong, hint,
+              ([g_fr, f'Règle : {correct[0]}'], [g_en, f'Rule: {correct[1]}']))
 
 
 # ── G4 · Times tables (fluency) ──────────────────────────────────────────────
@@ -588,9 +719,38 @@ def g4_times_tables_gen(level='medium'):
         return typed((f'**{p} ÷ {a} = ?**', f'**{p} ÷ {a} = ?**'), [b], 'integer',
                      (f'Pense à la table de {a} : {a} × ? = {p}', f'Think of the {a} times table: {a} × ? = {p}'),
                      ([f'{a} × {b} = {p} donc {p} ÷ {a} = {b}'], [f'{a} × {b} = {p} so {p} ÷ {a} = {b}']), time_limit=12)
-    return typed((f'**{a} × {b} = ?**', f'**{a} × {b} = ?**'), [a * b], 'integer',
-                 ('Récite la table, ou pars d’un fait que tu connais (× 2, × 5, × 10).', 'Say the table, or start from a fact you know (× 2, × 5, × 10).'),
-                 ([f'{a} × {b} = {a * b}'], [f'{a} × {b} = {a * b}']), time_limit=10)
+    hint, steps = _fact_strategy(a, b)
+    return typed((f'**{a} × {b} = ?**', f'**{a} × {b} = ?**'), [a * b], 'integer', hint, steps, time_limit=10)
+
+
+def _fact_strategy(a, b):
+    """A hint and a one-line worked strategy chosen from the factors of a × b."""
+    p = a * b
+    lo, hi = sorted((a, b))
+    if lo == 0:
+        return (('Un nombre multiplié par 0 donne toujours 0.', 'Any number times 0 is 0.'),
+                ([f'{a} × {b} = 0'], [f'{a} × {b} = 0']))
+    if lo == 1:
+        return (('Un nombre multiplié par 1 reste le même.', 'Any number times 1 stays the same.'),
+                ([f'{a} × {b} = {p}'], [f'{a} × {b} = {p}']))
+    if 10 in (a, b):
+        o = b if a == 10 else a
+        return (('Multiplier par 10 : compte par dizaines (on ajoute un 0).', 'Times 10: count by tens (add a 0).'),
+                ([f'{o} dizaines = {p}'], [f'{o} tens = {p}']))
+    if 2 in (a, b):
+        o = b if a == 2 else a
+        return (('Multiplier par 2, c’est doubler.', 'Times 2 is a double.'),
+                ([f'{o} + {o} = {p}'], [f'{o} + {o} = {p}']))
+    if 5 in (a, b):
+        o = b if a == 5 else a
+        return (('× 5, c’est la moitié de × 10.', '× 5 is half of × 10.'),
+                ([f'{o} × 10 = {o * 10}', f'{o * 10} ÷ 2 = {p}'], [f'{o} × 10 = {o * 10}', f'{o * 10} ÷ 2 = {p}']))
+    if hi % 2 == 0:
+        h = hi // 2
+        return ((f'Pars de {lo} × {h}, puis double.', f'Start from {lo} × {h}, then double it.'),
+                ([f'{lo} × {h} = {lo * h}', f'{lo * h} × 2 = {p}'], [f'{lo} × {h} = {lo * h}', f'{lo * h} × 2 = {p}']))
+    return ((f'Pars de {lo} × {hi - 1}, puis ajoute encore {lo}.', f'Start from {lo} × {hi - 1}, then add {lo} more.'),
+            ([f'{lo} × {hi - 1} = {lo * (hi - 1)}', f'{lo * (hi - 1)} + {lo} = {p}'], [f'{lo} × {hi - 1} = {lo * (hi - 1)}', f'{lo * (hi - 1)} + {lo} = {p}']))
 
 
 # ── G6 · Write large numbers ─────────────────────────────────────────────────
