@@ -286,6 +286,22 @@ def g3_build_chart_gen(level='easy'):
     short = [(c[0][:4] + '.' if len(c[0]) > 5 else c[0], c[1][:4] + '.' if len(c[1]) > 5 else c[1]) for c in cats]
     table = {'headers': [('Réponse', 'Answer'), (f'Nombre {_de(p_fr)}', f'Number of {p_en}')],
              'rows': [[c, str(v)] for c, v in zip(cats, vals)]}
+    if level == 'hard' or (level == 'medium' and random.random() < 0.5):
+        # tap-to-build: the child draws the chart themselves (workplan D7.4)
+        from ..widgets import build_bars
+        bstep = 1 if level == 'medium' and max(vals) <= 10 else 2
+        if bstep == 2:
+            vals = [v + v % 2 for v in vals]
+            if len(set(vals)) < n:
+                vals = random.sample(range(2, 17, 2), n)
+            table['rows'] = [[c, str(v)] for c, v in zip(cats, vals)]
+        return build_bars((f'Sondage « {q_fr} » — les résultats sont dans le tableau. Construis le diagramme à bandes.',
+                           f'Survey “{q_en}” — the results are in the table. Build the bar chart.'),
+                          short, vals,
+                          (f'Pour chaque réponse, monte la bande jusqu’au nombre du tableau. Une case vaut {bstep}.',
+                           f'For each answer, raise the bar up to the number in the table. One square is worth {bstep}.'),
+                          ([f'{c[0]} : {v}' for c, v in zip(cats, vals)], [f'{c[1]}: {v}' for c, v in zip(cats, vals)]),
+                          top=max(10, max(vals) + bstep) if bstep == 1 else max(16, max(vals) + bstep), step=bstep, table=table)
     variants = [vals]
     tries = 0
     while len(variants) < 5 and tries < 200:

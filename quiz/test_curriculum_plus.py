@@ -6,6 +6,7 @@ shared structural check. Below that, one correctness test per skill whose answer
 can be recomputed from the prompt.
 """
 import random
+import json
 import re
 from fractions import Fraction
 
@@ -529,8 +530,10 @@ class MeasurementPlusTests(SimpleTestCase):
             self.assertEqual(len(vals), len(set(vals)), q['choices'])
 
     def test_no_negative_temperatures(self):
-        for slug in ('g3-thermometer', 'g5-thermometer'):
-            for level in LEVELS:
+        # D2 (2026-10-26): below-zero readings only on the grade-5 hard level (winter scale)
+        for slug, level in [(s, lv) for s in ('g3-thermometer', 'g5-thermometer') for lv in LEVELS
+                            if not (s == 'g5-thermometer' and lv == 'hard')]:
+            if True:
                 for _ in range(30):
                     q = _q(slug, level)
                     for s in q['shape_data']:
@@ -603,6 +606,9 @@ class StatsProbabilityPlusTests(SimpleTestCase):
             for _ in range(30):
                 q = _q('g3-build-chart', level)
                 vals = [int(row[1]) for row in q['table']['rows']]
+                if q['q_type'] == 'build_bars':            # tap-to-build variant: the key is the table itself
+                    self.assertEqual(json.loads(q['correct_answers'][0]), vals)
+                    continue
                 n = len(vals)
                 bars = [m for m in q['shape_data'][0]['marks'] if m['type'] == 'rect']
                 panels = [[b['h'] for b in bars[k * n:(k + 1) * n]] for k in range(5)]

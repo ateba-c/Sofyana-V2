@@ -333,20 +333,34 @@ def _spin(weights, n):
     return [random.choices(names, weights=[weights[k] for k in names])[0] for _ in range(n)]
 
 
+# Simulation runner specs (partials/simulator.html): the child can try the experiment; the answer never
+# depends on their trials.
+COIN = {'kind': 'coin', 'label_fr': 'une pièce équilibrée', 'label_en': 'a fair coin', 'batches': [10, 100],
+        'outcomes': [{'fr': 'Pile', 'en': 'Tails', 'color': '#2563EB', 'w': 1}, {'fr': 'Face', 'en': 'Heads', 'color': '#D97706', 'w': 1}]}
+DIE = {'kind': 'die', 'label_fr': 'un dé équilibré', 'label_en': 'a fair die', 'batches': [6, 60, 600],
+       'outcomes': [{'fr': str(k), 'en': str(k), 'color': c, 'w': 1}
+                    for k, c in zip(range(1, 7), ['#EF4444', '#D97706', '#16A34A', '#0891B2', '#2563EB', '#9333EA'])]}
+
+
+def _sim(spec, q):
+    q['simulator'] = spec
+    return q
+
+
 def g5_simulation_gen(level='easy'):
     """Prediction vs result, record results, experimental vs theoretical (224, 227, 228, 234, 235)."""
     if level == 'easy':
         t = random.choice([10, 20])
         got = random.choice([x for x in range(t // 2 - 3, t // 2 + 4) if x != t // 2])
         # « pile » = tails
-        return mc((f'Avant de lancer une pièce {t} fois, Jade prédit {t // 2} piles. Elle obtient {got} piles. Que peut-on dire ?',
+        return _sim(COIN, mc((f'Avant de lancer une pièce {t} fois, Jade prédit {t // 2} piles. Elle obtient {got} piles. Que peut-on dire ?',
                    f'Before tossing a coin {t} times, Jade predicts {t // 2} tails. She gets {got} tails. What can we say?'),
                   ('Un résultat peut être différent de la prédiction : c’est le hasard.', 'A result can differ from the prediction: that is chance.'),
                   [('La pièce est sûrement truquée.', 'The coin must be rigged.'), ('Jade a sûrement mal compté.', 'Jade must have counted wrong.'),
                    (f'Il fallait obtenir exactement {t // 2} piles.', f'She had to get exactly {t // 2} tails.'),
                    ('Sa prédiction était impossible.', 'Her prediction was impossible.')],
                   ('Une prédiction dit ce qui est le plus probable, pas ce qui arrivera à coup sûr.', 'A prediction says what is most likely, not what will surely happen.'),
-                  (f'{got} piles au lieu de {t // 2} : un petit écart est normal avec le hasard.', f'{got} tails instead of {t // 2}: a small gap is normal with chance.'))
+                  (f'{got} piles au lieu de {t // 2} : un petit écart est normal avec le hasard.', f'{got} tails instead of {t // 2}: a small gap is normal with chance.')))
     if level == 'medium':
         colors = random.sample(list(COLS), 3)
         weights = dict(zip(colors, random.choice([(2, 1, 1), (1, 1, 1), (3, 2, 1)])))
@@ -371,11 +385,11 @@ def g5_simulation_gen(level='easy'):
     if random.random() < 0.5:
         t = random.choice([12, 18, 24, 30, 60, 120])
         face = random.randint(1, 6)
-        return typed((f'On lance un dé équilibré {t} fois. Combien de fois peut-on **s’attendre** à obtenir un {face} ?',
+        return _sim(DIE, typed((f'On lance un dé équilibré {t} fois. Combien de fois peut-on **s’attendre** à obtenir un {face} ?',
                       f'A fair die is rolled {t} times. How many times can you **expect** to roll a {face}?'),
                      [t // 6], 'integer',
                      ('Probabilité théorique d’une face : 1 sur 6.', 'Theoretical probability of one face: 1 in 6.'),
-                     (f'{t} ÷ 6 = {t // 6} fois (environ ; le résultat réel peut varier).', f'{t} ÷ 6 = {t // 6} times (about; the real result can vary).'))
+                     (f'{t} ÷ 6 = {t // 6} fois (environ ; le résultat réel peut varier).', f'{t} ÷ 6 = {t // 6} times (about; the real result can vary).')))
     small, big = 10, 500
     # The data shown must agree with the key: keep a run where the 500 tosses really are
     # closer to ½ than the 10 tosses (so never 5 tails out of 10).
@@ -384,7 +398,7 @@ def g5_simulation_gen(level='easy'):
         b = _spin({'P': 1, 'F': 1}, big).count('P')
         if abs(Fraction(b, big) - Fraction(1, 2)) < abs(Fraction(a, small) - Fraction(1, 2)):
             break
-    return mc(('Deux expériences avec une pièce. Laquelle a le plus de chances de donner une fréquence de piles **proche** de ½ ?',
+    return _sim(dict(COIN, batches=[10, 100, 500]), mc(('Deux expériences avec une pièce. Laquelle a le plus de chances de donner une fréquence de piles **proche** de ½ ?',
                'Two experiments with a coin. Which one is more likely to give a share of tails **close** to ½?'),
               (f'L’expérience 2 ({big} lancers)', f'Experiment 2 ({big} tosses)'),
               [(f'L’expérience 1 ({small} lancers)', f'Experiment 1 ({small} tosses)'),
@@ -396,7 +410,7 @@ def g5_simulation_gen(level='easy'):
                f'{a}/{small} and {b}/{big}: with many tosses, the share gets close to ½. '
                'With few tosses it can be far from ½ (or land on it by luck).'),
               bullets=[(f'Expérience 1 : {small} lancers, {a} piles', f'Experiment 1: {small} tosses, {a} tails'),
-                       (f'Expérience 2 : {big} lancers, {b} piles', f'Experiment 2: {big} tosses, {b} tails')])
+                       (f'Expérience 2 : {big} lancers, {b} piles', f'Experiment 2: {big} tosses, {b} tails')]))
 
 
 # ── G3 · List the outcomes ───────────────────────────────────────────────────

@@ -407,6 +407,14 @@ def mean_scores(grade):
         'Le total est la moyenne multipliée par le nombre de tests.', 'The total is the mean multiplied by the number of tests.')
 
 
+def _simp(a, b):
+    """'14/20 = 7/10', or just '7/20' when the fraction is already in simplest form (no '7/20 = 7/20')."""
+    if not b:
+        return f'{a}/{b}'
+    f = Fraction(a, b)
+    return f'{a}/{b}' if (f.numerator, f.denominator) == (a, b) else f'{a}/{b} = {f.numerator}/{f.denominator}'
+
+
 def probability_bag(grade):
     who, g = sc.pick_actor()
     colors = random.sample([('rouges', 'red'), ('bleues', 'blue'), ('vertes', 'green'), ('jaunes', 'yellow')], 3)
@@ -427,8 +435,8 @@ def probability_bag(grade):
         return _problem(
             f"Un sac contient {', '.join(f'**{n}** billes {c[0]}' for n, c in zip(counts, colors))}. {who} pige une bille sans regarder. Quelle est la probabilité qu'elle ne soit **pas** {colors[i][0][:-1]} ? (fraction)",
             f"A bag holds {', '.join(f'**{n}** {c[1]} marbles' for n, c in zip(counts, colors))}. {who} picks one without looking. What is the probability it is **not** {colors[i][1]}? (fraction)",
-            f'{fr.numerator}/{fr.denominator}', [f'Total : {" + ".join(map(str, counts))} = {total}', f'Pas {colors[i][0]} : {total} − {counts[i]} = {fav}', f'{fav}/{total} = {fr.numerator}/{fr.denominator}'],
-            [f'Total: {" + ".join(map(str, counts))} = {total}', f'Not {colors[i][1]}: {total} − {counts[i]} = {fav}', f'{fav}/{total} = {fr.numerator}/{fr.denominator}'],
+            f'{fr.numerator}/{fr.denominator}', [f'Total : {" + ".join(map(str, counts))} = {total}', f'Pas {colors[i][0]} : {total} − {counts[i]} = {fav}', _simp(fav, total)],
+            [f'Total: {" + ".join(map(str, counts))} = {total}', f'Not {colors[i][1]}: {total} − {counts[i]} = {fav}', _simp(fav, total)],
             'Cas favorables (toutes les autres couleurs) sur le total.', 'Favourable cases (all the other colours) over the total.',
             'fraction', [f'{fr.numerator}/{fr.denominator}', f'{fav}/{total}'])
     removed = random.randint(1, max(1, counts[i] - 1))   # usually some are left; 0 only when there was one
@@ -439,8 +447,8 @@ def probability_bag(grade):
     return _problem(
         f"Un sac contient {', '.join(f'**{n}** billes {c[0]}' for n, c in zip(counts, colors))}. {who} retire **{removed}** bille{'s' if removed > 1 else ''} {colors[i][0] if removed > 1 else colors[i][0][:-1]}, puis pige au hasard. Quelle est la probabilité de piger une bille {colors[i][0][:-1]} ? (fraction)",
         f"A bag holds {', '.join(f'**{n}** {c[1]} marbles' for n, c in zip(counts, colors))}. {who} removes **{removed}** {colors[i][1]} marble{'s' if removed > 1 else ''}, then picks at random. What is the probability of picking a {colors[i][1]} marble? (fraction)",
-        shown, [f'Il reste {counts[i]} − {removed} = {fav} {colors[i][0]}', f'Total : {total} − {removed} = {new_total}', f'{fav}/{new_total} = {fr.numerator}/{fr.denominator}'],
-        [f'{counts[i]} − {removed} = {fav} {colors[i][1]} left', f'Total: {total} − {removed} = {new_total}', f'{fav}/{new_total} = {fr.numerator}/{fr.denominator}'],
+        shown, [f'Il reste {counts[i]} − {removed} = {fav} {colors[i][0]}', f'Total : {total} − {removed} = {new_total}', _simp(fav, new_total)],
+        [f'{counts[i]} − {removed} = {fav} {colors[i][1]} left', f'Total: {total} − {removed} = {new_total}', _simp(fav, new_total)],
         'Mets à jour le nombre de billes de la couleur ET le total.', 'Update both the number of that colour AND the total.',
         'fraction', [shown, f'{fav}/{new_total}'])
 
