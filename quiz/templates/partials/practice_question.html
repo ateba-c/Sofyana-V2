@@ -112,7 +112,15 @@
        dragging: null,
        submitted: false,
        showHint: false,
-       init() { this.items = [...this.items].sort(() => Math.random() - 0.5); },
+       init() {
+         {# Fisher–Yates; items arrive in answer order, so never hand them back unshuffled #}
+         const a = [...this.items], key = a.map(i => i.label).join("|");
+         for (let t = 0; t < 10; t++) {
+           for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+           if (a.map(i => i.label).join("|") !== key) break;
+         }
+         this.items = a;
+       },
        dragStart(idx) { this.dragging = idx; },
        dragOver(idx) {
          if (this.dragging === null || this.dragging === idx) return;

@@ -2,7 +2,7 @@
 import json
 from unittest import mock
 
-from django.test import override_settings
+from django.test import SimpleTestCase, override_settings
 
 from quiz.models import Skill
 
@@ -159,3 +159,27 @@ class AIReviewTests(StudioBase):
         r = self.client.get(f'/qa/s/{s.pk}/?skill=g5-data-table')
         self.assertNotContains(r, 'Pré-revue IA')
         self.assertNotContains(r, 'IA ⚠')
+
+
+class AIFeedTests(SimpleTestCase):
+    """What the model sees must match what the child sees (the 2026-10 diagnoses were full of 'empty canvas' and
+    'list already sorted' false alarms caused by the feed, not by the generators)."""
+
+    def test_canvas_marks_reach_the_model(self):
+        shape = {'type': 'canvas', 'vw': 300, 'vh': 200,
+                 'marks': [{'type': 'path', 'd': 'M 69.12,14.3 L 85.0,54.3 Z', 'fill': '#DBEAFE'},
+                           {'type': 'line', 'x1': 18.0, 'y1': 38.0, 'x2': 302.4, 'y2': 38.0}] * 60,
+                 'labels': [{'text': 'A', 'x': 50, 'y': 106}]}
+        text = ai_review._shape_summary([shape])[0]
+        self.assertIn('path M 69,14 L 85,54 Z', text)
+        self.assertIn('line 18,38→302,38', text)
+        self.assertIn("text 'A' at 50,106", text)
+        self.assertLess(len(text), ai_review.ILLUSTRATION_CAP)
+
+    def test_ordering_items_are_shuffled_for_the_solver(self):
+        labels = ['1', '2', '3', '4']
+        for seed in ('Q-1', 'Q-2', 'Q-3'):
+            got = ai_review._shuffled(labels, seed)
+            self.assertCountEqual(got, labels)
+            self.assertNotEqual(got, labels)
+            self.assertEqual(got, ai_review._shuffled(labels, seed))

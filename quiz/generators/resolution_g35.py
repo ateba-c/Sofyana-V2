@@ -289,9 +289,10 @@ def decimal_shopping(grade):
         'Multiplication avant addition et soustraction.', 'Multiplication before addition and subtraction.')
 
 
-def volume_capacity(grade):
+def volume_capacity(grade, kinds=('aquarium', 'litres', 'bottles')):
+    """Volume / capacity stories; ``kinds`` keeps each skill on its own topic (mass lives in mass_story)."""
     who, g = sc.pick_actor()
-    variant = random.choice(['aquarium', 'litres', 'bottles', 'mass'])
+    variant = random.choice(kinds)
     if variant == 'aquarium':
         L, W, H = random.randint(20, 60), random.randint(10, 40), random.randint(10, 40)
         v = L * W * H
@@ -306,20 +307,37 @@ def volume_capacity(grade):
         litres = v // 1000
         return _problem(
             f"Un bac mesure **{L} cm** × **{W} cm** × **{H} cm**. Sachant que 1 000 cm³ = 1 L, combien de litres d'eau peut-il contenir ?",
-            f"A tub measures **{L} cm** × **{W} cm** × **{H} cm**. Knowing that 1 000 cm³ = 1 L, how many litres of water can it hold?",
-            litres, [f'{L} × {W} × {H} = {N(v)} cm³', f'{N(v)} ÷ 1 000 = {litres}', f'{litres} L'], [f'{L} × {W} × {H} = {N(v)} cm³', f'{N(v)} ÷ 1 000 = {litres}', f'{litres} L'],
-            'Volume en cm³, puis divise par 1 000.', 'Volume in cm³, then divide by 1 000.')
+            f"A tub measures **{L} cm** × **{W} cm** × **{H} cm**. Knowing that 1,000 cm³ = 1 L, how many litres of water can it hold?",
+            litres, [f'{L} × {W} × {H} = {N(v)} cm³', f'{N(v)} ÷ 1 000 = {litres}', f'{litres} L'], [f'{L} × {W} × {H} = {v:,} cm³', f'{v:,} ÷ 1,000 = {litres}', f'{litres} L'],
+            'Volume en cm³, puis divise par 1 000.', 'Volume in cm³, then divide by 1,000.')
     if variant == 'bottles':
-        n = random.randint(3, 9)
         ml = random.choice([250, 330, 500, 750])
         big = random.choice([2, 3, 4])
+        n = random.randint(2, (big * 1000 - 1) // ml)      # the jug never overflows: the subtraction is always valid
         total_ml = n * ml
+        left = big * 1000 - total_ml
         return _problem(
-            f"{who} verse **{n}** bouteilles de **{ml} mL** dans une cruche de **{big} L**. Combien de millilitres manque-t-il pour remplir la cruche ? (si elle déborde, écris 0)",
-            f"{who} pours **{n}** bottles of **{ml} mL** into a **{big} L** jug. How many millilitres are missing to fill the jug? (if it overflows, write 0)",
-            max(0, big * 1000 - total_ml), [f'{n} × {ml} = {N(total_ml)} mL', f'{big} L = {N(big * 1000)} mL', f'{N(big * 1000)} − {N(total_ml)} = {N(max(0, big * 1000 - total_ml))}', f'{N(max(0, big * 1000 - total_ml))} mL'],
-            [f'{n} × {ml} = {N(total_ml)} mL', f'{big} L = {N(big * 1000)} mL', f'{N(big * 1000)} − {N(total_ml)} = {N(max(0, big * 1000 - total_ml))}', f'{N(max(0, big * 1000 - total_ml))} mL'],
-            'Mets tout en millilitres, puis soustrais.', 'Put everything in millilitres, then subtract.')
+            f"{who} verse **{n}** bouteilles de **{ml} mL** dans une cruche de **{big} L**. Combien de millilitres manque-t-il pour remplir la cruche ?",
+            f"{who} pours **{n}** bottles of **{ml} mL** into a **{big} L** jug. How many millilitres are missing to fill the jug?",
+            left, [f'{n} × {ml} = {N(total_ml)} mL', f'{big} L = {N(big * 1000)} mL', f'{N(big * 1000)} − {N(total_ml)} = {N(left)}', f'{N(left)} mL'],
+            [f'{n} × {ml} = {total_ml:,} mL', f'{big} L = {big * 1000:,} mL', f'{big * 1000:,} − {total_ml:,} = {left:,}', f'{left:,} mL'],
+            'Mets tout en millilitres (1 L = 1 000 mL), puis soustrais.', 'Put everything in millilitres (1 L = 1,000 mL), then subtract.')
+    return mass_story(grade)
+
+
+def mass_story(grade):
+    """Mass conversions kg ↔ g (g5-mass-convert)."""
+    if random.random() < 0.5:
+        bag = random.choice([1, 2, 5])
+        use = random.choice([150, 200, 250, 300, 350, 400])
+        times = random.randint(1, max(1, bag * 1000 // use - 1))
+        left = bag * 1000 - times * use
+        return _problem(
+            f"Un sac contient **{bag} kg** de farine. On fait **{times}** recettes qui utilisent chacune **{use} g** de farine. Combien de grammes de farine reste-t-il ?",
+            f"A bag holds **{bag} kg** of flour. **{times}** recipes each use **{use} g** of flour. How many grams of flour are left?",
+            left, [f'{bag} kg = {N(bag * 1000)} g', f'{times} × {use} = {N(times * use)} g', f'{N(bag * 1000)} − {N(times * use)} = {N(left)}', f'{N(left)} g'],
+            [f'{bag} kg = {bag * 1000:,} g', f'{times} × {use} = {times * use:,} g', f'{bag * 1000:,} − {times * use:,} = {left:,}', f'{left:,} g'],
+            '1 kg = 1 000 g. Convertis le sac en grammes avant de soustraire.', '1 kg = 1,000 g. Convert the bag to grams before subtracting.')
     bags = random.randint(2, 6)
     kg = random.choice([1, 2, 5])
     g_ = random.choice([250, 500, 750])
@@ -328,8 +346,8 @@ def volume_capacity(grade):
         f"Une recette utilise **{bags}** sacs de **{kg} kg** de farine et **{g_} g** de sucre. Quelle est la masse totale en grammes ?",
         f"A recipe uses **{bags}** bags of **{kg} kg** of flour and **{g_} g** of sugar. What is the total mass in grams?",
         total_g, [f'{bags} × {kg} kg = {bags * kg} kg = {N(bags * kg * 1000)} g', f'{N(bags * kg * 1000)} + {g_} = {N(total_g)}', f'{N(total_g)} g'],
-        [f'{bags} × {kg} kg = {bags * kg} kg = {N(bags * kg * 1000)} g', f'{N(bags * kg * 1000)} + {g_} = {N(total_g)}', f'{N(total_g)} g'],
-        '1 kg = 1 000 g. Convertis, puis additionne.', '1 kg = 1 000 g. Convert, then add.')
+        [f'{bags} × {kg} kg = {bags * kg} kg = {bags * kg * 1000:,} g', f'{bags * kg * 1000:,} + {g_} = {total_g:,}', f'{total_g:,} g'],
+        '1 kg = 1 000 g. Convertis, puis additionne.', '1 kg = 1,000 g. Convert, then add.')
 
 
 def mean_scores(grade):
@@ -499,9 +517,9 @@ FAMILIES_G35 = {
     'g5-decimal-mult':     (5, [decimal_shopping]),
     'g5-div-decimal':      (5, [decimal_shopping]),
     'g5-decimal-div':      (5, [decimal_shopping]),
-    'g5-volume':           (5, [volume_capacity]),
-    'g5-capacity-convert': (5, [volume_capacity]),
-    'g5-mass-convert':     (5, [volume_capacity]),
+    'g5-volume':           (5, [lambda g: volume_capacity(g, ('aquarium', 'litres'))]),
+    'g5-capacity-convert': (5, [lambda g: volume_capacity(g, ('litres', 'bottles'))]),
+    'g5-mass-convert':     (5, [mass_story]),
     'g5-elapsed-time':     (5, [schedule]),
     'g5-temperature':      (5, [temperature_change]),
     'g5-thermometer':      (5, [temperature_change]),

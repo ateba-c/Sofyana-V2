@@ -53,17 +53,66 @@ def model_name():
 
 # ── what the model sees ───────────────────────────────────────────────────────
 
-_SHAPE_DROP = {'points', 'path', 'paths', 'marks', 'coords', 'vertices', 'svg', 'd', 'polygon', 'polyline'}
+_SHAPE_DROP = {'svg'}
+_NUM = re.compile(r'-?\d+\.\d+')
+ILLUSTRATION_CAP = 6000         # characters per illustration (a full canvas is ~1–3 kB once compacted)
+
+
+def _r(v):
+    return round(v) if isinstance(v, float) else v
+
+
+def _mark_text(m):
+    """One canvas primitive as a short line: 'line 18,38→302,38 #334155', 'path M 69,14 L 85,54 Z fill=#DBEAFE'."""
+    t = m.get('type')
+    if t == 'path':
+        d = _NUM.sub(lambda x: str(round(float(x.group()))), str(m.get('d', '')))
+        return f"path {d} fill={m.get('fill', 'none')}" + (' dashed' if m.get('dash') else '')
+    if t in ('line', 'dashed'):
+        return f"{t} {_r(m.get('x1'))},{_r(m.get('y1'))}→{_r(m.get('x2'))},{_r(m.get('y2'))} {m.get('color', '')}".rstrip()
+    if t == 'dot':
+        return f"dot {_r(m.get('x'))},{_r(m.get('y'))} r={_r(m.get('r', 4))} {m.get('fill', '')}".rstrip()
+    if t == 'rect':
+        return f"rect x={_r(m.get('x'))} y={_r(m.get('y'))} w={_r(m.get('w'))} h={_r(m.get('h'))} fill={m.get('fill', 'none')}"
+    if t == 'circle':
+        return f"circle c={_r(m.get('cx'))},{_r(m.get('cy'))} r={_r(m.get('r'))} fill={m.get('fill', 'none')}"
+    if t == 'pie_slice':
+        return f"pie_slice c={_r(m.get('cx'))},{_r(m.get('cy'))} r={_r(m.get('r'))} from {_r(m.get('lx1'))},{_r(m.get('ly1'))} to {_r(m.get('lx2'))},{_r(m.get('ly2'))} fill={m.get('fill')}"
+    return json.dumps({k: _r(v) for k, v in m.items()}, ensure_ascii=False, default=str)
+
+
+def _canvas_text(sh):
+    lines = [f"canvas {sh.get('vw')}×{sh.get('vh')} px (y grows downward)"]
+    lines += [_mark_text(m) for m in sh.get('marks') or [] if isinstance(m, dict)]
+    lines += [f"text {lb.get('text')!r} at {_r(lb.get('x'))},{_r(lb.get('y'))}" for lb in sh.get('labels') or [] if isinstance(lb, dict)]
+    return '\n'.join(lines)
 
 
 def _shape_summary(shapes):
+    """The illustration as the model can read it: canvas pictures become one SVG primitive per line, other
+    shapes stay JSON. Nothing geometric is dropped (a truncated picture made the model report 'empty canvas')."""
     out = []
     for sh in shapes or []:
         if not isinstance(sh, dict):
             continue
-        slim = {k: v for k, v in sh.items() if k not in _SHAPE_DROP}
-        text = json.dumps(slim, ensure_ascii=False, default=str)
-        out.append(text[:500] + ('…' if len(text) > 500 else ''))
+        if sh.get('type') == 'canvas':
+            text = _canvas_text(sh)
+        else:
+            slim = {k: v for k, v in sh.items() if k not in _SHAPE_DROP}
+            text = _NUM.sub(lambda x: str(round(float(x.group()), 1)), json.dumps(slim, ensure_ascii=False, default=str))
+        out.append(text[:ILLUSTRATION_CAP] + ('…' if len(text) > ILLUSTRATION_CAP else ''))
+    return out
+
+
+def _shuffled(labels, seed):
+    """Ordering items as the child sees them: shuffled (never already in the answer order), stable per sample."""
+    import random
+    rng = random.Random(seed)
+    out = list(labels)
+    for _ in range(10):
+        rng.shuffle(out)
+        if out != list(labels) or len(set(labels)) < 2:
+            break
     return out
 
 
@@ -83,7 +132,7 @@ def describe(sample, with_key):
             v['choices'] = [f"{i + 1}. {c.get('label', '')}" for i, c in enumerate(q['choices'])]
         if q.get('items'):
             labels = [it['label'] for it in q['items']]
-            v['items_to_order'] = labels if with_key else sorted(labels)
+            v['items_to_order'] = labels if with_key else _shuffled(labels, sample.code)
         if q.get('pairs'):
             v['left'] = [p['left'] for p in q['pairs']]
             v['right_options'] = sorted({p['right'] for p in q['pairs']})
@@ -115,6 +164,9 @@ def describe(sample, with_key):
 
 SOLVE_SYSTEM = """You are a careful elementary-school math teacher in Québec. Solve each problem exactly as a strong
 grade-{grade} student would, using only what the student sees (prompt, table, list, illustration data, choices).
+The illustration is given as a list of SVG primitives (path / line / dot / rect / circle / pie_slice / text, pixel
+coordinates, y grows downward): rebuild the picture from them. It is complete; do not call it missing or truncated
+unless the list really has no marks.
 Problems are shown in French and English; they are the same problem.
 
 For each problem return:
