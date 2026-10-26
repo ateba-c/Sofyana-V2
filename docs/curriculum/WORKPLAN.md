@@ -190,7 +190,7 @@ WP4 Operations & calculation
 - [x] G1-0 AI review feed: canvas pictures sent in full (were cut at 500 chars → "empty canvas" false alarms), ordering items shown shuffled; student-side ordering shuffle is unbiased and never returns the answer order
 - [x] QC-079 / 080 decimal versions — `g4-decimal-equivalences`, `g5-decimal-properties` (migration 0031)
 - [x] Widgets — tap-to-place point (`cartesian-place-point` medium/hard, `g6-cartesian-4q` hard), tap-to-build bar chart (`build_bars` q_type), simulation runner panel (`question.simulator`) — `quiz/widgets.py`, `partials/practice_widgets.html`, `partials/simulator.html`
-- [ ] Wire `build_bars` into `g3-build-chart` and the simulator into `g5-simulation` (after G1-B merges)
+- [x] Wired: `g3-build-chart` builds the chart at medium/hard; `g5-simulation` coin/die runner. All 5 agent branches merged; full suite green (322 tests, 147 s)
 - [ ] Deploy: migrate (0029 → 0032), `qa_refresh`, `qa_ingest` for the new skills, re-run `qa_ai_review` on changed skills
 
 ## Release checklist (owner-triggered, not done automatically)
