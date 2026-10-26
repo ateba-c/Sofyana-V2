@@ -1,0 +1,55 @@
+{% load quiz_extras %}
+{# Simulation runner (workplan D8.7): question.simulator = {'kind': 'spinner'|'die'|'coin'|'bag',
+   'outcomes': [{'fr': 'Rouge', 'en': 'Red', 'color': '#EF4444', 'w': 3}, ...], 'batches': [10, 100]}.
+   Trials run in the browser; the question never depends on them (it asks about what they *should* show). #}
+{% with sim=question.simulator %}
+<div class="rounded-xl border border-teal/30 bg-teal-light/60 p-3 mb-2"
+     x-data='{
+       w: {{ sim.outcomes|outcome_weights|to_json }},
+       counts: Array({{ sim.outcomes|length }}).fill(0),
+       last: null,
+       get total() { return this.counts.reduce((a, b) => a + b, 0); },
+       draw() {
+         const sum = this.w.reduce((a, b) => a + b, 0);
+         let r = Math.random() * sum;
+         for (let i = 0; i < this.w.length; i++) { r -= this.w[i]; if (r < 0) return i; }
+         return this.w.length - 1;
+       },
+       run(n) { for (let k = 0; k < n; k++) { const i = this.draw(); this.counts[i]++; this.last = i; } },
+       reset() { this.counts = this.counts.map(() => 0); this.last = null; },
+       pct(i) { return this.total ? Math.round(100 * this.counts[i] / this.total) : 0; }
+     }'>
+  <p class="text-xs font-extrabold text-teal-dark uppercase tracking-wide mb-2">
+    🎲 {% if lang == 'fr' %}Fais l’expérience{% else %}Try the experiment{% endif %}
+    <span class="normal-case font-bold text-ink/70">
+      — {% if lang == 'fr' %}{{ sim.label_fr }}{% else %}{{ sim.label_en }}{% endif %}
+    </span>
+  </p>
+  <div class="flex flex-wrap gap-1.5 mb-2">
+    {% for b in sim.batches %}
+    <button type="button" @click="run({{ b }})"
+            class="px-3 py-2 rounded-lg bg-white border border-teal/40 text-teal-dark text-xs font-black hover:bg-teal-light active:scale-[0.97] min-h-[40px]">
+      {% if lang == 'fr' %}Lancer {{ b }} fois{% else %}Run {{ b }} times{% endif %}
+    </button>
+    {% endfor %}
+    <button type="button" @click="reset()"
+            class="px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50 min-h-[40px]">
+      {% if lang == 'fr' %}Recommencer{% else %}Reset{% endif %}
+    </button>
+    <span class="ml-auto self-center text-xs font-black text-ink" x-text="'{% if lang == 'fr' %}Essais{% else %}Trials{% endif %} : ' + total"></span>
+  </div>
+  <div class="space-y-1">
+    {% for o in sim.outcomes %}
+    <div class="flex items-center gap-2 text-xs font-bold">
+      <span class="w-20 shrink-0 truncate" :class="last === {{ forloop.counter0 }} ? 'font-black text-ink' : 'text-ink/80'">
+        <span class="inline-block w-2.5 h-2.5 rounded-full align-middle mr-1" style="background: {{ o.color|default:'#0EA5E9' }}"></span>{% if lang == 'fr' %}{{ o.fr }}{% else %}{{ o.en }}{% endif %}
+      </span>
+      <div class="flex-1 h-3 rounded-full bg-white border border-slate-200 overflow-hidden">
+        <div class="h-full rounded-full transition-all duration-300" :style="'background: {{ o.color|default:'#0EA5E9' }}; width:' + pct({{ forloop.counter0 }}) + '%'"></div>
+      </div>
+      <span class="w-16 text-right font-mono" x-text="counts[{{ forloop.counter0 }}] + ' (' + pct({{ forloop.counter0 }}) + ' %)'"></span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endwith %}

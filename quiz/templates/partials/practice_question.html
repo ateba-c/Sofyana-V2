@@ -27,6 +27,7 @@
     {% shape_canvas question.shape_data lang %}
   </div>
   {% endif %}
+  {% if question.simulator %}{% include 'partials/simulator.html' %}{% endif %}
 
   <form id="pq-form"
         hx-post="{% url 'quiz:practice_check' topic %}"

@@ -89,3 +89,9 @@ def plane_layout(spec):
     """Geometry of the tap-to-place point grid (quiz/widgets.py)."""
     from quiz.widgets import plane_layout as _plane
     return _plane(spec or {})
+
+
+@register.filter
+def outcome_weights(outcomes):
+    """Simulator outcome weights as a plain list for the browser."""
+    return [float(o.get('w', 1)) for o in outcomes or []]

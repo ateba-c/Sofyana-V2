@@ -68,3 +68,17 @@ class WidgetPageTests(TestCase):
         r = self.client.post('/practice/cartesian-place-point/check/', {'answer': '(0, 0)', 'level': 'hard', 'lang': 'fr'})
         self.assertFalse(r.context['correct'])
         self.assertContains(r, 'En vert : la bonne réponse')
+
+
+class SimulatorRenderTests(SimpleTestCase):
+    def test_simulator_panel_renders(self):
+        from django.template.loader import render_to_string
+        q = {'q_type': 'multiple_choice', 'prompt_fr': 'p', 'prompt_en': 'p', 'hint_fr': 'h', 'hint_en': 'h',
+             'choices': [{'label': 'a', 'correct': True}, {'label': 'b', 'correct': False}],
+             'simulator': {'kind': 'spinner', 'label_fr': 'une roulette', 'label_en': 'a spinner', 'batches': [10, 100],
+                           'outcomes': [{'fr': 'Rouge', 'en': 'Red', 'color': '#EF4444', 'w': 3},
+                                        {'fr': 'Bleu', 'en': 'Blue', 'color': '#2563EB', 'w': 1}]}}
+        html = render_to_string('partials/practice_question.html', {'question': q, 'topic': 'g5-simulation', 'level': 'easy', 'lang': 'en'})
+        self.assertIn('Run 100 times', html)
+        self.assertIn('[3.0, 1.0]', html)
+        self.assertIn('Red', html)
