@@ -56,155 +56,120 @@ def g5_volume_gen(level='easy'):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# g5_capacity_convert_gen
+# g5_capacity_convert_gen / g5_mass_convert_gen
 # ─────────────────────────────────────────────────────────────────────────────
+
+def _num(x):
+    """(fr, en) text of a number: 0,875 / 0.875 — no trailing zeros, no thousands separator."""
+    s = f'{x:.3f}'.rstrip('0').rstrip('.') if isinstance(x, float) else str(x)
+    return s.replace('.', ','), s
+
+
+def _convert_problem(val, from_unit, to_unit, big, small):
+    """Typed conversion big ↔ small (factor 1000), with a hint that follows the direction."""
+    if from_unit == big:
+        answer = round(val * 1000, 3)
+        answer = int(answer) if float(answer).is_integer() else answer
+    else:
+        answer = round(val / 1000, 3)
+        answer = int(answer) if float(answer).is_integer() else answer
+    v_fr, v_en = _num(val)
+    a_fr, a_en = _num(answer)
+    if from_unit == big:
+        hint_fr = f'1 {big} = 1 000 {small}. Pour passer de {big} à {small}, multiplie par 1 000.'
+        hint_en = f'1 {big} = 1000 {small}. To go from {big} to {small}, multiply by 1000.'
+        op_fr = f'multiplie par 1 000 : {v_fr} × 1 000 = {a_fr}'
+        op_en = f'multiply by 1000: {v_en} × 1000 = {a_en}'
+    else:
+        hint_fr = f'1 000 {small} = 1 {big}. Pour passer de {small} à {big}, divise par 1 000.'
+        hint_en = f'1000 {small} = 1 {big}. To go from {small} to {big}, divide by 1000.'
+        op_fr = f'divise par 1 000 : {v_fr} ÷ 1 000 = {a_fr}'
+        op_en = f'divide by 1000: {v_en} ÷ 1000 = {a_en}'
+    return {
+        'q_type':           'text_input',
+        'prompt_fr':        f"Convertis **{v_fr} {from_unit}** en **{to_unit}**.",
+        'prompt_en':        f"Convert **{v_en} {from_unit}** to **{to_unit}**.",
+        'hint_fr':          hint_fr,
+        'hint_en':          hint_en,
+        'show_illustration': False,
+        'shape_data':       [],
+        'choices':          [],
+        'pairs':            [],
+        'explanation_en': (
+            f'Step 1: Remember: 1 {big} = 1000 {small}.\n'
+            f'Step 2: To convert {from_unit} → {to_unit}, {op_en}.\n'
+            f'Answer: {v_en} {from_unit} = {a_en} {to_unit}'
+        ),
+        'explanation_fr': (
+            f'Étape 1 : Rappel : 1 {big} = 1 000 {small}.\n'
+            f'Étape 2 : Pour convertir {from_unit} → {to_unit}, {op_fr}.\n'
+            f'Réponse : {v_fr} {from_unit} = {a_fr} {to_unit}'
+        ),
+        'correct_answers':  [a_fr] if a_fr == a_en else [a_fr, a_en],
+    }
+
 
 def g5_capacity_convert_gen(level='easy'):
     """Typed — convert L ↔ mL."""
     if level == 'easy':
-        # Whole litres → mL
-        val = random.randint(1, 10)
-        from_unit, to_unit = 'L', 'mL'
-        answer = val * 1000
-        answer_str = str(answer)
+        val, from_unit, to_unit = random.randint(1, 10), 'L', 'mL'
     elif level == 'medium':
-        direction = random.choice(['L_to_mL', 'mL_to_L'])
-        if direction == 'L_to_mL':
-            val = random.choice([0.5, 1.5, 2.5, 0.25, 0.75, 1.25])
-            from_unit, to_unit = 'L', 'mL'
-            answer = int(val * 1000)
-            val_str = str(val).replace('.', ',')
-            answer_str = str(answer)
+        if random.random() < 0.5:
+            val, from_unit, to_unit = random.choice([0.5, 1.5, 2.5, 0.25, 0.75, 1.25]), 'L', 'mL'
         else:
-            val = random.choice([500, 250, 750, 1500, 2000, 3500])
-            from_unit, to_unit = 'mL', 'L'
-            answer = val / 1000
-            answer_str = str(answer).replace('.', ',')
-            val_str = str(val)
+            val, from_unit, to_unit = random.choice([500, 250, 750, 1500, 2000, 3500]), 'mL', 'L'
     else:
-        direction = random.choice(['L_to_mL', 'mL_to_L'])
-        if direction == 'L_to_mL':
-            whole = random.randint(1, 5)
-            dec   = random.choice([25, 50, 75, 125, 250, 375])
-            val   = whole + dec / 1000
+        if random.random() < 0.5:
+            val = random.randint(1, 5) + random.choice([25, 50, 75, 125, 250, 375]) / 1000
             from_unit, to_unit = 'L', 'mL'
-            answer = int(val * 1000)
-            val_str = f"{whole},{dec:03d}".replace(',000', '')
-            answer_str = str(answer)
         else:
-            val = random.randint(1, 9) * 100 + random.choice([0, 25, 50, 75])
-            from_unit, to_unit = 'mL', 'L'
-            answer = val / 1000
-            answer_str = str(answer).replace('.', ',')
-            val_str = str(val)
+            val, from_unit, to_unit = random.randint(1, 9) * 100 + random.choice([0, 25, 50, 75]), 'mL', 'L'
+    return _convert_problem(val, from_unit, to_unit, 'L', 'mL')
 
-    # For easy, val_str wasn't set
-    if level == 'easy':
-        val_str = str(val)
-
-    correct_dot = answer_str.replace(',', '.')
-    if from_unit == 'L':
-        op_en = f'multiply by 1,000: {val_str} × 1,000 = {answer_str}'
-        op_fr = f'multiplie par 1 000 : {val_str} × 1 000 = {answer_str}'
-    else:
-        op_en = f'divide by 1,000: {val_str} ÷ 1,000 = {answer_str}'
-        op_fr = f'divise par 1 000 : {val_str} ÷ 1 000 = {answer_str}'
-    return {
-        'q_type':           'text_input',
-        'prompt_fr':        f"Convertis **{val_str} {from_unit}** en **{to_unit}**.",
-        'prompt_en':        f"Convert **{val_str} {from_unit}** to **{to_unit}**.",
-        'hint_fr':          '1 L = 1 000 mL. Pour convertir L → mL, multiplie par 1 000.',
-        'hint_en':          '1 L = 1,000 mL. To convert L → mL, multiply by 1,000.',
-        'show_illustration': False,
-        'shape_data':       [],
-        'choices':          [],
-        'pairs':            [],
-        'explanation_en': (
-            f'Step 1: Remember: 1 L = 1,000 mL.\n'
-            f'Step 2: To convert {from_unit} → {to_unit}, {op_en}.\n'
-            f'Answer: {val_str} {from_unit} = {answer_str} {to_unit}'
-        ),
-        'explanation_fr': (
-            f'Étape 1 : Rappel : 1 L = 1 000 mL.\n'
-            f'Étape 2 : Pour convertir {from_unit} → {to_unit}, {op_fr}.\n'
-            f'Réponse : {val_str} {from_unit} = {answer_str} {to_unit}'
-        ),
-        'correct_answers':  [answer_str, correct_dot, answer_str.replace(',', '.')],
-    }
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# g5_mass_convert_gen
-# ─────────────────────────────────────────────────────────────────────────────
 
 def g5_mass_convert_gen(level='easy'):
     """Typed — convert g ↔ kg."""
     if level == 'easy':
-        val = random.randint(1, 10)
-        from_unit, to_unit = 'kg', 'g'
-        answer_str = str(val * 1000)
-        val_str    = str(val)
+        val, from_unit, to_unit = random.randint(1, 10), 'kg', 'g'
     elif level == 'medium':
-        direction = random.choice(['kg_to_g', 'g_to_kg'])
-        if direction == 'kg_to_g':
-            val = random.choice([0.5, 1.5, 2.5, 0.25, 0.75])
-            from_unit, to_unit = 'kg', 'g'
-            answer_str = str(int(val * 1000))
-            val_str    = str(val).replace('.', ',')
+        if random.random() < 0.5:
+            val, from_unit, to_unit = random.choice([0.5, 1.5, 2.5, 0.25, 0.75]), 'kg', 'g'
         else:
-            val = random.choice([500, 250, 750, 1500, 2500])
-            from_unit, to_unit = 'g', 'kg'
-            answer_str = str(val / 1000).replace('.', ',')
-            val_str    = str(val)
+            val, from_unit, to_unit = random.choice([500, 250, 750, 1500, 2500]), 'g', 'kg'
     else:
-        direction = random.choice(['kg_to_g', 'g_to_kg'])
-        if direction == 'kg_to_g':
-            whole = random.randint(1, 9)
-            dec   = random.choice([250, 500, 750, 100, 200])
-            val   = whole + dec / 1000
+        if random.random() < 0.5:
+            val = random.randint(1, 9) + random.choice([250, 500, 750, 100, 200]) / 1000
             from_unit, to_unit = 'kg', 'g'
-            answer_str = str(int(val * 1000))
-            val_str    = f"{whole},{dec:03d}".rstrip('0').rstrip(',')
         else:
-            val = random.randint(1, 9) * 1000 + random.choice([0, 250, 500, 750])
-            from_unit, to_unit = 'g', 'kg'
-            answer_str = str(val / 1000).replace('.', ',')
-            val_str    = str(val)
-
-    correct_dot = answer_str.replace(',', '.')
-    if from_unit == 'kg':
-        mass_op_en = f'multiply by 1,000: {val_str} × 1,000 = {answer_str}'
-        mass_op_fr = f'multiplie par 1 000 : {val_str} × 1 000 = {answer_str}'
-    else:
-        mass_op_en = f'divide by 1,000: {val_str} ÷ 1,000 = {answer_str}'
-        mass_op_fr = f'divise par 1 000 : {val_str} ÷ 1 000 = {answer_str}'
-    return {
-        'q_type':           'text_input',
-        'prompt_fr':        f"Convertis **{val_str} {from_unit}** en **{to_unit}**.",
-        'prompt_en':        f"Convert **{val_str} {from_unit}** to **{to_unit}**.",
-        'hint_fr':          '1 kg = 1 000 g. Pour convertir kg → g, multiplie par 1 000.',
-        'hint_en':          '1 kg = 1,000 g. To convert kg → g, multiply by 1,000.',
-        'show_illustration': False,
-        'shape_data':       [],
-        'choices':          [],
-        'pairs':            [],
-        'explanation_en': (
-            f'Step 1: Remember: 1 kg = 1,000 g.\n'
-            f'Step 2: To convert {from_unit} → {to_unit}, {mass_op_en}.\n'
-            f'Answer: {val_str} {from_unit} = {answer_str} {to_unit}'
-        ),
-        'explanation_fr': (
-            f'Étape 1 : Rappel : 1 kg = 1 000 g.\n'
-            f'Étape 2 : Pour convertir {from_unit} → {to_unit}, {mass_op_fr}.\n'
-            f'Réponse : {val_str} {from_unit} = {answer_str} {to_unit}'
-        ),
-        'correct_answers':  [answer_str, correct_dot],
-    }
+            val, from_unit, to_unit = random.randint(1, 9) * 1000 + random.choice([0, 250, 500, 750]), 'g', 'kg'
+    return _convert_problem(val, from_unit, to_unit, 'kg', 'g')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # g5_elapsed_time_gen
 # ─────────────────────────────────────────────────────────────────────────────
+
+def _hm(mins):
+    h, m = divmod(mins, 60)
+    return f'{h}:{m:02d}'
+
+
+def _elapsed_jumps(start, end):
+    """The jumps really used: (from, to, label_fr, label_en) — no empty or impossible steps."""
+    nxt = (start // 60 + 1) * 60 if start % 60 else start
+    if nxt > end:                                  # 11:40 → 11:50: minutes only
+        return [(start, end, f'{end - start} min', f'{end - start} min')]
+    jumps = []
+    if nxt != start:
+        jumps.append((start, nxt, f'{nxt - start} min', f'{nxt - start} min'))
+    full = (end - nxt) // 60
+    if full:
+        jumps.append((nxt, nxt + full * 60, f'{full} h', f"{full} hour{'s' if full > 1 else ''}"))
+    rest = end - nxt - full * 60
+    if rest:
+        jumps.append((nxt + full * 60, end, f'{rest} min', f'{rest} min'))
+    return jumps
+
 
 def g5_elapsed_time_gen(level='easy'):
     """Typed — calculate elapsed time between two clock times (end > start)."""
@@ -226,56 +191,49 @@ def g5_elapsed_time_gen(level='easy'):
         start_m = random.choice(range(0, 60, 5))
         dur_h   = random.randint(0, 4)
         dur_m   = random.choice(range(5, 60, 5))
-        if dur_h == 0 and dur_m == 0:
-            dur_m = 30
 
-    end_total_m = start_h * 60 + start_m + dur_h * 60 + dur_m
-    end_h = (end_total_m // 60) % 24
-    end_m = end_total_m % 60
-
-    start_str = f"{start_h}:{start_m:02d}"
-    end_str   = f"{end_h}:{end_m:02d}"
+    start = start_h * 60 + start_m
+    total_min = dur_h * 60 + dur_m
+    end = start + total_min
+    start_str, end_str = _hm(start), _hm(end)
 
     if dur_h == 0:
-        answer_fr = f"{dur_m} min"
-        answer_en = f"{dur_m} min"
+        answer_fr, answer_en = f"{dur_m} min", f"{dur_m} minutes"
     elif dur_m == 0:
-        answer_fr = f"{dur_h} h"
-        answer_en = f"{dur_h} h"
+        answer_fr, answer_en = f"{dur_h} h", f"{dur_h} hour{'s' if dur_h > 1 else ''}"
     else:
         answer_fr = f"{dur_h} h {dur_m} min"
-        answer_en = f"{dur_h} h {dur_m} min"
+        answer_en = f"{dur_h} hour{'s' if dur_h > 1 else ''} {dur_m} minutes"
 
-    # Accept several formats
-    correct_answers = [answer_fr]
-    if dur_h > 0 and dur_m > 0:
-        total_min = dur_h * 60 + dur_m
-        correct_answers.append(f"{total_min} min")
-    elif dur_h > 0:
-        correct_answers.append(f"{dur_h * 60} min")
+    # Accept several formats (the check is by value: 1 h 30 min == 90 min == 1:30)
+    correct_answers = [answer_fr] + ([f"{total_min} min"] if dur_h else [])
+
+    jumps = _elapsed_jumps(start, end)
+    steps_fr = [f'De {_hm(a)} à {_hm(b)} : {lf}' for a, b, lf, _ in jumps]
+    steps_en = [f'From {_hm(a)} to {_hm(b)}: {le}' for a, b, _, le in jumps]
+    if len(jumps) > 1:
+        steps_fr.append('Additionne : ' + ' + '.join(lf for *_, lf, _ in jumps) + f' = {answer_fr}')
+        steps_en.append('Add them up: ' + ' + '.join(le for *_, le in jumps) + f' = {answer_en}')
+    if start_m == 0 and dur_m == 0:
+        hint_fr, hint_en = "Compte les heures entières de l'heure de début à l'heure de fin.", 'Count the whole hours from the start to the end.'
+    elif len(jumps) == 1:
+        hint_fr, hint_en = "Compte les minutes de l'heure de début à l'heure de fin.", 'Count the minutes from the start to the end.'
+    else:
+        hint_fr = "Fais des bonds : jusqu'à l'heure pleine, puis les heures entières, puis les minutes qui restent."
+        hint_en = 'Make jumps: up to the next full hour, then whole hours, then the minutes left.'
 
     return {
         'q_type':           'text_input',
         'prompt_fr':        f"Une activité commence à **{start_str}** et se termine à **{end_str}**. Quelle est sa durée ?",
         'prompt_en':        f"An activity starts at **{start_str}** and ends at **{end_str}**. How long does it last?",
-        'hint_fr':          'Compte les heures puis les minutes séparément.',
-        'hint_en':          'Count the hours first, then the minutes.',
+        'hint_fr':          hint_fr,
+        'hint_en':          hint_en,
         'show_illustration': False,
         'shape_data':       [],
         'choices':          [],
         'pairs':            [],
-        'explanation_en': (
-            f'Step 1: From {start_str} to the next full hour: count up to {start_h + 1 if start_m else start_h}:00.\n'
-            f'Step 2: Count full hours from there to {end_str}.\n'
-            f'Step 3: Count remaining minutes.\n'
-            f'Answer: the duration is {answer_en}'
-        ),
-        'explanation_fr': (
-            f'Étape 1 : De {start_str} à la prochaine heure pleine : compte jusqu\'à {start_h + 1 if start_m else start_h}:00.\n'
-            f'Étape 2 : Compte les heures entières jusqu\'à {end_str}.\n'
-            f'Étape 3 : Compte les minutes restantes.\n'
-            f'Réponse : la durée est {answer_fr}'
-        ),
+        'explanation_en':   ''.join(f'Step {i + 1}: {s}\n' for i, s in enumerate(steps_en)) + f'Answer: the duration is {answer_en}',
+        'explanation_fr':   ''.join(f'Étape {i + 1} : {s}\n' for i, s in enumerate(steps_fr)) + f'Réponse : la durée est {answer_fr}',
         'correct_answers':  correct_answers,
     }
 
@@ -284,65 +242,60 @@ def g5_elapsed_time_gen(level='easy'):
 # g5_temperature_gen
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _distinct_temps(lo, hi, k=5):
+    return random.sample(range(lo, hi + 1), k)
+
+
 def g5_temperature_gen(level='easy'):
     """QCM — compare temperatures (non-negative: primary school)."""
     if level == 'easy':
-        temps = random.sample(range(0, 41), 5)
+        temps = _distinct_temps(0, 40)
         question = random.choice(['coldest', 'warmest'])
     elif level == 'medium':
-        temps = [random.randint(0, 30) for _ in range(5)]
-        # ensure distinct
-        temps = list(set(temps))
-        while len(temps) < 5:
-            temps.append(random.randint(0, 30))
-        temps = list(set(temps))[:5]
+        temps = _distinct_temps(0, 30)
         question = random.choice(['coldest', 'warmest'])
     else:
-        temps = [random.randint(0, 35) for _ in range(5)]
-        temps = list(set(temps))
-        while len(temps) < 5:
-            temps.append(random.randint(0, 35))
-        temps = list(set(temps))[:5]
-        question = 'coldest'  # always coldest for hard (more common error with negatives)
+        temps = _distinct_temps(0, 35)
+        question = 'coldest'
 
+    # The temperatures are the answer choices; the prompt does not repeat them.
     if question == 'coldest':
         correct = min(temps)
-        prompt_fr = f"Quelle est la température la plus froide parmi : {', '.join(str(t) + ' °C' for t in temps)} ?"
-        prompt_en = f"Which is the coldest temperature among: {', '.join(str(t) + ' °C' for t in temps)}?"
+        prompt_fr = "Quelle est la température la plus froide ?"
+        prompt_en = "Which is the coldest temperature?"
     else:
         correct = max(temps)
-        prompt_fr = f"Quelle est la température la plus chaude parmi : {', '.join(str(t) + ' °C' for t in temps)} ?"
-        prompt_en = f"Which is the warmest temperature among: {', '.join(str(t) + ' °C' for t in temps)}?"
+        prompt_fr = "Quelle est la température la plus chaude ?"
+        prompt_en = "Which is the warmest temperature?"
 
     others = [t for t in temps if t != correct]
     tagged_candidates = [
         (str(t) + ' °C', 'wrong_temperature',
-         'Remember: lower numbers mean colder temperatures, even when negative.',
-         'Plus le nombre est petit, plus la température est froide — même en négatif.')
+         'Remember: the smaller the number, the colder it is.',
+         'Plus le nombre est petit, plus la température est froide.')
         for t in others
     ]
     correct_str = str(correct) + ' °C'
+    in_order = ', '.join(f'{t} °C' for t in sorted(temps))
 
     return {
         'q_type':           'multiple_choice',
         'prompt_fr':        prompt_fr,
         'prompt_en':        prompt_en,
-        'hint_fr':          'Sur un thermomètre, la température monte vers le haut. −10 °C est plus froid que −5 °C.',
-        'hint_en':          'On a thermometer, temperature rises upward. −10 °C is colder than −5 °C.',
+        'hint_fr':          'Sur un thermomètre, la température monte vers le haut : plus le nombre est petit, plus il fait froid ; plus il est grand, plus il fait chaud.',
+        'hint_en':          'On a thermometer, temperature rises upward: the smaller the number, the colder; the bigger, the warmer.',
         'show_illustration': False,
         'shape_data':       [],
         'choices':          _tagged_shuffle_mc(correct_str, tagged_candidates[:4]),
         'pairs':            [],
         'explanation_en': (
-            f'Step 1: List all temperatures: {", ".join(str(t) + " °C" for t in temps)}.\n'
-            f'Step 2: Remember — more negative = colder, more positive = warmer.\n'
-            f'Step 3: The {"coldest" if question == "coldest" else "warmest"} is {correct_str}.\n'
+            f'Step 1: Put the temperatures in order, from coldest to warmest: {in_order}.\n'
+            f'Step 2: The {"coldest is the smallest number" if question == "coldest" else "warmest is the biggest number"}: {correct_str}.\n'
             f'Answer: {correct_str}'
         ),
         'explanation_fr': (
-            f'Étape 1 : Liste toutes les températures : {", ".join(str(t) + " °C" for t in temps)}.\n'
-            f'Étape 2 : Plus le nombre est négatif = plus froid ; plus il est positif = plus chaud.\n'
-            f'Étape 3 : La plus {"froide" if question == "coldest" else "chaude"} est {correct_str}.\n'
+            f'Étape 1 : Range les températures de la plus froide à la plus chaude : {in_order}.\n'
+            f'Étape 2 : La plus {"froide est le plus petit nombre" if question == "coldest" else "chaude est le plus grand nombre"} : {correct_str}.\n'
             f'Réponse : {correct_str}'
         ),
         'correct_answers':  [correct_str],
@@ -356,23 +309,39 @@ def g5_temperature_gen(level='easy'):
 def g5_thermometer_gen(level='easy'):
     """Typed + SVG — read the temperature shown on a thermometer."""
     if level == 'easy':
-        min_t, max_t, step = 0, 40, 5
+        # every mark is numbered (5 by 5)
+        min_t, max_t, step, minor = 0, 40, 5, None
         temp = random.choice(range(0, 41, 5))
     elif level == 'medium':
-        min_t, max_t, step = 0, 50, 10                 # no negatives anywhere (primary rule; D2 pending)
-        temp = random.choice(range(0, 51, 5))
+        # numbered every 10, one small mark in between: the reading falls on that small mark
+        min_t, max_t, step, minor = 0, 50, 10, 5
+        temp = random.choice(range(5, 50, 10))
     else:
-        min_t, max_t, step = 0, 50, 10
-        temp = random.choice(range(0, 51, 2))
+        # numbered every 10, small marks every 2: count the small marks
+        min_t, max_t, step, minor = 0, 50, 10, 2
+        temp = random.choice([t for t in range(2, 50, 2) if t % 10])
 
     temp_str = f"{temp} °C"
+    # As drawn: numbers every 10 °C; the small marks in between are worth `small` °C.
+    small = minor or step
+    below = temp - temp % 10
+    k = (temp - below) // small
+    hint_fr = f'Les nombres vont de 10 en 10. Chaque petit trait vaut {small} °C.'
+    hint_en = f'The numbers go up by 10. Each small mark is worth {small} °C.'
+    if k == 0:
+        mid_fr = f'Le liquide s’arrête juste au nombre {temp}.'
+        mid_en = f'The liquid stops right at the number {temp}.'
+    else:
+        pl = 's' if k > 1 else ''
+        mid_fr = f'Le liquide dépasse le {below} de {k} petit{pl} trait{pl} de {small} °C : {below} + {k * small} = {temp}.'
+        mid_en = f'The liquid goes {k} small mark{pl} of {small} °C above {below}: {below} + {k * small} = {temp}.'
 
     return {
         'q_type':           'text_input',
         'prompt_fr':        "Quelle température indique ce thermomètre ?",
         'prompt_en':        "What temperature does this thermometer show?",
-        'hint_fr':          'Lis la graduation atteinte par la colonne de liquide.',
-        'hint_en':          'Read the graduation reached by the liquid column.',
+        'hint_fr':          hint_fr,
+        'hint_en':          hint_en,
         'show_illustration': True,
         'shape_data':       [{
             'type':     'thermometer',
@@ -380,20 +349,18 @@ def g5_thermometer_gen(level='easy'):
             'min_temp': min_t,
             'max_temp': max_t,
             'step':     step,
-            'minor':    {'easy': None, 'medium': 5, 'hard': 2}[level],
+            'minor':    minor,
         }],
         'choices':          [],
         'pairs':            [],
         'explanation_en': (
-            f'Step 1: Look at the liquid column in the thermometer.\n'
-            f'Step 2: Find the graduation line it reaches.\n'
-            f'Step 3: Read the number on the scale at that line.\n'
+            f'Step 1: Find the top of the liquid column.\n'
+            f'Step 2: {mid_en}\n'
             f'Answer: {temp_str}'
         ),
         'explanation_fr': (
-            f'Étape 1 : Observe la colonne de liquide dans le thermomètre.\n'
-            f'Étape 2 : Trouve la graduation qu\'elle atteint.\n'
-            f'Étape 3 : Lis le nombre sur l\'échelle à cette graduation.\n'
+            f'Étape 1 : Repère le haut de la colonne de liquide.\n'
+            f'Étape 2 : {mid_fr}\n'
             f'Réponse : {temp_str}'
         ),
         'correct_answers':  [temp_str, str(temp)],
