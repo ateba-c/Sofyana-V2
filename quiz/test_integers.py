@@ -7,7 +7,7 @@ from .answers import check_answer, input_spec, parse_number, infer_answer_type
 from .generators import GENERATORS, SKILL_MAP, TOPIC_GROUPS
 from .generators import integers_plus as ip
 from .generators.resolution import RESOLUTION
-from .generators.resolution_plus import SIGNED_SKILLS
+from .generators.resolution_plus import INTEGER_SKILLS as SIGNED_SKILLS
 from .models import Skill
 from .test_language import FRENCH_WORDS
 

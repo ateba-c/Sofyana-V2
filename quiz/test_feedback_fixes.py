@@ -42,8 +42,8 @@ class NoNegativesNoRootsTests(SimpleTestCase):
 
     def test_signed_skills_are_the_integer_domain_only(self):
         self.assertTrue(SIGNED_SKILLS)
-        for slug in SIGNED_SKILLS:
-            self.assertTrue(slug.startswith('g6-'), slug)      # grade 6 only (audit QC-056→061, 136)
+        for slug in SIGNED_SKILLS:      # grade 6 integers + grade 5 temperatures (audit QC-056→061, 136, 208)
+            self.assertTrue(slug.startswith('g6-') or slug in ('g5-thermometer', 'g5-temperature'), slug)
 
 
 class ParentFlowTests(TestCase):

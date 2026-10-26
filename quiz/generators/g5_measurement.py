@@ -247,7 +247,7 @@ def _distinct_temps(lo, hi, k=5):
 
 
 def g5_temperature_gen(level='easy'):
-    """QCM — compare temperatures (non-negative: primary school)."""
+    """QCM — compare temperatures. Hard: winter temperatures below zero (decision D2, 2026-10-26)."""
     if level == 'easy':
         temps = _distinct_temps(0, 40)
         question = random.choice(['coldest', 'warmest'])
@@ -255,8 +255,15 @@ def g5_temperature_gen(level='easy'):
         temps = _distinct_temps(0, 30)
         question = random.choice(['coldest', 'warmest'])
     else:
-        temps = _distinct_temps(0, 35)
-        question = 'coldest'
+        temps = random.sample([t for t in range(-25, 16) if t], 5)
+        if sum(t < 0 for t in temps) < 2:                 # at least two below zero: compare negatives
+            temps[:2] = random.sample(range(-25, 0), 2)
+            temps = list(dict.fromkeys(temps))
+            while len(temps) < 5:
+                t = random.randint(-25, 15)
+                if t and t not in temps:
+                    temps.append(t)
+        question = random.choice(['coldest', 'warmest'])
 
     # The temperatures are the answer choices; the prompt does not repeat them.
     if question == 'coldest':
@@ -269,21 +276,24 @@ def g5_temperature_gen(level='easy'):
         prompt_en = "Which is the warmest temperature?"
 
     others = [t for t in temps if t != correct]
+    T = lambda t: (f'−{abs(t)}' if t < 0 else str(t)) + ' °C'
     tagged_candidates = [
-        (str(t) + ' °C', 'wrong_temperature',
+        (T(t), 'wrong_temperature',
          'Remember: the smaller the number, the colder it is.',
          'Plus le nombre est petit, plus la température est froide.')
         for t in others
     ]
-    correct_str = str(correct) + ' °C'
-    in_order = ', '.join(f'{t} °C' for t in sorted(temps))
+    correct_str = T(correct)
+    in_order = ', '.join(T(t) for t in sorted(temps))
 
     return {
         'q_type':           'multiple_choice',
         'prompt_fr':        prompt_fr,
         'prompt_en':        prompt_en,
-        'hint_fr':          'Sur un thermomètre, la température monte vers le haut : plus le nombre est petit, plus il fait froid ; plus il est grand, plus il fait chaud.',
-        'hint_en':          'On a thermometer, temperature rises upward: the smaller the number, the colder; the bigger, the warmer.',
+        'hint_fr':          'Sur un thermomètre, la température monte vers le haut : plus le nombre est petit, plus il fait froid.'
+                            + (' Sous zéro, −20 °C est plus froid que −5 °C.' if level == 'hard' else ''),
+        'hint_en':          'On a thermometer, temperature rises upward: the smaller the number, the colder.'
+                            + (' Below zero, −20 °C is colder than −5 °C.' if level == 'hard' else ''),
         'show_illustration': False,
         'shape_data':       [],
         'choices':          _tagged_shuffle_mc(correct_str, tagged_candidates[:4]),
@@ -316,25 +326,30 @@ def g5_thermometer_gen(level='easy'):
         # numbered every 10, one small mark in between: the reading falls on that small mark
         min_t, max_t, step, minor = 0, 50, 10, 5
         temp = random.choice(range(5, 50, 10))
+    elif random.random() < 0.5:
+        # winter scale, below zero (decision D2): numbered every 10, small marks every 2
+        min_t, max_t, step, minor = -30, 20, 10, 2
+        temp = random.choice([t for t in range(-28, 0, 2) if t % 10])
     else:
         # numbered every 10, small marks every 2: count the small marks
         min_t, max_t, step, minor = 0, 50, 10, 2
         temp = random.choice([t for t in range(2, 50, 2) if t % 10])
 
-    temp_str = f"{temp} °C"
+    temp_str = (f'−{abs(temp)}' if temp < 0 else str(temp)) + ' °C'
     # As drawn: numbers every 10 °C; the small marks in between are worth `small` °C.
     small = minor or step
-    below = temp - temp % 10
+    below = temp - temp % 10                  # the numbered mark just under the liquid (−14 → −20)
     k = (temp - below) // small
+    S = lambda t: f'−{abs(t)}' if t < 0 else str(t)
     hint_fr = f'Les nombres vont de 10 en 10. Chaque petit trait vaut {small} °C.'
     hint_en = f'The numbers go up by 10. Each small mark is worth {small} °C.'
     if k == 0:
-        mid_fr = f'Le liquide s’arrête juste au nombre {temp}.'
-        mid_en = f'The liquid stops right at the number {temp}.'
+        mid_fr = f'Le liquide s’arrête juste au nombre {S(temp)}.'
+        mid_en = f'The liquid stops right at the number {S(temp)}.'
     else:
         pl = 's' if k > 1 else ''
-        mid_fr = f'Le liquide dépasse le {below} de {k} petit{pl} trait{pl} de {small} °C : {below} + {k * small} = {temp}.'
-        mid_en = f'The liquid goes {k} small mark{pl} of {small} °C above {below}: {below} + {k * small} = {temp}.'
+        mid_fr = f'Le liquide dépasse le {S(below)} de {k} petit{pl} trait{pl} de {small} °C : {S(below)} + {k * small} = {S(temp)}.'
+        mid_en = f'The liquid goes {k} small mark{pl} of {small} °C above {S(below)}: {S(below)} + {k * small} = {S(temp)}.'
 
     return {
         'q_type':           'text_input',
@@ -363,5 +378,6 @@ def g5_thermometer_gen(level='easy'):
             f'Étape 2 : {mid_fr}\n'
             f'Réponse : {temp_str}'
         ),
-        'correct_answers':  [temp_str, str(temp)],
+        'correct_answers':  list(dict.fromkeys([temp_str, str(temp), temp_str.replace(' °C', '')])),
+        'answer_type':      'signed' if temp < 0 else 'integer',
     }

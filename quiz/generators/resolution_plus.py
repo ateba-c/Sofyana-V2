@@ -994,5 +994,6 @@ FAMILIES_PLUS = {
 
 # Skills whose answers may be negative (decision D2, 2026-10-26). Tests exempt exactly these from the
 # "no negative numbers" rule; every other generator must stay ≥ 0.
-SIGNED_SKILLS = {'g6-integer-read', 'g6-integer-thermometer', 'g6-integer-number-line', 'g6-integer-compare',
-                 'g6-integer-order', 'g6-cartesian-4q'}
+INTEGER_SKILLS = {'g6-integer-read', 'g6-integer-thermometer', 'g6-integer-number-line', 'g6-integer-compare',
+                  'g6-integer-order', 'g6-cartesian-4q'}
+SIGNED_SKILLS = INTEGER_SKILLS | {'g5-thermometer', 'g5-temperature'}     # grade 5: winter temperatures (hard level)
