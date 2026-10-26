@@ -164,6 +164,20 @@
   </div>
   {% endif %}
 
+  <!-- ── Fact fluency: facts still to review (they come back more often) ── -->
+  {% if facts_to_review %}
+  <div class="rounded-xl border border-amber-light bg-amber-light/60 p-3">
+    <p class="text-xs font-extrabold text-amber-dark uppercase tracking-wide mb-2">
+      {% if lang == 'fr' %}Faits à revoir — ils reviendront plus souvent{% else %}Facts to review — they will come back more often{% endif %}
+    </p>
+    <div class="flex flex-wrap gap-1.5">
+      {% for f in facts_to_review %}
+      <span class="px-2.5 py-1 rounded-lg bg-white border border-amber/40 text-sm font-black text-ink font-mono">{{ f }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <!-- ── Layer 3: Adaptive routing suggestion ───────────────────────────── -->
   {% if suggested_action %}
   <div class="rounded-xl border p-4

@@ -131,6 +131,8 @@ class ProblemInteraction(models.Model):
     time_taken_seconds = models.PositiveSmallIntegerField(default=0)
     error_type         = models.CharField(max_length=60, blank=True, default='',
                              help_text='Misconception category for wrong answers')
+    item               = models.CharField(max_length=20, blank=True, default='',
+                             help_text='The basic fact answered, for fact-fluency skills (e.g. "7×8"); see quiz/facts.py')
     created_at         = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:

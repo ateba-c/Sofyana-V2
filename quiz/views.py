@@ -16,6 +16,7 @@ from .generators import GENERATORS, LEVEL_NAMES, generator_for
 from .taxonomy import topic_groups, topic_meta, skill_map, answer_type_for, available_grades
 from .answers import check_answer, infer_answer_type, input_spec
 from .labels import resolve_lang, localize_problem
+from . import facts
 
 
 # ── Error-type human-readable labels (bilingual) ──────────────────────────────
@@ -603,7 +604,13 @@ def practice_next(request, topic):
         stats['snooze'] = 5
         request.session[key] = stats
     gen = generator_for(topic, level) or GENERATORS[topic]
-    q = localize_problem(gen(level), lang)
+    if topic in facts.FACT_SKILLS and level != 'resolution':
+        # Fact fluency: missed facts come back about half the time until answered right twice in a row.
+        raw = facts.serve(gen, level, facts.weak_facts(request.user, topic))
+        raw['fact'] = facts.fact_key(raw)
+        q = localize_problem(raw, lang)
+    else:
+        q = localize_problem(gen(level), lang)
     # Typed answer: explicit on the problem > editor-declared on the skill > inferred from the key.
     if q.get('q_type') == 'text_input':
         q['answer_type'] = (q.get('answer_type') or answer_type_for(topic)
@@ -730,6 +737,7 @@ def practice_check(request, topic):
         points_earned=stars_value if correct else 0,
         error_type=error_type,
         time_taken_seconds=time_taken,
+        item=q_data.get('fact', ''),
     )
     for pa in ParentAssignment.objects.filter(student=request.user, topic_slug=topic, completed_at__isnull=True):
         pa.record_answer(correct, time_taken)
@@ -816,6 +824,8 @@ def practice_check(request, topic):
         'suggested_level_name':  LEVEL_NAMES.get(suggested_level, (suggested_level, suggested_level))[1 if lang == 'fr' else 0],
         'level_name':            LEVEL_NAMES.get(level, (level, level))[1 if lang == 'fr' else 0],
         'suggested_topic':       suggested_topic,
+        'facts_to_review':       [facts.label(k) for k in facts.weak_facts(request.user, topic)[:8]]
+                                 if topic in facts.FACT_SKILLS else [],
     })
 
 
