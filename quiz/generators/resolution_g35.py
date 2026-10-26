@@ -177,18 +177,21 @@ def fraction_of(grade):
     n = random.randint(1, d - 1)
     total = d * random.randint(2, 6)
     part = total * n // d
-    color_fr, color_en = random.choice([('rouges', 'red'), ('bleues', 'blue'), ('vertes', 'green'), ('jaunes', 'yellow')])
+    fem = thing[2] == 'f'
+    color_fr, color_en = random.choice([('rouges', 'red'), ('bleues' if fem else 'bleus', 'blue'),
+                                        ('vertes' if fem else 'verts', 'green'), ('jaunes', 'yellow')])
+    eux = 'elles' if fem else 'eux'
     variant = random.choice(['rest', 'part', 'decimal'])
     if variant == 'part':
         return _problem(
-            f"{who} a **{total}** {sc.noun(thing, total, 'fr')}. **{n}/{d}** d'entre eux sont {color_fr}. Combien de {sc.noun(thing, 2, 'fr')} sont {color_fr} ?",
+            f"{who} a **{total}** {sc.noun(thing, total, 'fr')}. **{n}/{d}** d'entre {eux} sont {color_fr}. Combien de {sc.noun(thing, 2, 'fr')} sont {color_fr} ?",
             f"{who} has **{total}** {sc.noun(thing, total, 'en')}. **{n}/{d}** of them are {color_en}. How many {sc.noun(thing, 2, 'en')} are {color_en}?",
             part, [f'1/{d} de {total} = {total} ÷ {d} = {total // d}', f'{n}/{d} = {n} × {total // d} = {part}', f'{part} {sc.noun(thing, part, "fr")} {color_fr}'],
             [f'1/{d} of {total} = {total} ÷ {d} = {total // d}', f'{n}/{d} = {n} × {total // d} = {part}', f'{part} {color_en} {sc.noun(thing, part, "en")}'],
             "Trouve d'abord une part (÷ dénominateur), puis multiplie par le numérateur.", 'Find one part first (÷ denominator), then multiply by the numerator.')
     if variant == 'rest':
         return _problem(
-            f"{who} a **{total}** {sc.noun(thing, total, 'fr')}. **{n}/{d}** d'entre eux sont {color_fr}. Combien de {sc.noun(thing, 2, 'fr')} ne sont **pas** {color_fr} ?",
+            f"{who} a **{total}** {sc.noun(thing, total, 'fr')}. **{n}/{d}** d'entre {eux} sont {color_fr}. Combien de {sc.noun(thing, 2, 'fr')} ne sont **pas** {color_fr} ?",
             f"{who} has **{total}** {sc.noun(thing, total, 'en')}. **{n}/{d}** of them are {color_en}. How many {sc.noun(thing, 2, 'en')} are **not** {color_en}?",
             total - part, [f'{n}/{d} de {total} = {n} × ({total} ÷ {d}) = {part}', f'{total} − {part} = {total - part}', f'{total - part} {sc.noun(thing, total - part, "fr")}'],
             [f'{n}/{d} of {total} = {n} × ({total} ÷ {d}) = {part}', f'{total} − {part} = {total - part}', f'{total - part} {sc.noun(thing, total - part, "en")}'],
